@@ -33,42 +33,47 @@
 }
 
 @layer components {
+  /* ── Tiles ─────────────────────────────────────────── */
   .vc-tile {
     @apply relative flex flex-col items-start justify-end
            rounded-xl p-4 overflow-hidden
            transition-all duration-200 ease-out
            active:scale-[0.97] cursor-pointer
            bg-surface-dark-1 border border-surface-dark-3
-           hover:border-vc-600 hover:bg-surface-dark-2;
-    min-height: 120px;
+           hover:border-vc-600/60 hover:bg-surface-dark-2;
+    min-height: 140px;
   }
 
   .vc-tile--accent {
     @apply border-vc-700/50 bg-gradient-to-br from-surface-dark-1 to-vc-950/30;
   }
 
+  /* ── Cards ─────────────────────────────────────────── */
   .vc-card {
-    @apply bg-surface-dark-1 border border-surface-dark-3 rounded-xl p-4;
+    @apply bg-surface-dark-1 border border-surface-dark-3 rounded-xl p-4
+           transition-all duration-150;
   }
 
+  /* ── Inputs ────────────────────────────────────────── */
   .vc-input {
-    @apply w-full bg-surface-dark-2 border border-surface-dark-4 rounded-lg
-           px-3 py-2.5 text-gray-100 text-sm
-           placeholder:text-gray-500
+    @apply w-full bg-surface-dark-2 border border-surface-dark-4 rounded-xl
+           px-3.5 py-3 text-gray-100 text-sm
+           placeholder:text-gray-600
            focus:outline-none focus:border-vc-500 focus:ring-1 focus:ring-vc-500/30
            transition-colors duration-150;
   }
 
+  /* ── Buttons ───────────────────────────────────────── */
   .vc-btn {
     @apply inline-flex items-center justify-center gap-2
-           px-4 py-2.5 rounded-lg text-sm font-medium
+           px-4 py-2.5 rounded-xl text-sm font-medium
            transition-all duration-150 ease-out
            active:scale-[0.97] cursor-pointer
            disabled:opacity-50 disabled:cursor-not-allowed;
   }
 
   .vc-btn--primary {
-    @apply bg-vc-600 text-white hover:bg-vc-500;
+    @apply bg-vc-600 text-white hover:bg-vc-500 shadow-lg shadow-vc-600/20;
   }
 
   .vc-btn--secondary {
@@ -81,6 +86,7 @@
            hover:bg-red-900/60;
   }
 
+  /* ── Badges ────────────────────────────────────────── */
   .vc-badge {
     @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium;
   }
@@ -91,6 +97,7 @@
   .vc-badge--red { @apply bg-red-900/50 text-red-300; }
   .vc-badge--gray { @apply bg-surface-dark-3 text-gray-400; }
 
+  /* ── Scrollable ────────────────────────────────────── */
   .vc-scroll {
     @apply flex-1 overflow-y-auto overflow-x-hidden;
     -webkit-overflow-scrolling: touch;
@@ -99,4 +106,30 @@
   .vc-scroll::-webkit-scrollbar { width: 4px; }
   .vc-scroll::-webkit-scrollbar-track { background: transparent; }
   .vc-scroll::-webkit-scrollbar-thumb { @apply bg-surface-dark-4 rounded-full; }
+}
+
+@layer utilities {
+  /* Safe area padding for bottom nav on notched devices */
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  /* Line clamping */
+  .line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+}
+
+/* ── Animations ────────────────────────────────────── */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-4px); }
+  40%, 80% { transform: translateX(4px); }
+}
+
+.animate-shake {
+  animation: shake 0.4s ease-out;
 }

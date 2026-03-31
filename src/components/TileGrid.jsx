@@ -9,25 +9,26 @@ export default function TileGrid() {
 
   if (!activeSite) return null;
 
-  // Filter to enabled modules (null = all enabled)
   const enabledModules = activeSite.modules
     ? Object.values(MODULES).filter(m => activeSite.modules.includes(m.key))
     : Object.values(MODULES);
 
   return (
     <div className="p-4 pb-8">
-      {/* Site header */}
-      <div className="mb-6">
-        <h2 className="text-lg font-semibold text-gray-100">
+      {/* Welcome header */}
+      <div className="mb-6 mt-2">
+        <h2 className="text-xl font-bold text-gray-100 tracking-tight">
           {activeSite.name}
         </h2>
-        <p className="text-sm text-gray-500 mt-0.5">
-          {enabledModules.length} sections available
+        <p className="text-sm text-gray-500 mt-1">
+          {enabledModules.length} modules available
         </p>
       </div>
 
-      {/* Tile Grid */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+      {/* Quick stats row — placeholder for future */}
+
+      {/* Module Grid */}
+      <div className="grid grid-cols-2 gap-3">
         {enabledModules.map((mod) => {
           const Icon = Icons[mod.icon] || Icons.Folder;
 
@@ -35,15 +36,22 @@ export default function TileGrid() {
             <button
               key={mod.key}
               onClick={() => navigate(`/${mod.key}`)}
-              className={`vc-tile bg-gradient-to-br ${mod.color} ${mod.border}`}
+              className={`vc-tile group bg-gradient-to-br ${mod.color} ${mod.border}`}
             >
-              <Icon className="w-8 h-8 text-gray-400 mb-3 opacity-60" />
-              <span className="text-sm font-medium text-gray-200">
+              {/* Icon container */}
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-3 ${mod.iconBg || 'bg-white/5'} transition-colors group-hover:bg-white/10`}>
+                <Icon className="w-5 h-5 text-gray-300 group-hover:text-white transition-colors" />
+              </div>
+
+              <span className="text-sm font-semibold text-gray-200 group-hover:text-white transition-colors">
                 {mod.label}
               </span>
-              <span className="text-xs text-gray-500 mt-0.5 text-left leading-tight">
+              <span className="text-[11px] text-gray-500 mt-0.5 text-left leading-snug line-clamp-2">
                 {mod.description}
               </span>
+
+              {/* Arrow indicator */}
+              <Icons.ChevronRight className="absolute top-4 right-3 w-4 h-4 text-gray-700 group-hover:text-gray-500 transition-colors" />
             </button>
           );
         })}

@@ -1,0 +1,174 @@
+import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { VCApiClient } from '../api/client';
+import { storeGet, storeSet, storeDel, SITES_KEY, ACTIVE_SITE_KEY, PREFS_KEY } from '../hooks/useStore';
+
+const AuthContext = createContext(null);
+
+/**
+ * Site shape stored in IndexedDB:
+ * {
+ *   id: string (uuid),
+ *   url: string,
+ *   name: string,
+ *   username: string,
+ *   appPassword: string,
+ *   user: { id, name, email, roles },
+ *   modules: string[] (enabled module keys),
+ * }
+ */
+
+export function AuthProvider({ children }) {
+  const [sites, setSites] = useState([]);
+  const [activeSiteId, setActiveSiteId] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // Load persisted sites on mount
+  useEffect(() => {
+    (async () => {
+      try {
+        const saved = await storeGet(SITES_KEY);
+        const activeId = await storeGet(ACTIVE_SITE_KEY);
+        if (saved && saved.length) {
+          setSites(saved);
+          setActiveSiteId(activeId || saved[0].id);
+        }
+      } catch (e) {
+        console.warn('Failed to load sites:', e);
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
+
+  // Persist sites whenever they change
+  const persistSites = useCallback(async (updatedSites) => {
+    setSites(updatedSites);
+    await storeSet(SITES_KEY, updatedSites);
+  }, []);
+
+  // Get active site object
+  const activeSite = sites.find(s => s.id === activeSiteId) || null;
+
+  // Get API client for active site
+  const getClient = useCallback((site = null) => {
+    const s = site || activeSite;
+    if (!s) return null;
+    return new VCApiClient(s.url, {
+      username: s.username,
+      appPassword: s.appPassword,
+    });
+  }, [activeSite]);
+
+  // Add a new site with credential validation
+  const addSite = useCallback(async ({ url, username, appPassword }) => {
+    setError(null);
+
+    // Normalize URL
+    let siteUrl = url.trim().replace(/\/+$/, '');
+    if (!siteUrl.startsWith('http')) {
+      siteUrl = `https://${siteUrl}`;
+    }
+
+    const client = new VCApiClient(siteUrl, { username, appPassword });
+
+    try {
+      // Validate credentials
+      const user = await client.validateAuth();
+
+      // Fetch site name
+      const { data: siteInfo } = await client.get('');
+      const siteName = siteInfo?.name || new URL(siteUrl).hostname;
+
+      const newSite = {
+        id: crypto.randomUUID(),
+        url: siteUrl,
+        name: siteName,
+        username,
+        appPassword,
+        user: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          roles: user.roles,
+        },
+        modules: null, // null = all modules visible
+      };
+
+      const updated = [...sites, newSite];
+      await persistSites(updated);
+
+      // Auto-switch to new site if it's the first
+      if (!activeSiteId) {
+        setActiveSiteId(newSite.id);
+        await storeSet(ACTIVE_SITE_KEY, newSite.id);
+      }
+
+      return newSite;
+    } catch (err) {
+      const msg = err.status === 401 || err.status === 403
+        ? 'Invalid credentials. Check your username and application password.'
+        : err.code === 'network_error'
+          ? 'Could not reach the site. Check the URL and make sure CORS is enabled.'
+          : err.message;
+      setError(msg);
+      throw err;
+    }
+  }, [sites, activeSiteId, persistSites]);
+
+  // Remove a site
+  const removeSite = useCallback(async (siteId) => {
+    const updated = sites.filter(s => s.id !== siteId);
+    await persistSites(updated);
+
+    if (activeSiteId === siteId) {
+      const newActive = updated.length ? updated[0].id : null;
+      setActiveSiteId(newActive);
+      await storeSet(ACTIVE_SITE_KEY, newActive);
+    }
+  }, [sites, activeSiteId, persistSites]);
+
+  // Switch active site
+  const switchSite = useCallback(async (siteId) => {
+    setActiveSiteId(siteId);
+    await storeSet(ACTIVE_SITE_KEY, siteId);
+  }, []);
+
+  // Update site modules (visible sections)
+  const updateSiteModules = useCallback(async (siteId, modules) => {
+    const updated = sites.map(s =>
+      s.id === siteId ? { ...s, modules } : s
+    );
+    await persistSites(updated);
+  }, [sites, persistSites]);
+
+  // Check if user is logged in to at least one site
+  const isAuthenticated = sites.length > 0;
+
+  return (
+    <AuthContext.Provider
+      value={{
+        sites,
+        activeSite,
+        activeSiteId,
+        isAuthenticated,
+        loading,
+        error,
+        setError,
+        getClient,
+        addSite,
+        removeSite,
+        switchSite,
+        updateSiteModules,
+      }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
+}
+
+export function useAuth() {
+  const ctx = useContext(AuthContext);
+  if (!ctx) throw new Error('useAuth must be used within AuthProvider');
+  return ctx;
+}

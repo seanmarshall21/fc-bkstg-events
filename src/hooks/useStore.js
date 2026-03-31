@@ -59,3 +59,4 @@ export async function storeDel(key) {
 export const SITES_KEY = 'vc_sites';
 export const PREFS_KEY = 'vc_prefs';
 export const ACTIVE_SITE_KEY = 'vc_active_site';
+export const ACTIVE_EVENTS_KEY = 'vc_active_events'; // { siteId: eventId } map

@@ -1,43 +1,29 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../auth/AuthContext';
 import { WP_ENDPOINTS } from '../../api/endpoints';
+import EventSelector from '../../components/EventSelector';
 import { Loader2, ShieldCheck, RefreshCw, Eye, EyeOff, AlertTriangle } from 'lucide-react';
 
 export default function ConfidentialView() {
-  const { getClient, activeSite } = useAuth();
-  const [events, setEvents] = useState([]);
-  const [selectedEvent, setSelectedEvent] = useState(null);
+  const { getClient, activeEventId } = useAuth();
   const [eventData, setEventData] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchEvents = useCallback(async () => {
-    const client = getClient();
-    if (!client) return;
-    try {
-      const { data } = await client.get(WP_ENDPOINTS.events.list, { per_page: 50, context: 'edit' });
-      setEvents(data);
-      if (data.length > 0 && !selectedEvent) setSelectedEvent(data[0].id);
-    } catch (err) {
-      console.error(err);
-    }
-  }, [getClient, selectedEvent]);
-
   const fetchEventData = useCallback(async () => {
-    if (!selectedEvent) return;
+    if (!activeEventId) return;
     const client = getClient();
     if (!client) return;
     setLoading(true);
     try {
-      const { data } = await client.get(WP_ENDPOINTS.events.single(selectedEvent), { context: 'edit' });
+      const { data } = await client.get(WP_ENDPOINTS.events.single(activeEventId), { context: 'edit' });
       setEventData(data);
     } catch (err) {
       console.error(err);
     } finally {
       setLoading(false);
     }
-  }, [getClient, selectedEvent]);
+  }, [getClient, activeEventId]);
 
-  useEffect(() => { fetchEvents(); }, [fetchEvents, activeSite?.id]);
   useEffect(() => { fetchEventData(); }, [fetchEventData]);
 
   const phases = eventData?.acf?.vc_announce_phases || [];
@@ -51,18 +37,24 @@ export default function ConfidentialView() {
         </button>
       </div>
 
-      {events.length > 1 && (
-        <div className="mb-4">
-          <label className="block text-xs text-gray-500 mb-1.5">Event</label>
-          <select className="vc-input" value={selectedEvent || ''} onChange={e => setSelectedEvent(Number(e.target.value))}>
-            {events.map(ev => <option key={ev.id} value={ev.id}>{ev.title?.rendered || ev.title?.raw}</option>)}
-          </select>
+      {/* Event context */}
+      <div className="mb-4">
+        <EventSelector />
+      </div>
+
+      {!activeEventId && (
+        <div className="text-center py-20 text-gray-500 text-sm">
+          Select an event to view confidentiality settings.
         </div>
       )}
 
-      {loading && <div className="flex items-center justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-gray-500" /></div>}
+      {activeEventId && loading && (
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="w-6 h-6 animate-spin text-gray-500" />
+        </div>
+      )}
 
-      {!loading && phases.length > 0 && (
+      {activeEventId && !loading && phases.length > 0 && (
         <div className="space-y-3">
           {phases.map((phase, i) => (
             <div key={i} className="vc-card">
@@ -89,7 +81,7 @@ export default function ConfidentialView() {
         </div>
       )}
 
-      {!loading && phases.length === 0 && (
+      {activeEventId && !loading && phases.length === 0 && (
         <div className="text-center py-20 text-gray-500 text-sm">
           No announce phases configured for this event.
           <br />

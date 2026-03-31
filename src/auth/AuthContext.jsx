@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { VCApiClient } from '../api/client';
-import { storeGet, storeSet, storeDel, SITES_KEY, ACTIVE_SITE_KEY, PREFS_KEY } from '../hooks/useStore';
+import { storeGet, storeSet, storeDel, SITES_KEY, ACTIVE_SITE_KEY, ACTIVE_EVENTS_KEY, PREFS_KEY } from '../hooks/useStore';
+import { WP_ENDPOINTS } from '../api/endpoints';
 
 const AuthContext = createContext(null);
 
@@ -23,15 +24,24 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  // Event state: { siteId: eventId } persisted map + loaded events list
+  const [activeEventsMap, setActiveEventsMap] = useState({});
+  const [events, setEvents] = useState([]);
+  const [eventsLoading, setEventsLoading] = useState(false);
+
   // Load persisted sites on mount
   useEffect(() => {
     (async () => {
       try {
         const saved = await storeGet(SITES_KEY);
         const activeId = await storeGet(ACTIVE_SITE_KEY);
+        const eventsMap = await storeGet(ACTIVE_EVENTS_KEY);
         if (saved && saved.length) {
           setSites(saved);
           setActiveSiteId(activeId || saved[0].id);
+        }
+        if (eventsMap) {
+          setActiveEventsMap(eventsMap);
         }
       } catch (e) {
         console.warn('Failed to load sites:', e);
@@ -59,6 +69,56 @@ export function AuthProvider({ children }) {
       appPassword: s.appPassword,
     });
   }, [activeSite]);
+
+  // ── Event Management ───────────────────────────────────────
+
+  // Fetch events for the active site
+  const fetchEvents = useCallback(async () => {
+    const client = getClient();
+    if (!client) return;
+    setEventsLoading(true);
+    try {
+      const { data } = await client.get(WP_ENDPOINTS.events.list, { per_page: 50 });
+      setEvents(data);
+
+      // Auto-select first event if none selected for this site
+      if (data.length > 0 && activeSiteId && !activeEventsMap[activeSiteId]) {
+        const newMap = { ...activeEventsMap, [activeSiteId]: data[0].id };
+        setActiveEventsMap(newMap);
+        await storeSet(ACTIVE_EVENTS_KEY, newMap);
+      }
+    } catch (err) {
+      console.error('Failed to fetch events:', err);
+      setEvents([]);
+    } finally {
+      setEventsLoading(false);
+    }
+  }, [getClient, activeSiteId, activeEventsMap]);
+
+  // Fetch events when active site changes
+  useEffect(() => {
+    if (activeSiteId && sites.length > 0) {
+      fetchEvents();
+    } else {
+      setEvents([]);
+    }
+  }, [activeSiteId, sites.length]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Current active event ID for the active site
+  const activeEventId = activeSiteId ? (activeEventsMap[activeSiteId] || null) : null;
+
+  // Current active event object
+  const activeEvent = events.find(e => e.id === activeEventId) || null;
+
+  // Set active event for current site
+  const setActiveEvent = useCallback(async (eventId) => {
+    if (!activeSiteId) return;
+    const newMap = { ...activeEventsMap, [activeSiteId]: eventId };
+    setActiveEventsMap(newMap);
+    await storeSet(ACTIVE_EVENTS_KEY, newMap);
+  }, [activeSiteId, activeEventsMap]);
+
+  // ── Site Management ────────────────────────────────────────
 
   // Add a new site with credential validation
   const addSite = useCallback(async ({ url, username, appPassword }) => {
@@ -126,7 +186,13 @@ export function AuthProvider({ children }) {
       setActiveSiteId(newActive);
       await storeSet(ACTIVE_SITE_KEY, newActive);
     }
-  }, [sites, activeSiteId, persistSites]);
+
+    // Clean up events map
+    const newMap = { ...activeEventsMap };
+    delete newMap[siteId];
+    setActiveEventsMap(newMap);
+    await storeSet(ACTIVE_EVENTS_KEY, newMap);
+  }, [sites, activeSiteId, persistSites, activeEventsMap]);
 
   // Switch active site
   const switchSite = useCallback(async (siteId) => {
@@ -160,6 +226,13 @@ export function AuthProvider({ children }) {
         removeSite,
         switchSite,
         updateSiteModules,
+        // Event context
+        events,
+        eventsLoading,
+        activeEventId,
+        activeEvent,
+        setActiveEvent,
+        fetchEvents,
       }}
     >
       {children}

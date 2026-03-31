@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import * as Icons from 'lucide-react';
 import { MODULES } from '../api/endpoints';
 import { useAuth } from '../auth/AuthContext';
+import EventSelector from './EventSelector';
 
 export default function TileGrid() {
   const navigate = useNavigate();
@@ -16,7 +17,7 @@ export default function TileGrid() {
   return (
     <div className="p-4 pb-8">
       {/* Welcome header */}
-      <div className="mb-6 mt-2">
+      <div className="mb-4 mt-2">
         <h2 className="text-xl font-bold text-gray-100 tracking-tight">
           {activeSite.name}
         </h2>
@@ -25,7 +26,10 @@ export default function TileGrid() {
         </p>
       </div>
 
-      {/* Quick stats row — placeholder for future */}
+      {/* Event Selector */}
+      <div className="mb-5">
+        <EventSelector />
+      </div>
 
       {/* Module Grid */}
       <div className="grid grid-cols-2 gap-3">

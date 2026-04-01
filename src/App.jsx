@@ -2,7 +2,8 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './auth/AuthContext';
 import Layout from './components/Layout';
 import WelcomePage from './auth/WelcomePage';
-import TileGrid from './components/TileGrid';
+import HomePage from './components/HomePage';
+import SiteDashboard from './components/SiteDashboard';
 import SettingsPage from './components/SettingsPage';
 import SearchPage from './components/SearchPage';
 import FavoritesPage from './components/FavoritesPage';
@@ -42,7 +43,8 @@ function AppRoutes() {
   return (
     <Routes>
       <Route element={<Layout />}>
-        <Route path="/" element={<TileGrid />} />
+        <Route path="/" element={<HomePage />} />
+        <Route path="/site/:siteId" element={<SiteDashboard />} />
 
         {/* Artists */}
         <Route path="/artists" element={<ArtistList />} />

@@ -5,13 +5,13 @@ import SiteSwitcher from '../sites/SiteSwitcher';
 import { useState } from 'react';
 
 // Bottom nav items — custom icons from /public/icons/
-// Dark variants (white) for the dark nav bar
+// Light variants (white fill) for the dark nav bar
 const NAV_ITEMS = [
-  { key: '/',          icon: '/icons/VC-WebApp-Logo-Purp-dark.svg', label: 'Home' },
-  { key: '/search',    icon: '/icons/search-dark.svg',              label: 'Search' },
-  { key: '/add-site',  icon: '/icons/add-outline-dark.svg',         label: 'Add Site' },
-  { key: '/favorites', icon: '/icons/favorite-dark.svg',            label: 'Favorites' },
-  { key: '/settings',  icon: '/icons/settings-dark.svg',            label: 'Settings' },
+  { key: '/',          icon: '/icons/VC-WebApp-Logo-Purp-lt.svg', label: 'Home' },
+  { key: '/search',    icon: '/icons/search-lt.svg',              label: 'Search' },
+  { key: '/add-site',  icon: '/icons/add-outline-lt.svg',         label: 'Add Site' },
+  { key: '/favorites', icon: '/icons/favorite-lt.svg',            label: 'Favorites' },
+  { key: '/settings',  icon: '/icons/settings-lt.svg',            label: 'Settings' },
 ];
 
 export default function Layout() {
@@ -32,7 +32,7 @@ export default function Layout() {
   const isNestedPage = !isHome && !NAV_ITEMS.some(item => item.key === location.pathname);
 
   return (
-    <>
+    <div className="flex flex-col h-full min-h-0">
       {/* Top Bar */}
       <header className="shrink-0 flex items-center justify-between px-4 h-14 border-b border-white/10 bg-white/80 backdrop-blur-sm z-50">
         <div className="flex items-center gap-2">
@@ -137,6 +137,6 @@ export default function Layout() {
       {showSiteSwitcher && (
         <SiteSwitcher onClose={() => setShowSiteSwitcher(false)} />
       )}
-    </>
+    </div>
   );
 }

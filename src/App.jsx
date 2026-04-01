@@ -4,6 +4,8 @@ import Layout from './components/Layout';
 import WelcomePage from './auth/WelcomePage';
 import TileGrid from './components/TileGrid';
 import SettingsPage from './components/SettingsPage';
+import SearchPage from './components/SearchPage';
+import FavoritesPage from './components/FavoritesPage';
 import AddSitePage from './sites/AddSitePage';
 
 // Modules
@@ -68,7 +70,9 @@ function AppRoutes() {
         <Route path="/genres" element={<GenreList />} />
         <Route path="/stages" element={<StageList />} />
 
-        {/* Settings */}
+        {/* Nav routes */}
+        <Route path="/search" element={<SearchPage />} />
+        <Route path="/favorites" element={<FavoritesPage />} />
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/add-site" element={<AddSitePage />} />
 

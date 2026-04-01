@@ -135,7 +135,7 @@ export function AuthProvider({ children }) {
   // ── Site Management ────────────────────────────────────────
 
   // Add a new site with credential validation
-  const addSite = useCallback(async ({ url, username, appPassword }) => {
+  const addSite = useCallback(async ({ url, username, appPassword, registrySlug }) => {
     setError(null);
 
     // Normalize URL
@@ -154,6 +154,22 @@ export function AuthProvider({ children }) {
       const { data: siteInfo } = await client.get('');
       const siteName = siteInfo?.name || new URL(siteUrl).hostname;
 
+      // Pull registry metadata if connected via site picker
+      let registryMeta = {};
+      if (registrySlug) {
+        const { getRegistrySite } = await import('../config/siteRegistry');
+        const reg = getRegistrySite(registrySlug);
+        if (reg) {
+          registryMeta = {
+            registrySlug: reg.slug,
+            logo: reg.logo,
+            modules: reg.modules,
+            category: reg.category,
+            sponsorshipPath: reg.sponsorshipPath || null,
+          };
+        }
+      }
+
       const newSite = {
         id: crypto.randomUUID(),
         url: siteUrl,
@@ -166,7 +182,8 @@ export function AuthProvider({ children }) {
           email: user.email,
           roles: user.roles,
         },
-        modules: null, // null = all modules visible
+        modules: registryMeta.modules || null,
+        ...registryMeta,
       };
 
       const updated = [...sites, newSite];

@@ -56,8 +56,12 @@ export default function SiteSwitcher({ onClose }) {
               onClick={() => handleSwitch(site.id)}
               className="w-full flex items-center gap-3 p-4 hover:bg-surface-1 transition-colors text-left group"
             >
-              <div className="w-9 h-9 rounded-xl bg-vc-100 flex items-center justify-center shrink-0">
-                <Globe className="w-4 h-4 text-vc-600" />
+              <div className="w-9 h-9 rounded-xl bg-surface-2 overflow-hidden flex items-center justify-center shrink-0">
+                {site.logo ? (
+                  <img src={site.logo} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  <Globe className="w-4 h-4 text-vc-600" />
+                )}
               </div>
               <div className="flex-1 min-w-0">
                 <div className="text-sm font-medium text-gray-800 truncate">

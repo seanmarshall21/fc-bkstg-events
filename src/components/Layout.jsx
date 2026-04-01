@@ -49,8 +49,12 @@ export default function Layout() {
               onClick={() => setShowSiteSwitcher(true)}
               className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-surface-2 transition-colors group"
             >
-              <div className="w-8 h-8 rounded-xl overflow-hidden bg-vc-950 flex items-center justify-center shadow-sm">
-                <img src="/icons/icon-192.png" alt="" className="w-full h-full object-cover" />
+              <div className="w-8 h-8 rounded-xl overflow-hidden bg-surface-2 flex items-center justify-center shadow-sm">
+                {activeSite?.logo ? (
+                  <img src={activeSite.logo} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  <img src="/icons/icon-192.png" alt="" className="w-full h-full object-cover" />
+                )}
               </div>
               <div className="flex flex-col items-start">
                 <span className="text-sm font-semibold text-gray-900 max-w-[180px] truncate leading-tight">

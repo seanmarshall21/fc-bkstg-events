@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthContext';
 import { WP_ENDPOINTS } from '../../api/endpoints';
 import ContentList from '../../components/ui/ContentList';
-import { Calendar } from 'lucide-react';
 import { decodeHtml } from '../../utils/helpers';
 
 export default function EventList() {
@@ -54,7 +53,7 @@ export default function EventList() {
       renderItem={(ev) => (
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-lg bg-orange-100 flex items-center justify-center shrink-0">
-            <Calendar className="w-4 h-4 text-orange-600" />
+            <img src="/icons/starglobe-dark.svg" alt="" className="w-4 h-4" />
           </div>
           <div className="flex-1 min-w-0">
             <span className="text-sm font-medium text-gray-800 truncate block">

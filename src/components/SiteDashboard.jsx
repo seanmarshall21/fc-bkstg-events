@@ -71,7 +71,7 @@ export default function SiteDashboard() {
       {/* Module Grid */}
       <div className="grid grid-cols-2 gap-3">
         {enabledModules.map((mod) => {
-          const Icon = Icons[mod.icon] || Icons.Folder;
+          const LucideIcon = Icons[mod.icon] || Icons.Folder;
           const colors = MODULE_COLORS[mod.key] || MODULE_COLORS.artists;
 
           return (
@@ -81,7 +81,11 @@ export default function SiteDashboard() {
               className="vc-tile group"
             >
               <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-3 ${colors.iconBg}`}>
-                <Icon className="w-5 h-5 text-white" />
+                {mod.svgIcon ? (
+                  <img src={mod.svgIcon} alt="" className="w-5 h-5" />
+                ) : (
+                  <LucideIcon className="w-5 h-5 text-white" />
+                )}
               </div>
               <span className="text-sm font-semibold text-gray-800 group-hover:text-gray-900 transition-colors">
                 {mod.label}
@@ -89,7 +93,7 @@ export default function SiteDashboard() {
               <span className="text-[11px] text-gray-400 mt-0.5 text-left leading-snug line-clamp-2">
                 {mod.description}
               </span>
-              <Icons.ChevronRight className="absolute top-4 right-3 w-4 h-4 text-gray-300 group-hover:text-gray-500 transition-colors" />
+              <img src="/icons/arrows/arrow-rt-dark.svg" alt="" className="absolute top-4 right-3 w-4 h-4 opacity-30 group-hover:opacity-60 transition-opacity" />
             </button>
           );
         })}

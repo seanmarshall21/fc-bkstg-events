@@ -10,6 +10,13 @@ const MODULE_ICONS = {
   lineup: ListMusic,
 };
 
+const MODULE_SVG_ICONS = {
+  artists:  '/icons/aster-dark.svg',
+  lineup:   '/icons/sound-dark.svg',
+  events:   '/icons/starglobe-dark.svg',
+  styles:   '/icons/sun-dark.svg',
+};
+
 const MODULE_COLORS = {
   artists:  'bg-blue-100 text-blue-600',
   sponsors: 'bg-emerald-100 text-emerald-600',
@@ -26,7 +33,7 @@ export default function FavoritesPage() {
     return (
       <div className="p-6 text-center py-20 animate-fade-in">
         <div className="w-14 h-14 mx-auto mb-4 rounded-2xl bg-surface-2 flex items-center justify-center">
-          <Star className="w-7 h-7 text-gray-300" />
+          <img src="/icons/favorite-dark.svg" alt="" className="w-7 h-7 opacity-30" />
         </div>
         <h2 className="text-lg font-semibold text-gray-900">Favorites</h2>
         <p className="text-sm text-gray-500 mt-2 max-w-[260px] mx-auto leading-relaxed">
@@ -48,7 +55,7 @@ export default function FavoritesPage() {
     return (
       <div className="p-6 text-center py-20 animate-fade-in">
         <div className="w-14 h-14 mx-auto mb-4 rounded-2xl bg-surface-2 flex items-center justify-center">
-          <Star className="w-7 h-7 text-gray-300" />
+          <img src="/icons/favorite-dark.svg" alt="" className="w-7 h-7 opacity-30" />
         </div>
         <h2 className="text-lg font-semibold text-gray-900">No Favorites Yet</h2>
         <p className="text-sm text-gray-500 mt-2 max-w-[260px] mx-auto leading-relaxed">
@@ -80,7 +87,8 @@ export default function FavoritesPage() {
       </div>
 
       {Object.entries(grouped).map(([module, items]) => {
-        const Icon = MODULE_ICONS[module] || Star;
+        const LucideIcon = MODULE_ICONS[module] || Star;
+        const svgIcon = MODULE_SVG_ICONS[module];
         const colorClass = MODULE_COLORS[module] || 'bg-gray-100 text-gray-600';
 
         return (
@@ -99,7 +107,11 @@ export default function FavoritesPage() {
                     className="flex items-center gap-3 flex-1 min-w-0 text-left"
                   >
                     <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${colorClass}`}>
-                      <Icon className="w-4 h-4" />
+                      {svgIcon ? (
+                        <img src={svgIcon} alt="" className="w-4 h-4" />
+                      ) : (
+                        <LucideIcon className="w-4 h-4" />
+                      )}
                     </div>
                     <div className="flex-1 min-w-0">
                       <span className="text-sm font-medium text-gray-800 truncate block">

@@ -23,6 +23,8 @@ import StylesView from './modules/styles/StylesView';
 import ConfidentialView from './modules/confidential/ConfidentialView';
 import GenreList from './modules/genres/GenreList';
 import StageList from './modules/stages/StageList';
+import ContestantList from './modules/contestants/ContestantList';
+import ContestantDetail from './modules/contestants/ContestantDetail';
 
 function AppRoutes() {
   const { loading, hasSeenWelcome, dismissWelcome, sites } = useAuth();
@@ -68,6 +70,10 @@ function AppRoutes() {
 
         {/* Confidentiality */}
         <Route path="/confidential" element={<ConfidentialView />} />
+
+        {/* Contestants (rodeo) */}
+        <Route path="/contestants" element={<ContestantList />} />
+        <Route path="/contestants/:id" element={<ContestantDetail />} />
 
         {/* Taxonomies */}
         <Route path="/genres" element={<GenreList />} />

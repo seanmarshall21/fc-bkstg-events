@@ -106,7 +106,7 @@ export default function Layout() {
       </main>
 
       {/* Bottom Navigation — dark bar with custom icons */}
-      <nav className="shrink-0 flex items-center justify-around px-2 h-16 bg-vc-950 z-50 pb-safe">
+      <nav className="shrink-0 flex items-center justify-around px-1 h-16 bg-vc-950 z-50 pb-safe">
         {NAV_ITEMS.map((item) => {
           const isActive = activeNav === item.key;
 
@@ -114,21 +114,25 @@ export default function Layout() {
             <button
               key={item.key}
               onClick={() => navigate(item.key)}
-              className={`flex flex-col items-center justify-center gap-1 py-1.5 px-4 rounded-xl transition-all duration-150 ${
+              className={`relative flex flex-col items-center justify-center gap-0.5 py-1.5 px-3 rounded-2xl transition-all duration-200 ${
                 isActive
-                  ? 'opacity-100'
-                  : 'opacity-60 hover:opacity-80'
+                  ? 'bg-white/10'
+                  : 'opacity-50 hover:opacity-75 active:opacity-90'
               }`}
             >
-              <img
-                src={item.icon}
-                alt=""
-                className="w-6 h-6"
-              />
-              <span className="text-[10px] font-medium text-white">{item.label}</span>
-              {isActive && (
-                <div className="w-1 h-1 rounded-full bg-vc-400 -mt-0.5" />
-              )}
+              <div className="relative">
+                <img
+                  src={item.icon}
+                  alt=""
+                  className={`w-6 h-6 transition-transform duration-200 ${isActive ? 'scale-110' : ''}`}
+                />
+                {isActive && (
+                  <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-4 h-0.5 rounded-full bg-vc-400" />
+                )}
+              </div>
+              <span className={`text-[10px] font-medium mt-1 transition-colors duration-200 ${
+                isActive ? 'text-white' : 'text-white/80'
+              }`}>{item.label}</span>
             </button>
           );
         })}

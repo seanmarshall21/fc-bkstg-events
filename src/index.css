@@ -7,11 +7,11 @@
     --vc-radius: 12px;
     --vc-radius-sm: 8px;
     --vc-transition: 200ms cubic-bezier(0.4, 0, 0.2, 1);
-    color-scheme: dark;
+    color-scheme: light;
   }
 
   body {
-    @apply bg-surface-dark-0 text-gray-100 antialiased;
+    @apply bg-surface-0 text-gray-900 antialiased;
     margin: 0;
     -webkit-tap-highlight-color: transparent;
     overscroll-behavior: none;
@@ -36,30 +36,26 @@
   /* ── Tiles ─────────────────────────────────────────── */
   .vc-tile {
     @apply relative flex flex-col items-start justify-end
-           rounded-xl p-4 overflow-hidden
+           rounded-2xl p-4 overflow-hidden
            transition-all duration-200 ease-out
            active:scale-[0.97] cursor-pointer
-           bg-surface-dark-1 border border-surface-dark-3
-           hover:border-vc-600/60 hover:bg-surface-dark-2;
-    min-height: 140px;
-  }
-
-  .vc-tile--accent {
-    @apply border-vc-700/50 bg-gradient-to-br from-surface-dark-1 to-vc-950/30;
+           bg-white border border-surface-3
+           shadow-sm hover:shadow-md;
+    min-height: 120px;
   }
 
   /* ── Cards ─────────────────────────────────────────── */
   .vc-card {
-    @apply bg-surface-dark-1 border border-surface-dark-3 rounded-xl p-4
-           transition-all duration-150;
+    @apply bg-white border border-surface-3 rounded-2xl p-4
+           transition-all duration-150 shadow-sm;
   }
 
   /* ── Inputs ────────────────────────────────────────── */
   .vc-input {
-    @apply w-full bg-surface-dark-2 border border-surface-dark-4 rounded-xl
-           px-3.5 py-3 text-gray-100 text-sm
-           placeholder:text-gray-600
-           focus:outline-none focus:border-vc-500 focus:ring-1 focus:ring-vc-500/30
+    @apply w-full bg-surface-1 border border-surface-3 rounded-xl
+           px-3.5 py-3 text-gray-900 text-sm
+           placeholder:text-gray-400
+           focus:outline-none focus:border-vc-500 focus:ring-2 focus:ring-vc-500/20
            transition-colors duration-150;
   }
 
@@ -73,17 +69,21 @@
   }
 
   .vc-btn--primary {
-    @apply bg-vc-600 text-white hover:bg-vc-500 shadow-lg shadow-vc-600/20;
+    @apply bg-vc-700 text-white hover:bg-vc-600 shadow-lg shadow-vc-700/20;
   }
 
   .vc-btn--secondary {
-    @apply bg-surface-dark-2 text-gray-300 border border-surface-dark-4
-           hover:bg-surface-dark-3 hover:text-gray-100;
+    @apply bg-surface-2 text-gray-600 border border-surface-3
+           hover:bg-surface-3 hover:text-gray-900;
   }
 
   .vc-btn--danger {
-    @apply bg-red-900/40 text-red-300 border border-red-800/50
-           hover:bg-red-900/60;
+    @apply bg-red-50 text-red-600 border border-red-200
+           hover:bg-red-100;
+  }
+
+  .vc-btn--ghost {
+    @apply bg-transparent text-gray-500 hover:bg-surface-2 hover:text-gray-700;
   }
 
   /* ── Badges ────────────────────────────────────────── */
@@ -91,11 +91,12 @@
     @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium;
   }
 
-  .vc-badge--blue { @apply bg-vc-900/50 text-vc-300; }
-  .vc-badge--green { @apply bg-emerald-900/50 text-emerald-300; }
-  .vc-badge--amber { @apply bg-amber-900/50 text-amber-300; }
-  .vc-badge--red { @apply bg-red-900/50 text-red-300; }
-  .vc-badge--gray { @apply bg-surface-dark-3 text-gray-400; }
+  .vc-badge--green { @apply bg-emerald-50 text-emerald-700 border border-emerald-200; }
+  .vc-badge--amber { @apply bg-amber-50 text-amber-700 border border-amber-200; }
+  .vc-badge--red { @apply bg-red-50 text-red-700 border border-red-200; }
+  .vc-badge--blue { @apply bg-vc-50 text-vc-700 border border-vc-200; }
+  .vc-badge--gray { @apply bg-gray-100 text-gray-500 border border-gray-200; }
+  .vc-badge--purple { @apply bg-purple-50 text-purple-700 border border-purple-200; }
 
   /* ── Scrollable ────────────────────────────────────── */
   .vc-scroll {
@@ -105,16 +106,14 @@
 
   .vc-scroll::-webkit-scrollbar { width: 4px; }
   .vc-scroll::-webkit-scrollbar-track { background: transparent; }
-  .vc-scroll::-webkit-scrollbar-thumb { @apply bg-surface-dark-4 rounded-full; }
+  .vc-scroll::-webkit-scrollbar-thumb { @apply bg-surface-4 rounded-full; }
 }
 
 @layer utilities {
-  /* Safe area padding for bottom nav on notched devices */
   .pb-safe {
     padding-bottom: env(safe-area-inset-bottom, 0px);
   }
 
-  /* Line clamping */
   .line-clamp-2 {
     display: -webkit-box;
     -webkit-line-clamp: 2;
@@ -132,4 +131,22 @@
 
 .animate-shake {
   animation: shake 0.4s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(100%); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-slide-up {
+  animation: slideUp 0.3s ease-out;
 }

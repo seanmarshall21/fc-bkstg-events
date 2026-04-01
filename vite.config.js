@@ -12,8 +12,8 @@ export default defineConfig({
         name: 'VC Event Manager',
         short_name: 'VC Events',
         description: 'Manage event content across multiple sites',
-        theme_color: '#4263eb',
-        background_color: '#1a1b1e',
+        theme_color: '#6b21e8',
+        background_color: '#ffffff',
         display: 'standalone',
         orientation: 'any',
         start_url: '/',
@@ -38,6 +38,10 @@ export default defineConfig({
       },
     }),
   ],
+  build: {
+    outDir: 'build',
+    emptyOutDir: true,
+  },
   server: {
     port: 3000,
   },

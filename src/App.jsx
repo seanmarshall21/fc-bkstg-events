@@ -1,7 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './auth/AuthContext';
-import LoginScreen from './auth/LoginScreen';
 import Layout from './components/Layout';
+import WelcomePage from './auth/WelcomePage';
 import TileGrid from './components/TileGrid';
 import SettingsPage from './components/SettingsPage';
 import AddSitePage from './sites/AddSitePage';
@@ -21,20 +21,22 @@ import GenreList from './modules/genres/GenreList';
 import StageList from './modules/stages/StageList';
 
 function AppRoutes() {
-  const { isAuthenticated, loading } = useAuth();
+  const { loading, hasSeenWelcome, dismissWelcome, sites } = useAuth();
 
   if (loading) {
     return (
-      <div className="flex-1 flex items-center justify-center">
+      <div className="flex-1 flex items-center justify-center bg-surface-0">
         <div className="w-8 h-8 border-2 border-vc-600 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
 
-  if (!isAuthenticated) {
-    return <LoginScreen />;
+  // Show welcome/onboarding on first visit (no sites connected, hasn't dismissed)
+  if (!hasSeenWelcome && sites.length === 0) {
+    return <WelcomePage onDismiss={dismissWelcome} />;
   }
 
+  // Always show app shell — no auth wall. Homepage is sparse when no sites connected.
   return (
     <Routes>
       <Route element={<Layout />}>

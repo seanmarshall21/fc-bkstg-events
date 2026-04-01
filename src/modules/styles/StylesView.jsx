@@ -5,7 +5,7 @@ import EventSelector from '../../components/EventSelector';
 import { Loader2, Palette, RefreshCw } from 'lucide-react';
 
 export default function StylesView() {
-  const { getClient, activeEventId } = useAuth();
+  const { getClient, activeEventId, hasSites } = useAuth();
   const [styles, setStyles] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -27,29 +27,36 @@ export default function StylesView() {
 
   useEffect(() => { fetchStyles(); }, [fetchStyles]);
 
+  if (!hasSites) {
+    return (
+      <div className="p-6 text-center py-20">
+        <p className="text-sm text-gray-400">Connect a site to view event styles.</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="p-4 pb-8">
+    <div className="p-4 pb-8 animate-fade-in">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-semibold text-gray-100">Event Styles</h2>
-        <button onClick={fetchStyles} disabled={loading} className="vc-btn vc-btn--secondary !px-2.5">
+        <h2 className="text-lg font-semibold text-gray-900">Event Styles</h2>
+        <button onClick={fetchStyles} disabled={loading} className="vc-btn vc-btn--ghost !px-2.5">
           <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
         </button>
       </div>
 
-      {/* Event context */}
       <div className="mb-4">
         <EventSelector />
       </div>
 
       {!activeEventId && (
-        <div className="text-center py-20 text-gray-500 text-sm">
+        <div className="text-center py-20 text-gray-400 text-sm">
           Select an event to view styles.
         </div>
       )}
 
       {activeEventId && loading && (
         <div className="flex items-center justify-center py-20">
-          <Loader2 className="w-6 h-6 animate-spin text-gray-500" />
+          <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
         </div>
       )}
 
@@ -58,21 +65,21 @@ export default function StylesView() {
           {/* Color Properties */}
           {styles.properties && (
             <div className="vc-card">
-              <h3 className="text-sm font-medium text-gray-300 mb-3">CSS Properties</h3>
+              <h3 className="text-sm font-medium text-gray-700 mb-3">CSS Properties</h3>
               <div className="grid grid-cols-2 gap-2">
                 {Object.entries(styles.properties).map(([key, val]) => (
                   <div key={key} className="flex items-center gap-2 text-xs">
                     {val.startsWith('#') || val.startsWith('rgb') ? (
                       <div
-                        className="w-5 h-5 rounded border border-surface-dark-4 shrink-0"
+                        className="w-5 h-5 rounded border border-surface-3 shrink-0"
                         style={{ backgroundColor: val }}
                       />
                     ) : (
-                      <Palette className="w-4 h-4 text-gray-600 shrink-0" />
+                      <Palette className="w-4 h-4 text-gray-400 shrink-0" />
                     )}
                     <div className="min-w-0">
-                      <div className="text-gray-400 truncate">{key}</div>
-                      <div className="text-gray-600 truncate">{val}</div>
+                      <div className="text-gray-600 truncate">{key}</div>
+                      <div className="text-gray-400 truncate">{val}</div>
                     </div>
                   </div>
                 ))}
@@ -83,12 +90,12 @@ export default function StylesView() {
           {/* Logos */}
           {styles.logos && (
             <div className="vc-card">
-              <h3 className="text-sm font-medium text-gray-300 mb-3">Logos</h3>
+              <h3 className="text-sm font-medium text-gray-700 mb-3">Logos</h3>
               <div className="grid grid-cols-2 gap-3">
                 {Object.entries(styles.logos).map(([key, url]) => (
                   url && (
                     <div key={key} className="space-y-1">
-                      <span className="text-xs text-gray-500">{key}</span>
+                      <span className="text-xs text-gray-400">{key}</span>
                       <img src={url} alt={key} className="h-16 object-contain" />
                     </div>
                   )
@@ -100,12 +107,12 @@ export default function StylesView() {
           {/* Textures */}
           {styles.textures && (
             <div className="vc-card">
-              <h3 className="text-sm font-medium text-gray-300 mb-3">Textures</h3>
+              <h3 className="text-sm font-medium text-gray-700 mb-3">Textures</h3>
               <div className="grid grid-cols-2 gap-3">
                 {Object.entries(styles.textures).map(([key, url]) => (
                   url && (
                     <div key={key} className="space-y-1">
-                      <span className="text-xs text-gray-500">{key}</span>
+                      <span className="text-xs text-gray-400">{key}</span>
                       <img src={url} alt={key} className="h-20 object-cover rounded-lg" />
                     </div>
                   )
@@ -117,7 +124,7 @@ export default function StylesView() {
       )}
 
       {activeEventId && !loading && !styles && (
-        <div className="text-center py-20 text-gray-500 text-sm">
+        <div className="text-center py-20 text-gray-400 text-sm">
           No style data available for this event
         </div>
       )}

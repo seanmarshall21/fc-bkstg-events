@@ -41,10 +41,7 @@ export default function ArtistDetail() {
     if (!client) return;
     setLoading(true);
     try {
-      // Fetch from custom endpoint for rich data
       const { data } = await client.get(VC_ENDPOINTS.artists.single(id));
-
-      // Also fetch WP post for ACF field values
       const { data: wpPost } = await client.get(
         WP_ENDPOINTS.artists.single(id),
         { context: 'edit' }
@@ -53,7 +50,6 @@ export default function ArtistDetail() {
       setArtist({
         ...data,
         _wp: wpPost,
-        // Map ACF fields for editing
         title: wpPost.title?.raw || data.name,
         vc_artist_bio: data.bio || '',
         vc_artist_origin: data.origin || '',
@@ -80,12 +76,6 @@ export default function ArtistDetail() {
     if (!client) return;
     setSaving(true);
     try {
-      // Update post title
-      const postUpdate = {
-        title: values.title,
-      };
-
-      // Update ACF fields
       const acfFields = {
         vc_artist_bio: values.vc_artist_bio,
         vc_artist_origin: values.vc_artist_origin,
@@ -97,11 +87,10 @@ export default function ArtistDetail() {
       };
 
       await client.post(WP_ENDPOINTS.artists.single(id), {
-        ...postUpdate,
+        title: values.title,
         acf: acfFields,
       });
 
-      // Refresh data
       await fetchArtist();
     } finally {
       setSaving(false);
@@ -111,14 +100,14 @@ export default function ArtistDetail() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <Loader2 className="w-6 h-6 animate-spin text-gray-500" />
+        <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
       </div>
     );
   }
 
   if (!artist) {
     return (
-      <div className="p-4 text-center text-gray-500">
+      <div className="p-4 text-center text-gray-400">
         Artist not found
       </div>
     );

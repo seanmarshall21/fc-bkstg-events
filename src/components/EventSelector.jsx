@@ -5,7 +5,6 @@ import { useState, useRef, useEffect } from 'react';
 /**
  * Dropdown selector for the active event property.
  * Persisted per-site via AuthContext.
- * Shows inline on the dashboard, scopes data across all modules.
  */
 export default function EventSelector() {
   const { events, eventsLoading, activeEventId, activeEvent, setActiveEvent } = useAuth();
@@ -26,12 +25,11 @@ export default function EventSelector() {
     };
   }, [open]);
 
-  // Don't render if no events or only one event
   if (eventsLoading) {
     return (
-      <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-surface-dark-1 border border-surface-dark-3">
-        <Loader2 className="w-4 h-4 text-gray-500 animate-spin" />
-        <span className="text-sm text-gray-500">Loading events...</span>
+      <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-surface-1 border border-surface-3">
+        <Loader2 className="w-4 h-4 text-gray-400 animate-spin" />
+        <span className="text-sm text-gray-400">Loading events...</span>
       </div>
     );
   }
@@ -42,13 +40,13 @@ export default function EventSelector() {
   if (events.length === 1) {
     const ev = events[0];
     return (
-      <div className="flex items-center gap-2.5 px-3 py-2 rounded-xl bg-surface-dark-1 border border-surface-dark-3">
-        <div className="w-8 h-8 rounded-lg bg-amber-900/30 flex items-center justify-center shrink-0">
-          <Calendar className="w-4 h-4 text-amber-400" />
+      <div className="flex items-center gap-2.5 px-3 py-2 rounded-xl bg-surface-1 border border-surface-3">
+        <div className="w-8 h-8 rounded-lg bg-orange-100 flex items-center justify-center shrink-0">
+          <Calendar className="w-4 h-4 text-orange-600" />
         </div>
         <div className="min-w-0">
-          <div className="text-xs text-gray-500 leading-none">Active Event</div>
-          <div className="text-sm font-medium text-gray-200 truncate">
+          <div className="text-xs text-gray-400 leading-none">Active Event</div>
+          <div className="text-sm font-medium text-gray-800 truncate">
             {ev.title?.rendered || ev.title}
           </div>
         </div>
@@ -65,23 +63,22 @@ export default function EventSelector() {
     <div ref={ref} className="relative">
       <button
         onClick={() => setOpen(!open)}
-        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl bg-surface-dark-1 border border-surface-dark-3 hover:border-vc-600/50 transition-colors"
+        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl bg-surface-1 border border-surface-3 hover:border-vc-400 transition-colors"
       >
-        <div className="w-8 h-8 rounded-lg bg-amber-900/30 flex items-center justify-center shrink-0">
-          <Calendar className="w-4 h-4 text-amber-400" />
+        <div className="w-8 h-8 rounded-lg bg-orange-100 flex items-center justify-center shrink-0">
+          <Calendar className="w-4 h-4 text-orange-600" />
         </div>
         <div className="flex-1 min-w-0 text-left">
-          <div className="text-xs text-gray-500 leading-none">Active Event</div>
-          <div className="text-sm font-medium text-gray-200 truncate">
+          <div className="text-xs text-gray-400 leading-none">Active Event</div>
+          <div className="text-sm font-medium text-gray-800 truncate">
             {eventTitle}
           </div>
         </div>
-        <ChevronDown className={`w-4 h-4 text-gray-500 transition-transform ${open ? 'rotate-180' : ''}`} />
+        <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
 
-      {/* Dropdown */}
       {open && (
-        <div className="absolute left-0 right-0 top-full mt-1 z-50 bg-surface-dark-1 border border-surface-dark-3 rounded-xl overflow-hidden shadow-xl shadow-black/30">
+        <div className="absolute left-0 right-0 top-full mt-1 z-50 bg-white border border-surface-3 rounded-xl overflow-hidden shadow-xl shadow-black/10">
           {events.map((ev) => {
             const title = ev.title?.rendered || ev.title;
             const isActive = ev.id === activeEventId;
@@ -95,14 +92,14 @@ export default function EventSelector() {
                 }}
                 className={`w-full flex items-center gap-3 px-3 py-2.5 text-left transition-colors ${
                   isActive
-                    ? 'bg-vc-600/10 text-vc-300'
-                    : 'hover:bg-surface-dark-2 text-gray-300'
+                    ? 'bg-vc-50 text-vc-700'
+                    : 'hover:bg-surface-1 text-gray-700'
                 }`}
               >
-                <Calendar className={`w-4 h-4 shrink-0 ${isActive ? 'text-vc-400' : 'text-gray-600'}`} />
+                <Calendar className={`w-4 h-4 shrink-0 ${isActive ? 'text-vc-600' : 'text-gray-400'}`} />
                 <span className="text-sm font-medium truncate">{title}</span>
                 {isActive && (
-                  <div className="ml-auto w-1.5 h-1.5 rounded-full bg-vc-400 shrink-0" />
+                  <div className="ml-auto w-1.5 h-1.5 rounded-full bg-vc-600 shrink-0" />
                 )}
               </button>
             );

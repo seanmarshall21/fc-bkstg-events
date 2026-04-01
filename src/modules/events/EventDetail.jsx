@@ -71,8 +71,8 @@ export default function EventDetail() {
     }
   };
 
-  if (loading) return <div className="flex items-center justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-gray-500" /></div>;
-  if (!event) return <div className="p-4 text-center text-gray-500">Event not found</div>;
+  if (loading) return <div className="flex items-center justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-gray-400" /></div>;
+  if (!event) return <div className="p-4 text-center text-gray-400">Event not found</div>;
 
   return (
     <FieldEditor

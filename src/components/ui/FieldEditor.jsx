@@ -15,7 +15,7 @@ export default function FieldEditor({
   saving = false,
 }) {
   const [values, setValues] = useState(initialValues);
-  const [saveStatus, setSaveStatus] = useState(null); // null | 'success' | 'error'
+  const [saveStatus, setSaveStatus] = useState(null);
   const [saveMessage, setSaveMessage] = useState('');
 
   useEffect(() => {
@@ -43,12 +43,12 @@ export default function FieldEditor({
   const isDirty = JSON.stringify(values) !== JSON.stringify(initialValues);
 
   return (
-    <div className="p-4 pb-8">
+    <div className="p-4 pb-8 animate-fade-in">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-lg font-semibold text-gray-100">{title}</h2>
+        <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
         {onCancel && (
-          <button onClick={onCancel} className="vc-btn vc-btn--secondary !px-2.5">
+          <button onClick={onCancel} className="vc-btn vc-btn--ghost !px-2.5">
             <X className="w-4 h-4" />
           </button>
         )}
@@ -56,17 +56,17 @@ export default function FieldEditor({
 
       {/* Status Toast */}
       {saveStatus && (
-        <div className={`flex items-center gap-2 p-3 rounded-lg mb-4 ${
+        <div className={`flex items-center gap-2 p-3 rounded-xl mb-4 ${
           saveStatus === 'success'
-            ? 'bg-emerald-900/30 border border-emerald-800/50'
-            : 'bg-red-900/30 border border-red-800/50'
+            ? 'bg-emerald-50 border border-emerald-200'
+            : 'bg-red-50 border border-red-200'
         }`}>
           {saveStatus === 'success'
-            ? <CheckCircle className="w-4 h-4 text-emerald-400" />
-            : <AlertCircle className="w-4 h-4 text-red-400" />
+            ? <CheckCircle className="w-4 h-4 text-emerald-500" />
+            : <AlertCircle className="w-4 h-4 text-red-500" />
           }
           <span className={`text-sm ${
-            saveStatus === 'success' ? 'text-emerald-300' : 'text-red-300'
+            saveStatus === 'success' ? 'text-emerald-700' : 'text-red-700'
           }`}>{saveMessage}</span>
         </div>
       )}
@@ -82,7 +82,7 @@ export default function FieldEditor({
         ))}
 
         {/* Actions */}
-        <div className="flex items-center gap-3 pt-4 border-t border-surface-dark-3">
+        <div className="flex items-center gap-3 pt-4 border-t border-surface-3">
           <button
             type="submit"
             disabled={saving || !isDirty}
@@ -117,7 +117,7 @@ function FieldRenderer({ field, value, onChange }) {
     case 'textarea':
       return (
         <div>
-          <label className="block text-xs text-gray-500 mb-1.5">{label}</label>
+          <label className="block text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wider">{label}</label>
           <textarea
             className="vc-input resize-none"
             rows={rows}
@@ -131,7 +131,7 @@ function FieldRenderer({ field, value, onChange }) {
     case 'select':
       return (
         <div>
-          <label className="block text-xs text-gray-500 mb-1.5">{label}</label>
+          <label className="block text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wider">{label}</label>
           <select
             className="vc-input"
             value={value}
@@ -150,15 +150,15 @@ function FieldRenderer({ field, value, onChange }) {
     case 'toggle':
       return (
         <div className="flex items-center justify-between py-1">
-          <label className="text-sm text-gray-300">{label}</label>
+          <label className="text-sm text-gray-700">{label}</label>
           <button
             type="button"
             onClick={() => onChange(!value)}
             className={`relative w-10 h-5.5 rounded-full transition-colors ${
-              value ? 'bg-vc-600' : 'bg-surface-dark-4'
+              value ? 'bg-vc-600' : 'bg-surface-4'
             }`}
           >
-            <span className={`absolute top-0.5 w-4.5 h-4.5 rounded-full bg-white transition-transform ${
+            <span className={`absolute top-0.5 w-4.5 h-4.5 rounded-full bg-white shadow transition-transform ${
               value ? 'left-[22px]' : 'left-0.5'
             }`} />
           </button>
@@ -168,24 +168,24 @@ function FieldRenderer({ field, value, onChange }) {
     case 'image':
       return (
         <div>
-          <label className="block text-xs text-gray-500 mb-1.5">{label}</label>
+          <label className="block text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wider">{label}</label>
           {value ? (
             <div className="relative group">
               <img
                 src={typeof value === 'string' ? value : value.url}
                 alt=""
-                className="w-full h-40 object-cover rounded-lg"
+                className="w-full h-40 object-cover rounded-xl border border-surface-3"
               />
               <button
                 type="button"
                 onClick={() => onChange('')}
-                className="absolute top-2 right-2 p-1 rounded-md bg-black/60 text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                className="absolute top-2 right-2 p-1.5 rounded-lg bg-white/90 shadow text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity"
               >
-                <X className="w-3 h-3" />
+                <X className="w-3.5 h-3.5" />
               </button>
             </div>
           ) : (
-            <div className="flex items-center justify-center h-40 rounded-lg border-2 border-dashed border-surface-dark-4 text-gray-500 text-sm">
+            <div className="flex items-center justify-center h-40 rounded-xl border-2 border-dashed border-surface-4 text-gray-400 text-sm bg-surface-1">
               No image set
             </div>
           )}
@@ -195,13 +195,16 @@ function FieldRenderer({ field, value, onChange }) {
     case 'tags':
       return (
         <div>
-          <label className="block text-xs text-gray-500 mb-1.5">{label}</label>
+          <label className="block text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wider">{label}</label>
           <div className="flex flex-wrap gap-1.5">
             {(value || []).map((tag, i) => (
-              <span key={i} className="vc-badge vc-badge--blue">
+              <span key={i} className="vc-badge vc-badge--purple">
                 {typeof tag === 'object' ? tag.name : tag}
               </span>
             ))}
+            {(!value || value.length === 0) && (
+              <span className="text-xs text-gray-400">No tags assigned</span>
+            )}
           </div>
         </div>
       );
@@ -209,7 +212,7 @@ function FieldRenderer({ field, value, onChange }) {
     default:
       return (
         <div>
-          <label className="block text-xs text-gray-500 mb-1.5">{label}</label>
+          <label className="block text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wider">{label}</label>
           <input
             type={type}
             className="vc-input"

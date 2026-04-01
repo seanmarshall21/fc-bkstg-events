@@ -5,6 +5,8 @@ import { WP_ENDPOINTS } from '../api/endpoints';
 
 const AuthContext = createContext(null);
 
+const WELCOME_KEY = 'vc_seen_welcome';
+
 /**
  * Site shape stored in IndexedDB:
  * {
@@ -23,6 +25,7 @@ export function AuthProvider({ children }) {
   const [activeSiteId, setActiveSiteId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [hasSeenWelcome, setHasSeenWelcome] = useState(false);
 
   // Event state: { siteId: eventId } persisted map + loaded events list
   const [activeEventsMap, setActiveEventsMap] = useState({});
@@ -36,9 +39,14 @@ export function AuthProvider({ children }) {
         const saved = await storeGet(SITES_KEY);
         const activeId = await storeGet(ACTIVE_SITE_KEY);
         const eventsMap = await storeGet(ACTIVE_EVENTS_KEY);
+        const seenWelcome = await storeGet(WELCOME_KEY);
+
         if (saved && saved.length) {
           setSites(saved);
           setActiveSiteId(activeId || saved[0].id);
+          setHasSeenWelcome(true); // If they have sites, they've been through onboarding
+        } else {
+          setHasSeenWelcome(!!seenWelcome);
         }
         if (eventsMap) {
           setActiveEventsMap(eventsMap);
@@ -49,6 +57,12 @@ export function AuthProvider({ children }) {
         setLoading(false);
       }
     })();
+  }, []);
+
+  // Dismiss welcome screen (persists so it doesn't show again)
+  const dismissWelcome = useCallback(async () => {
+    setHasSeenWelcome(true);
+    await storeSet(WELCOME_KEY, true);
   }, []);
 
   // Persist sites whenever they change
@@ -164,6 +178,12 @@ export function AuthProvider({ children }) {
         await storeSet(ACTIVE_SITE_KEY, newSite.id);
       }
 
+      // Mark welcome as seen since they've connected a site
+      if (!hasSeenWelcome) {
+        setHasSeenWelcome(true);
+        await storeSet(WELCOME_KEY, true);
+      }
+
       return newSite;
     } catch (err) {
       const msg = err.status === 401 || err.status === 403
@@ -174,7 +194,7 @@ export function AuthProvider({ children }) {
       setError(msg);
       throw err;
     }
-  }, [sites, activeSiteId, persistSites]);
+  }, [sites, activeSiteId, persistSites, hasSeenWelcome]);
 
   // Remove a site
   const removeSite = useCallback(async (siteId) => {
@@ -208,8 +228,8 @@ export function AuthProvider({ children }) {
     await persistSites(updated);
   }, [sites, persistSites]);
 
-  // Check if user is logged in to at least one site
-  const isAuthenticated = sites.length > 0;
+  // Whether any sites are connected
+  const hasSites = sites.length > 0;
 
   return (
     <AuthContext.Provider
@@ -217,7 +237,7 @@ export function AuthProvider({ children }) {
         sites,
         activeSite,
         activeSiteId,
-        isAuthenticated,
+        hasSites,
         loading,
         error,
         setError,
@@ -226,6 +246,8 @@ export function AuthProvider({ children }) {
         removeSite,
         switchSite,
         updateSiteModules,
+        hasSeenWelcome,
+        dismissWelcome,
         // Event context
         events,
         eventsLoading,

@@ -6,7 +6,7 @@ import ContentList from '../../components/ui/ContentList';
 import { Calendar } from 'lucide-react';
 
 export default function EventList() {
-  const { getClient, activeSite } = useAuth();
+  const { getClient, activeSite, hasSites } = useAuth();
   const navigate = useNavigate();
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -33,6 +33,14 @@ export default function EventList() {
 
   useEffect(() => { fetchEvents(); }, [fetchEvents, activeSite?.id]);
 
+  if (!hasSites) {
+    return (
+      <div className="p-6 text-center py-20">
+        <p className="text-sm text-gray-400">Connect a site to view events.</p>
+      </div>
+    );
+  }
+
   return (
     <ContentList
       title="Events"
@@ -44,14 +52,14 @@ export default function EventList() {
       emptyMessage="No events found"
       renderItem={(ev) => (
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-amber-900/30 flex items-center justify-center shrink-0">
-            <Calendar className="w-4 h-4 text-amber-400" />
+          <div className="w-10 h-10 rounded-lg bg-orange-100 flex items-center justify-center shrink-0">
+            <Calendar className="w-4 h-4 text-orange-600" />
           </div>
           <div className="flex-1 min-w-0">
-            <span className="text-sm font-medium text-gray-200 truncate block">
+            <span className="text-sm font-medium text-gray-800 truncate block">
               {ev.title}
             </span>
-            <span className="text-xs text-gray-500">
+            <span className="text-xs text-gray-400">
               {ev.status === 'publish' ? 'Published' : ev.status}
             </span>
           </div>

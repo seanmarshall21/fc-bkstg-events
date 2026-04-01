@@ -75,8 +75,8 @@ export default function SponsorDetail() {
     }
   };
 
-  if (loading) return <div className="flex items-center justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-gray-500" /></div>;
-  if (!sponsor) return <div className="p-4 text-center text-gray-500">Sponsor not found</div>;
+  if (loading) return <div className="flex items-center justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-gray-400" /></div>;
+  if (!sponsor) return <div className="p-4 text-center text-gray-400">Sponsor not found</div>;
 
   return (
     <FieldEditor

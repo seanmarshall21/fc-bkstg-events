@@ -1,15 +1,17 @@
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { ChevronLeft, Home, Search, PlusCircle, Heart, Settings } from 'lucide-react';
+import { ChevronLeft } from 'lucide-react';
 import { useAuth } from '../auth/AuthContext';
 import SiteSwitcher from '../sites/SiteSwitcher';
 import { useState } from 'react';
 
+// Bottom nav items — custom icons from /public/icons/
+// Dark variants (white) for the dark nav bar
 const NAV_ITEMS = [
-  { key: '/', icon: Home, label: 'Home' },
-  { key: '/search', icon: Search, label: 'Search' },
-  { key: '/add-site', icon: PlusCircle, label: 'Add Site' },
-  { key: '/favorites', icon: Heart, label: 'Favorites' },
-  { key: '/settings', icon: Settings, label: 'Settings' },
+  { key: '/',          icon: '/icons/VC-WebApp-Logo-Purp-dark.svg', label: 'Home' },
+  { key: '/search',    icon: '/icons/search-dark.svg',              label: 'Search' },
+  { key: '/add-site',  icon: '/icons/add-outline-dark.svg',         label: 'Add Site' },
+  { key: '/favorites', icon: '/icons/favorite-dark.svg',            label: 'Favorites' },
+  { key: '/settings',  icon: '/icons/settings-dark.svg',            label: 'Settings' },
 ];
 
 export default function Layout() {
@@ -32,7 +34,7 @@ export default function Layout() {
   return (
     <>
       {/* Top Bar */}
-      <header className="shrink-0 flex items-center justify-between px-4 h-14 border-b border-surface-3 bg-white/95 backdrop-blur-sm z-50">
+      <header className="shrink-0 flex items-center justify-between px-4 h-14 border-b border-white/10 bg-white/80 backdrop-blur-sm z-50">
         <div className="flex items-center gap-2">
           {isNestedPage && (
             <button
@@ -53,7 +55,7 @@ export default function Layout() {
                 {activeSite?.logo ? (
                   <img src={activeSite.logo} alt="" className="w-full h-full object-cover" />
                 ) : (
-                  <img src="/icons/icon-192.png" alt="" className="w-full h-full object-cover" />
+                  <img src="/icons/VC-WebApp-Logo-Purp-lt.svg" alt="" className="w-6 h-6" />
                 )}
               </div>
               <div className="flex flex-col items-start">
@@ -65,14 +67,17 @@ export default function Layout() {
             </button>
           ) : (
             <div className="flex items-center gap-2 px-2 py-1.5">
-              <div className="w-8 h-8 rounded-xl overflow-hidden bg-vc-950 flex items-center justify-center shadow-sm">
-                <img src="/icons/icon-192.png" alt="" className="w-full h-full object-cover" />
-              </div>
+              <img src="/icons/VC-WebApp-Logo-Purp-lt.svg" alt="" className="w-8 h-8" />
               <span className="text-sm font-semibold text-gray-900">
-                VC Event Manager
+                FC Event Manager
               </span>
             </div>
           )}
+        </div>
+
+        {/* User initials */}
+        <div className="w-9 h-9 rounded-full bg-amber-600 flex items-center justify-center text-white text-xs font-bold tracking-wide shadow-sm">
+          SM
         </div>
       </header>
 
@@ -81,26 +86,29 @@ export default function Layout() {
         <Outlet />
       </main>
 
-      {/* Bottom Navigation — 5 icons per Figma */}
-      <nav className="shrink-0 flex items-center justify-around px-2 h-16 border-t border-surface-3 bg-white/95 backdrop-blur-sm z-50 pb-safe">
+      {/* Bottom Navigation — dark bar with custom icons */}
+      <nav className="shrink-0 flex items-center justify-around px-2 h-16 bg-vc-950 z-50 pb-safe">
         {NAV_ITEMS.map((item) => {
-          const Icon = item.icon;
           const isActive = activeNav === item.key;
 
           return (
             <button
               key={item.key}
               onClick={() => navigate(item.key)}
-              className={`flex flex-col items-center justify-center gap-0.5 py-1 px-4 rounded-xl transition-all duration-150 ${
+              className={`flex flex-col items-center justify-center gap-1 py-1.5 px-4 rounded-xl transition-all duration-150 ${
                 isActive
-                  ? 'text-vc-700'
-                  : 'text-gray-400 hover:text-gray-600'
+                  ? 'opacity-100'
+                  : 'opacity-60 hover:opacity-80'
               }`}
             >
-              <Icon className={`w-5 h-5 ${isActive ? 'stroke-[2.5]' : ''}`} />
-              <span className="text-[10px] font-medium">{item.label}</span>
+              <img
+                src={item.icon}
+                alt=""
+                className="w-6 h-6"
+              />
+              <span className="text-[10px] font-medium text-white">{item.label}</span>
               {isActive && (
-                <div className="w-1 h-1 rounded-full bg-vc-700 mt-0.5" />
+                <div className="w-1 h-1 rounded-full bg-vc-400 -mt-0.5" />
               )}
             </button>
           );

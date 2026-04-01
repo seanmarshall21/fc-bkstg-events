@@ -29,6 +29,11 @@
     overflow: hidden;
     display: flex;
     flex-direction: column;
+    background-image: url('/bkgnds/Dirty Marble Mobile.jpg');
+    background-size: cover;
+    background-position: center top;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
   }
 }
 

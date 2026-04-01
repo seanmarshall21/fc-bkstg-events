@@ -15,7 +15,7 @@ const NAV_ITEMS = [
 ];
 
 export default function Layout() {
-  const { activeSite, hasSites } = useAuth();
+  const { activeSite, hasSites, user, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const isHome = location.pathname === '/';
@@ -75,10 +75,28 @@ export default function Layout() {
           )}
         </div>
 
-        {/* User initials */}
-        <div className="w-9 h-9 rounded-full bg-amber-600 flex items-center justify-center text-white text-xs font-bold tracking-wide shadow-sm">
-          SM
-        </div>
+        {/* User initials / login link */}
+        {isAuthenticated ? (
+          <button
+            onClick={() => navigate('/settings')}
+            className="w-9 h-9 rounded-full bg-amber-600 flex items-center justify-center text-white text-xs font-bold tracking-wide shadow-sm"
+          >
+            {(user?.user_metadata?.full_name || user?.email || '')
+              .split(/[\s@]/)
+              .filter(Boolean)
+              .slice(0, 2)
+              .map(s => s[0]?.toUpperCase())
+              .join('')
+              || '?'}
+          </button>
+        ) : (
+          <button
+            onClick={() => navigate('/login')}
+            className="text-xs font-medium text-vc-600 hover:text-vc-500 px-3 py-1.5 rounded-lg hover:bg-surface-2 transition-colors"
+          >
+            Sign in
+          </button>
+        )}
       </header>
 
       {/* Main Content */}

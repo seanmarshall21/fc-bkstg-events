@@ -1,9 +1,9 @@
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, Globe } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 
 /**
- * Welcome / onboarding screen shown on first visit.
- * Two paths: "Go to Home Page" (no login) or "Connect a Site" (add credentials).
+ * Welcome / onboarding screen — first visit.
+ * Matches the Figma "01 — Onboarding" sample.
  */
 export default function WelcomePage({ onDismiss }) {
   const navigate = useNavigate();
@@ -18,21 +18,30 @@ export default function WelcomePage({ onDismiss }) {
     navigate('/add-site');
   };
 
-  return (
-    <div className="flex-1 flex flex-col items-center justify-center p-6 bg-surface-0 relative overflow-hidden">
-      {/* Subtle background glow */}
-      <div className="absolute top-[-80px] left-1/2 -translate-x-1/2 w-[500px] h-[500px] rounded-full bg-vc-100/60 blur-[120px] pointer-events-none" />
+  const handleLogin = () => {
+    onDismiss();
+    navigate('/login');
+  };
 
+  return (
+    <div
+      className="flex-1 flex flex-col items-center justify-center p-6 relative overflow-hidden"
+      style={{
+        backgroundImage: 'url(/bkgnds/Dirty Marble Mobile.jpg)',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+      }}
+    >
       <div className="w-full max-w-sm relative z-10 text-center">
-        {/* Logo */}
-        <div className="w-24 h-24 mx-auto mb-6 rounded-3xl overflow-hidden shadow-xl shadow-vc-900/20">
-          <img src="/icons/icon-512.png" alt="VC Event Manager" className="w-full h-full object-cover" />
+        {/* FC Logo — large hero mark */}
+        <div className="w-40 h-40 mx-auto mb-6">
+          <img src="/logos/fcevents-logo-main.png" alt="FC Event Manager" className="w-full h-full object-contain" />
         </div>
 
         <h1 className="text-2xl font-bold text-gray-900 tracking-tight">
-          VC Event Manager
+          FC Event Manager
         </h1>
-        <p className="text-sm text-gray-500 mt-3 leading-relaxed max-w-[280px] mx-auto">
+        <p className="text-sm text-gray-600 mt-3 leading-relaxed max-w-[280px] mx-auto">
           Manage your festival content across all your brands, in one place.
         </p>
 
@@ -40,7 +49,7 @@ export default function WelcomePage({ onDismiss }) {
         <div className="mt-10 space-y-3">
           <button
             onClick={handleGoHome}
-            className="vc-btn vc-btn--primary w-full py-3 text-base"
+            className="w-full flex items-center justify-center gap-2 py-3.5 px-6 rounded-xl bg-white border border-surface-3 text-sm font-semibold text-gray-900 shadow-sm hover:shadow-md transition-all"
           >
             Go to Home Page
             <ArrowRight className="w-4 h-4" />
@@ -48,15 +57,26 @@ export default function WelcomePage({ onDismiss }) {
 
           <button
             onClick={handleConnectSite}
-            className="vc-btn vc-btn--secondary w-full py-3 text-base"
+            className="vc-btn vc-btn--primary w-full py-3.5 text-base"
           >
-            <Globe className="w-4 h-4" />
             Connect a Site
+            <ArrowRight className="w-4 h-4" />
           </button>
         </div>
 
+        {/* Login link */}
+        <p className="text-xs text-gray-500 mt-8">
+          Already have an account?{' '}
+          <button
+            onClick={handleLogin}
+            className="text-vc-600 hover:text-vc-500 transition-colors font-medium underline underline-offset-2"
+          >
+            Sign in
+          </button>
+        </p>
+
         {/* Help link */}
-        <p className="text-xs text-gray-400 mt-8">
+        <p className="text-xs text-gray-400 mt-3">
           Need help?{' '}
           <button
             onClick={handleGoHome}

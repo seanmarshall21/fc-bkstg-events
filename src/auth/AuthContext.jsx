@@ -1,24 +1,22 @@
-import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { VCApiClient } from '../api/client';
 import { storeGet, storeSet, storeDel, SITES_KEY, ACTIVE_SITE_KEY, ACTIVE_EVENTS_KEY, PREFS_KEY } from '../hooks/useStore';
 import { WP_ENDPOINTS } from '../api/endpoints';
+import { isSupabaseConfigured } from '../config/supabase';
+import {
+  signInWithEmail,
+  signUpWithEmail,
+  signInWithGoogle,
+  signOut as supaSignOut,
+  getSession,
+  onAuthStateChange,
+  loadProfile,
+  saveProfile,
+} from './ProfileSync';
 
 const AuthContext = createContext(null);
 
 const WELCOME_KEY = 'vc_seen_welcome';
-
-/**
- * Site shape stored in IndexedDB:
- * {
- *   id: string (uuid),
- *   url: string,
- *   name: string,
- *   username: string,
- *   appPassword: string,
- *   user: { id, name, email, roles },
- *   modules: string[] (enabled module keys),
- * }
- */
 
 export function AuthProvider({ children }) {
   const [sites, setSites] = useState([]);
@@ -27,12 +25,134 @@ export function AuthProvider({ children }) {
   const [error, setError] = useState(null);
   const [hasSeenWelcome, setHasSeenWelcome] = useState(false);
 
-  // Event state: { siteId: eventId } persisted map + loaded events list
+  // Supabase auth state
+  const [session, setSession] = useState(null);
+  const [authError, setAuthError] = useState(null);
+  const syncingRef = useRef(false);
+
+  // Event state
   const [activeEventsMap, setActiveEventsMap] = useState({});
   const [events, setEvents] = useState([]);
   const [eventsLoading, setEventsLoading] = useState(false);
 
-  // Load persisted sites on mount
+  // ── Supabase Auth ──────────────────────────────────────────
+  const user = session?.user || null;
+
+  // Listen for auth changes (login, logout, token refresh)
+  useEffect(() => {
+    if (!isSupabaseConfigured()) return;
+
+    // Check existing session
+    getSession().then((s) => setSession(s));
+
+    const { data: { subscription } } = onAuthStateChange((_event, newSession) => {
+      setSession(newSession);
+    });
+
+    return () => subscription?.unsubscribe();
+  }, []);
+
+  // Sync profile from Supabase when user signs in
+  useEffect(() => {
+    if (!user || syncingRef.current) return;
+
+    (async () => {
+      syncingRef.current = true;
+      try {
+        const profile = await loadProfile(user.id);
+        if (profile && profile.sites?.length) {
+          // Merge cloud sites with local — local app passwords take priority
+          const localSites = await storeGet(SITES_KEY) || [];
+          const merged = profile.sites.map((cloudSite) => {
+            const local = localSites.find(
+              (ls) => ls.registrySlug === cloudSite.registrySlug || ls.url === cloudSite.url
+            );
+            // If we have local app password, keep it; otherwise site needs re-auth
+            return local
+              ? { ...cloudSite, appPassword: local.appPassword, username: local.username }
+              : { ...cloudSite, appPassword: null, username: cloudSite.username || null };
+          });
+
+          setSites(merged);
+          await storeSet(SITES_KEY, merged);
+
+          if (profile.active_site_id) {
+            setActiveSiteId(profile.active_site_id);
+            await storeSet(ACTIVE_SITE_KEY, profile.active_site_id);
+          }
+          if (profile.active_events_map) {
+            setActiveEventsMap(profile.active_events_map);
+            await storeSet(ACTIVE_EVENTS_KEY, profile.active_events_map);
+          }
+        }
+      } catch (e) {
+        console.warn('Profile sync failed:', e);
+      } finally {
+        syncingRef.current = false;
+      }
+    })();
+  }, [user]);
+
+  // Push local state to Supabase whenever sites change (debounced)
+  const syncTimeout = useRef(null);
+  useEffect(() => {
+    if (!user || syncingRef.current || sites.length === 0) return;
+
+    if (syncTimeout.current) clearTimeout(syncTimeout.current);
+    syncTimeout.current = setTimeout(() => {
+      saveProfile(user.id, {
+        sites,
+        activeSiteId,
+        activeEventsMap,
+        preferences: {},
+      });
+    }, 2000);
+
+    return () => clearTimeout(syncTimeout.current);
+  }, [user, sites, activeSiteId, activeEventsMap]);
+
+  // Auth actions exposed to components
+  const signIn = useCallback(async (email, password) => {
+    setAuthError(null);
+    try {
+      const { session: s } = await signInWithEmail(email, password);
+      setSession(s);
+      return s;
+    } catch (err) {
+      setAuthError(err.message || 'Sign in failed.');
+      throw err;
+    }
+  }, []);
+
+  const signUp = useCallback(async (email, password) => {
+    setAuthError(null);
+    try {
+      const { user: u, session: s } = await signUpWithEmail(email, password);
+      if (s) setSession(s);
+      return { user: u, session: s };
+    } catch (err) {
+      setAuthError(err.message || 'Sign up failed.');
+      throw err;
+    }
+  }, []);
+
+  const signInGoogle = useCallback(async () => {
+    setAuthError(null);
+    try {
+      return await signInWithGoogle();
+    } catch (err) {
+      setAuthError(err.message || 'Google sign in failed.');
+      throw err;
+    }
+  }, []);
+
+  const signOutUser = useCallback(async () => {
+    await supaSignOut();
+    setSession(null);
+    // Keep local data — just disconnect cloud sync
+  }, []);
+
+  // ── Local bootstrap ────────────────────────────────────────
   useEffect(() => {
     (async () => {
       try {
@@ -44,7 +164,7 @@ export function AuthProvider({ children }) {
         if (saved && saved.length) {
           setSites(saved);
           setActiveSiteId(activeId || saved[0].id);
-          setHasSeenWelcome(true); // If they have sites, they've been through onboarding
+          setHasSeenWelcome(true);
         } else {
           setHasSeenWelcome(!!seenWelcome);
         }
@@ -59,22 +179,22 @@ export function AuthProvider({ children }) {
     })();
   }, []);
 
-  // Dismiss welcome screen (persists so it doesn't show again)
+  // Dismiss welcome
   const dismissWelcome = useCallback(async () => {
     setHasSeenWelcome(true);
     await storeSet(WELCOME_KEY, true);
   }, []);
 
-  // Persist sites whenever they change
+  // Persist sites locally
   const persistSites = useCallback(async (updatedSites) => {
     setSites(updatedSites);
     await storeSet(SITES_KEY, updatedSites);
   }, []);
 
-  // Get active site object
+  // Active site object
   const activeSite = sites.find(s => s.id === activeSiteId) || null;
 
-  // Get API client for active site
+  // API client
   const getClient = useCallback((site = null) => {
     const s = site || activeSite;
     if (!s) return null;
@@ -85,8 +205,6 @@ export function AuthProvider({ children }) {
   }, [activeSite]);
 
   // ── Event Management ───────────────────────────────────────
-
-  // Fetch events for the active site
   const fetchEvents = useCallback(async () => {
     const client = getClient();
     if (!client) return;
@@ -95,7 +213,6 @@ export function AuthProvider({ children }) {
       const { data } = await client.get(WP_ENDPOINTS.events.list, { per_page: 50 });
       setEvents(data);
 
-      // Auto-select first event if none selected for this site
       if (data.length > 0 && activeSiteId && !activeEventsMap[activeSiteId]) {
         const newMap = { ...activeEventsMap, [activeSiteId]: data[0].id };
         setActiveEventsMap(newMap);
@@ -109,7 +226,6 @@ export function AuthProvider({ children }) {
     }
   }, [getClient, activeSiteId, activeEventsMap]);
 
-  // Fetch events when active site changes
   useEffect(() => {
     if (activeSiteId && sites.length > 0) {
       fetchEvents();
@@ -118,13 +234,9 @@ export function AuthProvider({ children }) {
     }
   }, [activeSiteId, sites.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Current active event ID for the active site
   const activeEventId = activeSiteId ? (activeEventsMap[activeSiteId] || null) : null;
-
-  // Current active event object
   const activeEvent = events.find(e => e.id === activeEventId) || null;
 
-  // Set active event for current site
   const setActiveEvent = useCallback(async (eventId) => {
     if (!activeSiteId) return;
     const newMap = { ...activeEventsMap, [activeSiteId]: eventId };
@@ -133,12 +245,9 @@ export function AuthProvider({ children }) {
   }, [activeSiteId, activeEventsMap]);
 
   // ── Site Management ────────────────────────────────────────
-
-  // Add a new site with credential validation
   const addSite = useCallback(async ({ url, username, appPassword, registrySlug }) => {
     setError(null);
 
-    // Normalize URL
     let siteUrl = url.trim().replace(/\/+$/, '');
     if (!siteUrl.startsWith('http')) {
       siteUrl = `https://${siteUrl}`;
@@ -147,14 +256,10 @@ export function AuthProvider({ children }) {
     const client = new VCApiClient(siteUrl, { username, appPassword });
 
     try {
-      // Validate credentials
       const user = await client.validateAuth();
-
-      // Fetch site name
       const { data: siteInfo } = await client.get('');
       const siteName = siteInfo?.name || new URL(siteUrl).hostname;
 
-      // Pull registry metadata if connected via site picker
       let registryMeta = {};
       if (registrySlug) {
         const { getRegistrySite } = await import('../config/siteRegistry');
@@ -189,13 +294,11 @@ export function AuthProvider({ children }) {
       const updated = [...sites, newSite];
       await persistSites(updated);
 
-      // Auto-switch to new site if it's the first
       if (!activeSiteId) {
         setActiveSiteId(newSite.id);
         await storeSet(ACTIVE_SITE_KEY, newSite.id);
       }
 
-      // Mark welcome as seen since they've connected a site
       if (!hasSeenWelcome) {
         setHasSeenWelcome(true);
         await storeSet(WELCOME_KEY, true);
@@ -213,7 +316,6 @@ export function AuthProvider({ children }) {
     }
   }, [sites, activeSiteId, persistSites, hasSeenWelcome]);
 
-  // Remove a site
   const removeSite = useCallback(async (siteId) => {
     const updated = sites.filter(s => s.id !== siteId);
     await persistSites(updated);
@@ -224,20 +326,17 @@ export function AuthProvider({ children }) {
       await storeSet(ACTIVE_SITE_KEY, newActive);
     }
 
-    // Clean up events map
     const newMap = { ...activeEventsMap };
     delete newMap[siteId];
     setActiveEventsMap(newMap);
     await storeSet(ACTIVE_EVENTS_KEY, newMap);
   }, [sites, activeSiteId, persistSites, activeEventsMap]);
 
-  // Switch active site
   const switchSite = useCallback(async (siteId) => {
     setActiveSiteId(siteId);
     await storeSet(ACTIVE_SITE_KEY, siteId);
   }, []);
 
-  // Update site modules (visible sections)
   const updateSiteModules = useCallback(async (siteId, modules) => {
     const updated = sites.map(s =>
       s.id === siteId ? { ...s, modules } : s
@@ -245,12 +344,22 @@ export function AuthProvider({ children }) {
     await persistSites(updated);
   }, [sites, persistSites]);
 
-  // Whether any sites are connected
   const hasSites = sites.length > 0;
 
   return (
     <AuthContext.Provider
       value={{
+        // Auth
+        user,
+        session,
+        authError,
+        setAuthError,
+        signIn,
+        signUp,
+        signInGoogle,
+        signOut: signOutUser,
+        isAuthenticated: !!session,
+        // Sites
         sites,
         activeSite,
         activeSiteId,
@@ -265,7 +374,7 @@ export function AuthProvider({ children }) {
         updateSiteModules,
         hasSeenWelcome,
         dismissWelcome,
-        // Event context
+        // Events
         events,
         eventsLoading,
         activeEventId,

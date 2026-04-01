@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { MODULES } from '../api/endpoints';
-import { Check, Globe, Trash2 } from 'lucide-react';
+import { Check, Globe, Trash2, LogOut, LogIn } from 'lucide-react';
 import * as Icons from 'lucide-react';
 
 export default function SettingsPage() {
@@ -13,6 +13,9 @@ export default function SettingsPage() {
     hasSites,
     updateSiteModules,
     removeSite,
+    user,
+    isAuthenticated,
+    signOut,
   } = useAuth();
 
   if (!hasSites || !activeSite) {
@@ -103,6 +106,46 @@ export default function SettingsPage() {
         <p className="text-xs text-gray-400 mt-2">
           Toggle sections to customize your dashboard.
         </p>
+      </div>
+
+      {/* Account */}
+      <div className="border-t border-surface-3 pt-6 mb-6">
+        <h3 className="text-sm font-medium text-gray-700 mb-3">Account</h3>
+        {isAuthenticated ? (
+          <div className="vc-card">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-amber-600 flex items-center justify-center text-white text-xs font-bold">
+                {(user?.user_metadata?.full_name || user?.email || '')
+                  .split(/[\s@]/)
+                  .filter(Boolean)
+                  .slice(0, 2)
+                  .map(s => s[0]?.toUpperCase())
+                  .join('') || '?'}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-medium text-gray-800 truncate">
+                  {user?.user_metadata?.full_name || 'User'}
+                </div>
+                <div className="text-xs text-gray-400 truncate">{user?.email}</div>
+              </div>
+            </div>
+            <button
+              onClick={signOut}
+              className="vc-btn vc-btn--ghost w-full mt-3"
+            >
+              <LogOut className="w-4 h-4" />
+              Sign Out
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={() => navigate('/login')}
+            className="vc-btn vc-btn--secondary w-full"
+          >
+            <LogIn className="w-4 h-4" />
+            Sign In to Sync Across Devices
+          </button>
+        )}
       </div>
 
       {/* Danger Zone */}

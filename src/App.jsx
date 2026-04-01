@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './auth/AuthContext';
 import Layout from './components/Layout';
 import WelcomePage from './auth/WelcomePage';
+import LoginPage from './auth/LoginPage';
 import HomePage from './components/HomePage';
 import SiteDashboard from './components/SiteDashboard';
 import SettingsPage from './components/SettingsPage';
@@ -77,6 +78,7 @@ function AppRoutes() {
         <Route path="/favorites" element={<FavoritesPage />} />
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/add-site" element={<AddSitePage />} />
+        <Route path="/login" element={<LoginPage />} />
 
         {/* Catch-all */}
         <Route path="*" element={<Navigate to="/" replace />} />

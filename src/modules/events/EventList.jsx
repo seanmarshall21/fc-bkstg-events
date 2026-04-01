@@ -4,6 +4,7 @@ import { useAuth } from '../../auth/AuthContext';
 import { WP_ENDPOINTS } from '../../api/endpoints';
 import ContentList from '../../components/ui/ContentList';
 import { Calendar } from 'lucide-react';
+import { decodeHtml } from '../../utils/helpers';
 
 export default function EventList() {
   const { getClient, activeSite, hasSites } = useAuth();
@@ -22,7 +23,7 @@ export default function EventList() {
       });
       setEvents(data.map(ev => ({
         ...ev,
-        title: ev.title?.rendered || ev.title?.raw || 'Untitled',
+        title: decodeHtml(ev.title?.rendered || ev.title?.raw || 'Untitled'),
       })));
     } catch (err) {
       console.error('Failed to fetch events:', err);

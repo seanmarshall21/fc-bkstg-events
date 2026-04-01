@@ -4,6 +4,7 @@ import { useAuth } from '../../auth/AuthContext';
 import { WP_ENDPOINTS } from '../../api/endpoints';
 import FieldEditor from '../../components/ui/FieldEditor';
 import { Loader2 } from 'lucide-react';
+import { decodeHtml } from '../../utils/helpers';
 
 const EVENT_FIELDS = [
   { key: 'title', label: 'Event Name', type: 'text' },
@@ -32,7 +33,7 @@ export default function EventDetail() {
       const acf = data.acf || {};
       setEvent({
         ...data,
-        title: data.title?.raw || '',
+        title: decodeHtml(data.title?.raw || ''),
         vc_event_date_start: acf.vc_event_date_start || '',
         vc_event_date_end: acf.vc_event_date_end || '',
         vc_event_venue: acf.vc_event_venue || '',

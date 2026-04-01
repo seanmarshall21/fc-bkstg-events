@@ -3,6 +3,7 @@ import { VCApiClient } from '../api/client';
 import { storeGet, storeSet, storeDel, SITES_KEY, ACTIVE_SITE_KEY, ACTIVE_EVENTS_KEY, PREFS_KEY } from '../hooks/useStore';
 import { WP_ENDPOINTS } from '../api/endpoints';
 import { isSupabaseConfigured } from '../config/supabase';
+import { decodeHtml } from '../utils/helpers';
 import {
   signInWithEmail,
   signUpWithEmail,
@@ -258,7 +259,7 @@ export function AuthProvider({ children }) {
     try {
       const user = await client.validateAuth();
       const { data: siteInfo } = await client.get('');
-      const siteName = siteInfo?.name || new URL(siteUrl).hostname;
+      const siteName = decodeHtml(siteInfo?.name) || new URL(siteUrl).hostname;
 
       let registryMeta = {};
       if (registrySlug) {

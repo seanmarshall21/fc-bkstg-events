@@ -3,6 +3,7 @@ import { ChevronLeft } from 'lucide-react';
 import { useAuth } from '../auth/AuthContext';
 import SiteSwitcher from '../sites/SiteSwitcher';
 import { useState } from 'react';
+import { resolveSiteLogo, siteName } from '../utils/helpers';
 
 // Bottom nav items — custom icons from /public/icons/
 // Light variants (white fill) for the dark nav bar
@@ -52,15 +53,15 @@ export default function Layout() {
               className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-surface-2 transition-colors group"
             >
               <div className="w-8 h-8 rounded-xl overflow-hidden bg-surface-2 flex items-center justify-center shadow-sm">
-                {activeSite?.logo ? (
-                  <img src={activeSite.logo} alt="" className="w-full h-full object-cover" />
+                {activeSite && resolveSiteLogo(activeSite) ? (
+                  <img src={resolveSiteLogo(activeSite)} alt="" className="w-full h-full object-cover" />
                 ) : (
                   <img src="/icons/VC-WebApp-Logo-Purp-lt.svg" alt="" className="w-6 h-6" />
                 )}
               </div>
               <div className="flex flex-col items-start">
                 <span className="text-sm font-semibold text-gray-900 max-w-[180px] truncate leading-tight">
-                  {activeSite?.name || 'Select Site'}
+                  {activeSite ? siteName(activeSite) : 'Select Site'}
                 </span>
               </div>
               <ChevronLeft className="w-3 h-3 text-gray-400 rotate-[-90deg] group-hover:text-gray-600 transition-colors" />

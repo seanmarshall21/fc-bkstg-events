@@ -4,6 +4,7 @@ import { useAuth } from '../../auth/AuthContext';
 import { WP_ENDPOINTS } from '../../api/endpoints';
 import FieldEditor from '../../components/ui/FieldEditor';
 import { Loader2 } from 'lucide-react';
+import { decodeHtml } from '../../utils/helpers';
 
 const SPONSOR_FIELDS = [
   { key: 'title', label: 'Sponsor Name', type: 'text' },
@@ -34,7 +35,7 @@ export default function SponsorDetail() {
       const acf = data.acf || {};
       setSponsor({
         ...data,
-        title: data.title?.raw || '',
+        title: decodeHtml(data.title?.raw || ''),
         excerpt: data.excerpt?.raw || '',
         vc_sponsor_logo: acf.vc_sponsor_logo || '',
         vc_sponsor_logo_light: acf.vc_sponsor_logo_light || '',

@@ -26,7 +26,25 @@ export default function SponsorDetail() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
+  const isCreate = id === 'new';
+
   const fetchSponsor = useCallback(async () => {
+    if (isCreate) {
+      setSponsor({
+        title: '',
+        excerpt: '',
+        vc_sponsor_logo: '',
+        vc_sponsor_logo_light: '',
+        vc_sponsor_url: '',
+        vc_sponsor_activation_type: '',
+        vc_sponsor_activation_details: '',
+        vc_sponsor_contact_name: '',
+        vc_sponsor_contact_email: '',
+      });
+      setLoading(false);
+      return;
+    }
+
     const client = getClient();
     if (!client) return;
     setLoading(true);
@@ -50,7 +68,7 @@ export default function SponsorDetail() {
     } finally {
       setLoading(false);
     }
-  }, [getClient, id]);
+  }, [getClient, id, isCreate]);
 
   useEffect(() => { fetchSponsor(); }, [fetchSponsor]);
 
@@ -59,7 +77,7 @@ export default function SponsorDetail() {
     if (!client) return;
     setSaving(true);
     try {
-      await client.post(WP_ENDPOINTS.sponsors.single(id), {
+      const payload = {
         title: values.title,
         excerpt: values.excerpt,
         acf: {
@@ -69,8 +87,16 @@ export default function SponsorDetail() {
           vc_sponsor_contact_name: values.vc_sponsor_contact_name,
           vc_sponsor_contact_email: values.vc_sponsor_contact_email,
         },
-      });
-      await fetchSponsor();
+      };
+
+      if (isCreate) {
+        payload.status = 'publish';
+        const { data: newPost } = await client.post(WP_ENDPOINTS.sponsors.list, payload);
+        navigate(`/sponsors/${newPost.id}`, { replace: true });
+      } else {
+        await client.post(WP_ENDPOINTS.sponsors.single(id), payload);
+        await fetchSponsor();
+      }
     } finally {
       setSaving(false);
     }
@@ -81,12 +107,14 @@ export default function SponsorDetail() {
 
   return (
     <FieldEditor
-      title={sponsor.title || 'Edit Sponsor'}
+      title={isCreate ? 'New Sponsor' : (sponsor.title || 'Edit Sponsor')}
       fields={SPONSOR_FIELDS}
       initialValues={sponsor}
       onSave={handleSave}
       onCancel={() => navigate('/sponsors')}
       saving={saving}
+      mode={isCreate ? 'create' : 'edit'}
+      layout="form"
     />
   );
 }

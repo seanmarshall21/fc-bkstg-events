@@ -36,12 +36,27 @@ const LINEUP_FIELDS = [
 export default function LineupDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { getClient } = useAuth();
+  const { getClient, activeEventId } = useAuth();
   const [slot, setSlot] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
+  const isCreate = id === 'new';
+
   const fetchSlot = useCallback(async () => {
+    if (isCreate) {
+      setSlot({
+        title: '',
+        vc_ls_set_type: '',
+        vc_ls_billing: '',
+        vc_ls_start_time: '',
+        vc_ls_end_time: '',
+        vc_ls_sort_order: '',
+      });
+      setLoading(false);
+      return;
+    }
+
     const client = getClient();
     if (!client) return;
     setLoading(true);
@@ -61,7 +76,7 @@ export default function LineupDetail() {
     } finally {
       setLoading(false);
     }
-  }, [getClient, id]);
+  }, [getClient, id, isCreate]);
 
   useEffect(() => { fetchSlot(); }, [fetchSlot]);
 
@@ -70,7 +85,7 @@ export default function LineupDetail() {
     if (!client) return;
     setSaving(true);
     try {
-      await client.post(WP_ENDPOINTS.lineupSlots.single(id), {
+      const payload = {
         title: values.title,
         acf: {
           vc_ls_set_type: values.vc_ls_set_type,
@@ -79,8 +94,19 @@ export default function LineupDetail() {
           vc_ls_end_time: values.vc_ls_end_time,
           vc_ls_sort_order: values.vc_ls_sort_order,
         },
-      });
-      await fetchSlot();
+      };
+
+      if (isCreate) {
+        payload.status = 'publish';
+        if (activeEventId) {
+          payload.acf.vc_ls_event = activeEventId;
+        }
+        const { data: newPost } = await client.post(WP_ENDPOINTS.lineupSlots.list, payload);
+        navigate(`/lineup/${newPost.id}`, { replace: true });
+      } else {
+        await client.post(WP_ENDPOINTS.lineupSlots.single(id), payload);
+        await fetchSlot();
+      }
     } finally {
       setSaving(false);
     }
@@ -91,12 +117,14 @@ export default function LineupDetail() {
 
   return (
     <FieldEditor
-      title={slot.title || 'Edit Lineup Slot'}
+      title={isCreate ? 'New Lineup Slot' : (slot.title || 'Edit Lineup Slot')}
       fields={LINEUP_FIELDS}
       initialValues={slot}
       onSave={handleSave}
       onCancel={() => navigate('/lineup')}
       saving={saving}
+      mode={isCreate ? 'create' : 'edit'}
+      layout="form"
     />
   );
 }

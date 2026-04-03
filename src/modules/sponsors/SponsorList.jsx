@@ -16,13 +16,11 @@ export default function SponsorList() {
     if (!client) return;
     setLoading(true);
     try {
-      // Build params — include event_id only if one is selected
       const params = {};
       if (activeEventId) {
         params.event_id = activeEventId;
       }
       const { data } = await client.get(VC_ENDPOINTS.sponsors.list, params);
-      // Flatten tiers into sponsor list
       const flat = [];
       data.forEach(tier => {
         tier.sponsors?.forEach(s => {
@@ -59,10 +57,9 @@ export default function SponsorList() {
   }
 
   return (
-    <div className="p-4 pb-8 animate-fade-in">
-      {/* Event context — only show if events exist */}
+    <div className="animate-fade-in">
       {events.length > 0 && (
-        <div className="mb-4">
+        <div className="px-4 pt-4 mb-0">
           <EventSelector />
         </div>
       )}
@@ -72,9 +69,12 @@ export default function SponsorList() {
         items={sponsors}
         loading={loading}
         onRefresh={fetchSponsors}
+        onAdd={() => navigate('/sponsors/new')}
         onSelect={(s) => navigate(`/sponsors/${s.id}`)}
         searchKeys={['name', '_tier']}
-        emptyMessage={activeEventId ? 'No sponsors for this event' : 'No sponsors found on this site'}
+        emptyMessage="No Sponsors Added"
+        emptySubtext="There are no sponsor posts yet. Add your first one."
+        addLabel="Add a Sponsor"
         renderItem={(sponsor) => (
           <div className="flex items-center gap-3">
             {sponsor.logo ? (

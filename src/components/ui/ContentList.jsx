@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { Search, Plus, RefreshCw, ChevronRight } from 'lucide-react';
+import { Search, Plus, RefreshCw, ChevronRight, SlidersHorizontal } from 'lucide-react';
 
 /**
  * Reusable content list shell.
  * Handles search, empty state, loading, and item rendering.
+ * Matches Figma: search bar with filter + add icons, dashed Add CTA.
  */
 export default function ContentList({
   title,
@@ -17,7 +18,9 @@ export default function ContentList({
   renderItem,
   searchKeys = ['title'],
   emptyMessage = 'No items found',
+  emptySubtext = '',
   addLabel = 'Add New',
+  moduleIcon,
 }) {
   const [search, setSearch] = useState('');
 
@@ -31,48 +34,63 @@ export default function ContentList({
       )
     : items;
 
+  const displayCount = count ?? items.length;
+
   return (
     <div className="p-4 pb-8 animate-fade-in">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-4">
-        <div>
-          <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
-          <p className="text-xs text-gray-400 mt-0.5">
-            {count ?? items.length} total{search ? `, ${filtered.length} shown` : ''}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          {onRefresh && (
-            <button
-              onClick={onRefresh}
-              disabled={loading}
-              className="vc-btn vc-btn--ghost !px-2.5"
-            >
-              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-            </button>
-          )}
+      {/* Search bar row: input + filter icon + add icon */}
+      {searchable && (
+        <div className="flex items-center gap-2 mb-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input
+              type="text"
+              className="w-full bg-white border border-surface-3 rounded-xl pl-9 pr-3 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-vc-500 focus:ring-2 focus:ring-vc-500/20 transition-colors"
+              placeholder={`Search ${title}...`}
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+            />
+          </div>
+          <button
+            className="w-10 h-10 rounded-xl border border-surface-3 bg-white flex items-center justify-center text-gray-400 hover:text-gray-600 hover:border-gray-300 transition-colors shrink-0"
+          >
+            <SlidersHorizontal className="w-4 h-4" />
+          </button>
           {onAdd && (
-            <button onClick={onAdd} className="vc-btn vc-btn--primary">
+            <button
+              onClick={onAdd}
+              className="w-10 h-10 rounded-xl border border-surface-3 bg-white flex items-center justify-center text-gray-400 hover:text-gray-600 hover:border-gray-300 transition-colors shrink-0"
+            >
               <Plus className="w-4 h-4" />
-              <span className="hidden sm:inline">{addLabel}</span>
             </button>
           )}
-        </div>
-      </div>
-
-      {/* Search */}
-      {searchable && items.length > 0 && (
-        <div className="relative mb-4">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-          <input
-            type="text"
-            className="vc-input pl-9"
-            placeholder="Search..."
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-          />
         </div>
       )}
+
+      {/* Title row with icon + count + refresh */}
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          {moduleIcon && (
+            <img src={moduleIcon} alt="" className="w-8 h-8" />
+          )}
+          <h2 className="text-xl font-bold text-gray-900">{title}</h2>
+          <span className="text-base text-gray-400 font-medium">
+            {search ? filtered.length : displayCount}
+          </span>
+        </div>
+        {onRefresh && (
+          <button
+            onClick={onRefresh}
+            disabled={loading}
+            className="p-2 rounded-lg hover:bg-surface-2 text-gray-400 hover:text-gray-600 transition-colors"
+          >
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+          </button>
+        )}
+      </div>
+
+      {/* Divider */}
+      <div className="border-b border-surface-3 mb-3" />
 
       {/* Loading */}
       {loading && items.length === 0 && (
@@ -82,10 +100,31 @@ export default function ContentList({
         </div>
       )}
 
-      {/* Empty */}
-      {!loading && filtered.length === 0 && (
-        <div className="flex flex-col items-center justify-center py-20 text-gray-400">
-          <p className="text-sm">{search ? 'No matches found' : emptyMessage}</p>
+      {/* Empty state */}
+      {!loading && filtered.length === 0 && !search && (
+        <div className="flex flex-col items-center justify-center py-16 text-gray-400">
+          <p className="text-base font-bold text-gray-800 mb-1">
+            No {title} Added
+          </p>
+          <p className="text-sm text-gray-400 mb-5">
+            {emptySubtext || `There are no ${title.toLowerCase()} posts yet. Add your first one.`}
+          </p>
+          {onAdd && (
+            <button
+              onClick={onAdd}
+              className="w-full max-w-sm border-2 border-dashed border-surface-4 rounded-2xl py-4 text-gray-400 hover:text-gray-600 hover:border-gray-400 transition-colors flex items-center justify-center gap-2"
+            >
+              <Plus className="w-4 h-4" />
+              <span className="text-sm font-medium">{addLabel}</span>
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* No search matches */}
+      {!loading && filtered.length === 0 && search && (
+        <div className="flex flex-col items-center justify-center py-16 text-gray-400">
+          <p className="text-sm">No matches found</p>
         </div>
       )}
 
@@ -106,6 +145,17 @@ export default function ContentList({
           </button>
         ))}
       </div>
+
+      {/* Add CTA at bottom of list (when items exist) */}
+      {!loading && filtered.length > 0 && onAdd && (
+        <button
+          onClick={onAdd}
+          className="w-full mt-3 border-2 border-dashed border-surface-4 rounded-2xl py-4 text-gray-400 hover:text-gray-600 hover:border-gray-400 transition-colors flex items-center justify-center gap-2"
+        >
+          <Plus className="w-4 h-4" />
+          <span className="text-sm font-medium">{addLabel}</span>
+        </button>
+      )}
     </div>
   );
 }

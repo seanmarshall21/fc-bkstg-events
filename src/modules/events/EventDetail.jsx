@@ -24,7 +24,23 @@ export default function EventDetail() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
+  const isCreate = id === 'new';
+
   const fetchEvent = useCallback(async () => {
+    if (isCreate) {
+      setEvent({
+        title: '',
+        vc_event_date_start: '',
+        vc_event_date_end: '',
+        vc_event_venue: '',
+        vc_event_city: '',
+        vc_event_website: '',
+        vc_event_ticket_url: '',
+      });
+      setLoading(false);
+      return;
+    }
+
     const client = getClient();
     if (!client) return;
     setLoading(true);
@@ -46,7 +62,7 @@ export default function EventDetail() {
     } finally {
       setLoading(false);
     }
-  }, [getClient, id]);
+  }, [getClient, id, isCreate]);
 
   useEffect(() => { fetchEvent(); }, [fetchEvent]);
 
@@ -55,7 +71,7 @@ export default function EventDetail() {
     if (!client) return;
     setSaving(true);
     try {
-      await client.post(WP_ENDPOINTS.events.single(id), {
+      const payload = {
         title: values.title,
         acf: {
           vc_event_date_start: values.vc_event_date_start,
@@ -65,8 +81,16 @@ export default function EventDetail() {
           vc_event_website: values.vc_event_website,
           vc_event_ticket_url: values.vc_event_ticket_url,
         },
-      });
-      await fetchEvent();
+      };
+
+      if (isCreate) {
+        payload.status = 'publish';
+        const { data: newPost } = await client.post(WP_ENDPOINTS.events.list, payload);
+        navigate(`/events/${newPost.id}`, { replace: true });
+      } else {
+        await client.post(WP_ENDPOINTS.events.single(id), payload);
+        await fetchEvent();
+      }
     } finally {
       setSaving(false);
     }
@@ -77,12 +101,14 @@ export default function EventDetail() {
 
   return (
     <FieldEditor
-      title={event.title || 'Edit Event'}
+      title={isCreate ? 'New Event' : (event.title || 'Edit Event')}
       fields={EVENT_FIELDS}
       initialValues={event}
       onSave={handleSave}
       onCancel={() => navigate('/events')}
       saving={saving}
+      mode={isCreate ? 'create' : 'edit'}
+      layout="form"
     />
   );
 }

@@ -47,9 +47,12 @@ export default function EventList() {
       items={events}
       loading={loading}
       onRefresh={fetchEvents}
+      onAdd={() => navigate('/events/new')}
       onSelect={(ev) => navigate(`/events/${ev.id}`)}
       searchKeys={['title']}
-      emptyMessage="No events found"
+      emptyMessage="No Events Added"
+      emptySubtext="There are no event posts yet. Add your first one."
+      addLabel="Add an Event"
       renderItem={(ev) => (
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-lg bg-orange-100 flex items-center justify-center shrink-0">

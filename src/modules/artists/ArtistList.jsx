@@ -60,9 +60,12 @@ export default function ArtistList() {
       items={artists}
       loading={loading}
       onRefresh={fetchArtists}
+      onAdd={() => navigate('/artists/new')}
       onSelect={(artist) => navigate(`/artists/${artist.id}`)}
       searchKeys={['name', (a) => a.genres?.map(g => g.name).join(' ')]}
-      emptyMessage="No artists found on this site"
+      emptyMessage="No Artists Added"
+      emptySubtext="There are no artists posts yet. Add your first one."
+      addLabel="Add an Artist"
       renderItem={(artist) => (
         <div className="flex items-center gap-3">
           {/* Avatar circle */}
@@ -86,19 +89,12 @@ export default function ArtistList() {
               </span>
               {statusBadge(artist.booking_status)}
             </div>
-            {/* Genre tags */}
-            <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-              {artist.genres?.slice(0, 3).map(g => (
-                <span key={g.slug} className="vc-badge vc-badge--purple text-[10px] px-1.5 py-0">
-                  {g.name}
-                </span>
-              ))}
-              {artist.origin && (
-                <span className="text-xs text-gray-400">
-                  {artist.origin}
-                </span>
-              )}
-            </div>
+            {/* Subtitle: stage or origin */}
+            {(artist.origin || artist.genres?.length > 0) && (
+              <span className="text-xs text-gray-400 mt-0.5 block truncate">
+                {artist.origin || artist.genres?.slice(0, 2).map(g => g.name).join(', ')}
+              </span>
+            )}
           </div>
         </div>
       )}

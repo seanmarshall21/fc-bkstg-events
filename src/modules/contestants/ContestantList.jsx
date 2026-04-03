@@ -64,9 +64,12 @@ export default function ContestantList() {
       items={contestants}
       loading={loading}
       onRefresh={fetchContestants}
+      onAdd={() => navigate('/contestants/new')}
       onSelect={(c) => navigate(`/contestants/${c.id}`)}
       searchKeys={['name', (c) => c.origin || '']}
-      emptyMessage="No contestants found on this site"
+      emptyMessage="No Contestants Added"
+      emptySubtext="There are no contestant posts yet. Add your first one."
+      addLabel="Add a Contestant"
       renderItem={(contestant) => (
         <div className="flex items-center gap-3">
           {contestant.photo?.thumbnail ? (

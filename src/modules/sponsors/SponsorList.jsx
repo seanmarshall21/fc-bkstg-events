@@ -6,20 +6,22 @@ import ContentList from '../../components/ui/ContentList';
 import EventSelector from '../../components/EventSelector';
 
 export default function SponsorList() {
-  const { getClient, activeEventId, hasSites } = useAuth();
+  const { getClient, activeEventId, events, hasSites } = useAuth();
   const navigate = useNavigate();
   const [sponsors, setSponsors] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const fetchSponsors = useCallback(async () => {
-    if (!activeEventId) return;
     const client = getClient();
     if (!client) return;
     setLoading(true);
     try {
-      const { data } = await client.get(VC_ENDPOINTS.sponsors.list, {
-        event_id: activeEventId,
-      });
+      // Build params — include event_id only if one is selected
+      const params = {};
+      if (activeEventId) {
+        params.event_id = activeEventId;
+      }
+      const { data } = await client.get(VC_ENDPOINTS.sponsors.list, params);
       // Flatten tiers into sponsor list
       const flat = [];
       data.forEach(tier => {
@@ -58,46 +60,40 @@ export default function SponsorList() {
 
   return (
     <div className="p-4 pb-8 animate-fade-in">
-      {/* Event context */}
-      <div className="mb-4">
-        <EventSelector />
-      </div>
-
-      {!activeEventId && (
-        <div className="text-center py-20 text-gray-400 text-sm">
-          Select an event to view sponsors.
+      {/* Event context — only show if events exist */}
+      {events.length > 0 && (
+        <div className="mb-4">
+          <EventSelector />
         </div>
       )}
 
-      {activeEventId && (
-        <ContentList
-          title="Sponsors"
-          items={sponsors}
-          loading={loading}
-          onRefresh={fetchSponsors}
-          onSelect={(s) => navigate(`/sponsors/${s.id}`)}
-          searchKeys={['name', '_tier']}
-          emptyMessage="No sponsors for this event"
-          renderItem={(sponsor) => (
-            <div className="flex items-center gap-3">
-              {sponsor.logo ? (
-                <img src={sponsor.logo} alt="" className="w-10 h-10 rounded-lg object-contain bg-surface-1 p-1 shrink-0 border border-surface-3" />
-              ) : (
-                <div className="w-10 h-10 rounded-lg bg-surface-2 shrink-0" />
-              )}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium text-gray-800 truncate">{sponsor.name}</span>
-                  {tierBadge(sponsor._tier)}
-                </div>
-                {sponsor.url && (
-                  <span className="text-xs text-gray-400 truncate block mt-0.5">{sponsor.url}</span>
-                )}
+      <ContentList
+        title="Sponsors"
+        items={sponsors}
+        loading={loading}
+        onRefresh={fetchSponsors}
+        onSelect={(s) => navigate(`/sponsors/${s.id}`)}
+        searchKeys={['name', '_tier']}
+        emptyMessage={activeEventId ? 'No sponsors for this event' : 'No sponsors found on this site'}
+        renderItem={(sponsor) => (
+          <div className="flex items-center gap-3">
+            {sponsor.logo ? (
+              <img src={sponsor.logo} alt="" className="w-10 h-10 rounded-lg object-contain bg-surface-1 p-1 shrink-0 border border-surface-3" />
+            ) : (
+              <div className="w-10 h-10 rounded-lg bg-surface-2 shrink-0" />
+            )}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-gray-800 truncate">{sponsor.name}</span>
+                {tierBadge(sponsor._tier)}
               </div>
+              {sponsor.url && (
+                <span className="text-xs text-gray-400 truncate block mt-0.5">{sponsor.url}</span>
+              )}
             </div>
-          )}
-        />
-      )}
+          </div>
+        )}
+      />
     </div>
   );
 }

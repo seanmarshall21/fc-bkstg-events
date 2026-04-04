@@ -58,12 +58,21 @@ export default function Layout() {
   const currentItemId = detailMatch?.[2] || null;
   const canFavorite = currentModule && currentItemId && currentItemId !== 'new';
 
-  // Handle back button — if inside site module, go to site dashboard
+  // Is this the site dashboard itself?
+  const isSiteDashboard = location.pathname.startsWith('/site/');
+  // Is this a module list page (e.g. /artists, /sponsors)?
+  const isModuleList = MODULE_ROUTES.some(r => location.pathname === r);
+
+  // Handle back button
   const handleBack = () => {
-    if (isInsideSite && activeSiteId && !detailMatch) {
-      // From a module list, go to site dashboard
+    if (isSiteDashboard) {
+      // Site dashboard → home
+      navigate('/');
+    } else if (isModuleList && activeSiteId) {
+      // Module list → site dashboard
       navigate(`/site/${activeSiteId}`);
     } else {
+      // Detail page or anything else → go back
       navigate(-1);
     }
   };

@@ -208,7 +208,7 @@ export default function FieldEditor({
               <label className="block text-[13px] font-medium text-[#979797] mb-2">Social Links</label>
               <div className="space-y-1.5">
                 {socialFields.map(sf => (
-                  <div key={sf.key} className="flex items-center rounded-lg bg-[#ececec] px-3 py-2.5">
+                  <div key={sf.key} className="flex items-center rounded-lg vc-field-bg !py-2.5 !px-3">
                     <span className="text-[12px] font-medium text-[#979797] w-24 shrink-0">{sf.label}</span>
                     <input
                       type="url"
@@ -330,7 +330,7 @@ function CardField({ field, value, onChange }) {
       return (
         <div>
           <label className="block text-[13px] font-medium text-[#979797] mb-1.5">{label}</label>
-          <div className="bg-[#ececec] rounded-[10px] px-3.5 py-3">
+          <div className="vc-field-bg">
             <textarea
               className="w-full bg-transparent text-[14px] text-[#282828] border-none outline-none resize-none placeholder:text-gray-300"
               rows={rows}
@@ -346,7 +346,7 @@ function CardField({ field, value, onChange }) {
       return (
         <div>
           <label className="block text-[13px] font-medium text-[#979797] mb-1.5">{label}</label>
-          <div className="bg-[#ececec] rounded-[10px] px-3.5 py-3">
+          <div className="vc-field-bg">
             <select
               className="w-full bg-transparent text-[14px] text-[#282828] border-none outline-none cursor-pointer"
               value={value}
@@ -433,7 +433,7 @@ function CardField({ field, value, onChange }) {
       return (
         <div>
           <label className="block text-[13px] font-medium text-[#979797] mb-1.5">{label}</label>
-          <div className="bg-[#ececec] rounded-[10px] px-3.5 py-3">
+          <div className="vc-field-bg">
             <input
               type={type}
               className="w-full bg-transparent text-[14px] text-[#282828] border-none outline-none placeholder:text-gray-300"

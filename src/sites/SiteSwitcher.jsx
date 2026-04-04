@@ -10,7 +10,7 @@ export default function SiteSwitcher({ onClose }) {
   const handleSwitch = async (siteId) => {
     await switchSite(siteId);
     onClose();
-    navigate('/');
+    navigate(`/site/${siteId}`);
   };
 
   const handleRemove = async (e, siteId) => {

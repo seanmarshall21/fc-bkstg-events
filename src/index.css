@@ -62,12 +62,35 @@
 
   /* ── Inputs ────────────────────────────────────────── */
   .vc-input {
-    @apply w-full bg-surface-1 border border-surface-3 rounded-xl
+    @apply w-full rounded-xl
            px-3.5 py-3 text-gray-900 text-base
            placeholder:text-gray-400
-           focus:outline-none focus:border-vc-500 focus:ring-2 focus:ring-vc-500/20
-           transition-colors duration-150;
+           focus:outline-none focus:ring-2 focus:ring-vc-500/20
+           transition-all duration-150;
     font-size: 16px; /* Prevents iOS auto-zoom on focus */
+    background-color: rgba(252, 252, 252, 0.75);
+    border: 1px solid transparent;
+  }
+  .vc-input:hover {
+    background-color: rgba(252, 252, 252, 0.85);
+  }
+  .vc-input:focus {
+    background-color: rgba(252, 252, 252, 0.95);
+    border-color: var(--vc-500, #7c3aed);
+  }
+
+  /* ── Field containers (detail view card fields) ──── */
+  .vc-field-bg {
+    background-color: rgba(252, 252, 252, 0.75);
+    border-radius: 10px;
+    padding: 0.75rem 0.875rem;
+    transition: background-color 150ms ease;
+  }
+  .vc-field-bg:hover {
+    background-color: rgba(252, 252, 252, 0.85);
+  }
+  .vc-field-bg:focus-within {
+    background-color: rgba(252, 252, 252, 0.95);
   }
 
   /* ── Buttons ───────────────────────────────────────── */

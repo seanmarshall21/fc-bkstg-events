@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Search, Plus, RefreshCw, ChevronRight, ArrowDownAZ, Flag, LayoutGrid } from 'lucide-react';
+import { Search, Plus, RefreshCw, ChevronRight, ArrowDownAZ, Flag } from 'lucide-react';
 
 /**
  * Reusable content list shell.
@@ -64,7 +64,7 @@ export default function ContentList({
               onClick={onAdd}
               className="w-10 h-10 rounded-xl border border-surface-3 bg-white flex items-center justify-center text-gray-400 hover:text-gray-600 hover:border-gray-300 transition-colors shrink-0"
             >
-              <LayoutGrid className="w-4 h-4" />
+              <Plus className="w-4 h-4" />
             </button>
           )}
         </div>
@@ -134,10 +134,12 @@ export default function ContentList({
       {/* Items */}
       <div className="space-y-2">
         {filtered.map((item, i) => (
-          <button
+          <div
             key={item.id || i}
             onClick={() => onSelect?.(item)}
-            className="w-full vc-card flex items-center gap-3 hover:border-vc-300 transition-colors text-left group"
+            role="button"
+            tabIndex={0}
+            className="w-full vc-card flex items-center gap-3 hover:border-vc-300 transition-colors text-left group cursor-pointer"
           >
             <div className="flex-1 min-w-0">
               {renderItem(item)}
@@ -146,16 +148,16 @@ export default function ContentList({
               {onToggleFavorite && item.id && (
                 <button
                   onClick={(e) => { e.stopPropagation(); onToggleFavorite(item); }}
-                  className="p-1.5 rounded-lg hover:bg-surface-2 transition-colors"
+                  className="p-2 -mr-1 rounded-lg hover:bg-surface-2 active:bg-vc-100 transition-colors"
                 >
-                  <Flag className={`w-3.5 h-3.5 ${isFavorite?.(moduleKey, item.id) ? 'text-vc-600 fill-vc-600' : 'text-gray-300'}`} />
+                  <Flag className={`w-4 h-4 ${isFavorite?.(moduleKey, item.id) ? 'text-vc-600 fill-vc-600' : 'text-vc-400'}`} />
                 </button>
               )}
               {onSelect && (
                 <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-gray-500" />
               )}
             </div>
-          </button>
+          </div>
         ))}
       </div>
 

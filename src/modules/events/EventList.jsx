@@ -4,9 +4,11 @@ import { useAuth } from '../../auth/AuthContext';
 import { WP_ENDPOINTS } from '../../api/endpoints';
 import ContentList from '../../components/ui/ContentList';
 import { decodeHtml } from '../../utils/helpers';
+import { useFavorites } from '../../hooks/useFavorites';
 
 export default function EventList() {
-  const { getClient, activeSite, hasSites } = useAuth();
+  const { getClient, activeSite, hasSites, activeSiteId } = useAuth();
+  const { isFavorite, toggleFavorite } = useFavorites(activeSiteId);
   const navigate = useNavigate();
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -53,6 +55,9 @@ export default function EventList() {
       emptyMessage="No Events Added"
       emptySubtext="There are no event posts yet. Add your first one."
       addLabel="Add an Event"
+      moduleKey="events"
+      isFavorite={isFavorite}
+      onToggleFavorite={(ev) => toggleFavorite('events', ev.id, ev.title)}
       renderItem={(ev) => (
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-lg bg-orange-100 flex items-center justify-center shrink-0">

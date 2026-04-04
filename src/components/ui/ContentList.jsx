@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Search, Plus, RefreshCw, ChevronRight, SlidersHorizontal } from 'lucide-react';
+import { Search, Plus, RefreshCw, ChevronRight, ArrowDownAZ, Flag, LayoutGrid } from 'lucide-react';
 
 /**
  * Reusable content list shell.
@@ -21,6 +21,9 @@ export default function ContentList({
   emptySubtext = '',
   addLabel = 'Add New',
   moduleIcon,
+  isFavorite,
+  onToggleFavorite,
+  moduleKey,
 }) {
   const [search, setSearch] = useState('');
 
@@ -54,14 +57,14 @@ export default function ContentList({
           <button
             className="w-10 h-10 rounded-xl border border-surface-3 bg-white flex items-center justify-center text-gray-400 hover:text-gray-600 hover:border-gray-300 transition-colors shrink-0"
           >
-            <SlidersHorizontal className="w-4 h-4" />
+            <ArrowDownAZ className="w-4 h-4" />
           </button>
           {onAdd && (
             <button
               onClick={onAdd}
               className="w-10 h-10 rounded-xl border border-surface-3 bg-white flex items-center justify-center text-gray-400 hover:text-gray-600 hover:border-gray-300 transition-colors shrink-0"
             >
-              <Plus className="w-4 h-4" />
+              <LayoutGrid className="w-4 h-4" />
             </button>
           )}
         </div>
@@ -139,9 +142,19 @@ export default function ContentList({
             <div className="flex-1 min-w-0">
               {renderItem(item)}
             </div>
-            {onSelect && (
-              <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-gray-500 shrink-0" />
-            )}
+            <div className="flex items-center gap-1 shrink-0">
+              {onToggleFavorite && item.id && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); onToggleFavorite(item); }}
+                  className="p-1.5 rounded-lg hover:bg-surface-2 transition-colors"
+                >
+                  <Flag className={`w-3.5 h-3.5 ${isFavorite?.(moduleKey, item.id) ? 'text-vc-600 fill-vc-600' : 'text-gray-300'}`} />
+                </button>
+              )}
+              {onSelect && (
+                <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-gray-500" />
+              )}
+            </div>
           </button>
         ))}
       </div>

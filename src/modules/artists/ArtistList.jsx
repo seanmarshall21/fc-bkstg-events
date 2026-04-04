@@ -3,9 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthContext';
 import { VC_ENDPOINTS } from '../../api/endpoints';
 import ContentList from '../../components/ui/ContentList';
+import { useFavorites } from '../../hooks/useFavorites';
 
 export default function ArtistList() {
-  const { getClient, activeSite, hasSites } = useAuth();
+  const { getClient, activeSite, activeSiteId, hasSites } = useAuth();
+  const { isFavorite, toggleFavorite } = useFavorites(activeSiteId);
   const navigate = useNavigate();
   const [artists, setArtists] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -66,6 +68,9 @@ export default function ArtistList() {
       emptyMessage="No Artists Added"
       emptySubtext="There are no artists posts yet. Add your first one."
       addLabel="Add an Artist"
+      moduleKey="artists"
+      isFavorite={isFavorite}
+      onToggleFavorite={(artist) => toggleFavorite('artists', artist.id, artist.name, { subtitle: artist.origin })}
       renderItem={(artist) => (
         <div className="flex items-center gap-3">
           {/* Avatar circle */}

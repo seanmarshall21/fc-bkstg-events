@@ -46,8 +46,22 @@ export function AuthProvider({ children }) {
     // Check existing session
     getSession().then((s) => setSession(s));
 
-    const { data: { subscription } } = onAuthStateChange((_event, newSession) => {
+    const { data: { subscription } } = onAuthStateChange(async (_event, newSession) => {
       setSession(newSession);
+
+      // If session was revoked/expired, wipe local state immediately
+      if (!newSession) {
+        setSites([]);
+        setActiveSiteId(null);
+        setActiveEventsMap({});
+        setEvents([]);
+        setHasSeenWelcome(false);
+        await storeDel(SITES_KEY);
+        await storeDel(ACTIVE_SITE_KEY);
+        await storeDel(ACTIVE_EVENTS_KEY);
+        await storeDel(WELCOME_KEY);
+        await storeDel(PREFS_KEY);
+      }
     });
 
     return () => subscription?.unsubscribe();
@@ -62,16 +76,18 @@ export function AuthProvider({ children }) {
       try {
         const profile = await loadProfile(user.id);
         if (profile && profile.sites?.length) {
-          // Merge cloud sites with local — local app passwords take priority
+          // Merge cloud sites with local — local app passwords take priority,
+          // fall back to cloud-stored credentials
           const localSites = await storeGet(SITES_KEY) || [];
           const merged = profile.sites.map((cloudSite) => {
             const local = localSites.find(
               (ls) => ls.registrySlug === cloudSite.registrySlug || ls.url === cloudSite.url
             );
-            // If we have local app password, keep it; otherwise site needs re-auth
-            return local
-              ? { ...cloudSite, appPassword: local.appPassword, username: local.username }
-              : { ...cloudSite, appPassword: null, username: cloudSite.username || null };
+            return {
+              ...cloudSite,
+              appPassword: local?.appPassword || cloudSite.appPassword || null,
+              username: local?.username || cloudSite.username || null,
+            };
           });
 
           setSites(merged);
@@ -150,13 +166,55 @@ export function AuthProvider({ children }) {
   const signOutUser = useCallback(async () => {
     await supaSignOut();
     setSession(null);
-    // Keep local data — just disconnect cloud sync
+
+    // Wipe ALL local state — sites, credentials, events, preferences
+    setSites([]);
+    setActiveSiteId(null);
+    setActiveEventsMap({});
+    setEvents([]);
+    setHasSeenWelcome(false);
+
+    await storeDel(SITES_KEY);
+    await storeDel(ACTIVE_SITE_KEY);
+    await storeDel(ACTIVE_EVENTS_KEY);
+    await storeDel(WELCOME_KEY);
+    await storeDel(PREFS_KEY);
   }, []);
 
   // ── Local bootstrap ────────────────────────────────────────
+  // Only restore saved sites/state if user has an active Supabase session.
+  // If not authenticated, show clean welcome state (no lingering credentials).
+  const [authChecked, setAuthChecked] = useState(false);
+
+  // Wait for Supabase auth check before deciding what to load
   useEffect(() => {
+    if (!isSupabaseConfigured()) {
+      // No Supabase — fall back to unauthenticated local-only mode
+      setAuthChecked(true);
+      return;
+    }
+    getSession().then((s) => {
+      setSession(s);
+      setAuthChecked(true);
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!authChecked) return;
+
     (async () => {
       try {
+        // If Supabase is configured but no session, wipe local data and show welcome
+        if (isSupabaseConfigured() && !session) {
+          await storeDel(SITES_KEY);
+          await storeDel(ACTIVE_SITE_KEY);
+          await storeDel(ACTIVE_EVENTS_KEY);
+          await storeDel(PREFS_KEY);
+          setHasSeenWelcome(false);
+          setLoading(false);
+          return;
+        }
+
         const saved = await storeGet(SITES_KEY);
         const activeId = await storeGet(ACTIVE_SITE_KEY);
         const eventsMap = await storeGet(ACTIVE_EVENTS_KEY);
@@ -178,7 +236,7 @@ export function AuthProvider({ children }) {
         setLoading(false);
       }
     })();
-  }, []);
+  }, [authChecked, session]);
 
   // Dismiss welcome
   const dismissWelcome = useCallback(async () => {

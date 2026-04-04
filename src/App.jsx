@@ -27,7 +27,7 @@ import ContestantList from './modules/contestants/ContestantList';
 import ContestantDetail from './modules/contestants/ContestantDetail';
 
 function AppRoutes() {
-  const { loading, hasSeenWelcome, dismissWelcome, sites } = useAuth();
+  const { loading, hasSeenWelcome, dismissWelcome, sites, isAuthenticated } = useAuth();
 
   if (loading) {
     return (
@@ -37,12 +37,18 @@ function AppRoutes() {
     );
   }
 
-  // Show welcome/onboarding on first visit (no sites connected, hasn't dismissed)
-  if (!hasSeenWelcome && sites.length === 0) {
-    return <WelcomePage onDismiss={dismissWelcome} />;
+  // Tier 1 auth gate — must be logged into main hub account
+  // If not authenticated, only allow welcome, login, and sign-up routes
+  if (!isAuthenticated) {
+    return (
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="*" element={<WelcomePage onDismiss={dismissWelcome} />} />
+      </Routes>
+    );
   }
 
-  // Always show app shell — no auth wall. Homepage is sparse when no sites connected.
+  // Authenticated — show full app
   return (
     <Routes>
       <Route element={<Layout />}>

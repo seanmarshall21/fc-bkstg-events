@@ -3,13 +3,15 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthContext';
 import { VC_ENDPOINTS } from '../../api/endpoints';
 import ContentList from '../../components/ui/ContentList';
+import { useFavorites } from '../../hooks/useFavorites';
 
 /**
  * Contestants list — reuses vc_artist CPT with rodeo-specific labeling.
  * San Diego Rodeo's "contestants" maps to the same vc_artist post type.
  */
 export default function ContestantList() {
-  const { getClient, activeSite, hasSites } = useAuth();
+  const { getClient, activeSite, hasSites, activeSiteId } = useAuth();
+  const { isFavorite, toggleFavorite } = useFavorites(activeSiteId);
   const navigate = useNavigate();
   const [contestants, setContestants] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -70,6 +72,9 @@ export default function ContestantList() {
       emptyMessage="No Contestants Added"
       emptySubtext="There are no contestant posts yet. Add your first one."
       addLabel="Add a Contestant"
+      moduleKey="contestants"
+      isFavorite={isFavorite}
+      onToggleFavorite={(c) => toggleFavorite('contestants', c.id, c.name, { subtitle: c.origin })}
       renderItem={(contestant) => (
         <div className="flex items-center gap-3">
           {contestant.photo?.thumbnail ? (

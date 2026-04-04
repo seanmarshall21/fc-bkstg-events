@@ -4,9 +4,11 @@ import { useAuth } from '../../auth/AuthContext';
 import { VC_ENDPOINTS } from '../../api/endpoints';
 import ContentList from '../../components/ui/ContentList';
 import EventSelector from '../../components/EventSelector';
+import { useFavorites } from '../../hooks/useFavorites';
 
 export default function SponsorList() {
-  const { getClient, activeEventId, events, hasSites } = useAuth();
+  const { getClient, activeEventId, events, hasSites, activeSiteId } = useAuth();
+  const { isFavorite, toggleFavorite } = useFavorites(activeSiteId);
   const navigate = useNavigate();
   const [sponsors, setSponsors] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -75,6 +77,9 @@ export default function SponsorList() {
         emptyMessage="No Sponsors Added"
         emptySubtext="There are no sponsor posts yet. Add your first one."
         addLabel="Add a Sponsor"
+        moduleKey="sponsors"
+        isFavorite={isFavorite}
+        onToggleFavorite={(s) => toggleFavorite('sponsors', s.id, s.name, { subtitle: s._tier })}
         renderItem={(sponsor) => (
           <div className="flex items-center gap-3">
             {sponsor.logo ? (

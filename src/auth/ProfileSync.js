@@ -47,9 +47,10 @@ export async function loadProfile(userId) {
 export async function saveProfile(userId, { sites, activeSiteId, activeEventsMap, preferences }) {
   if (!isSupabaseConfigured() || !userId) return;
 
-  // Strip sensitive credentials before syncing — app passwords
-  // are stored locally only. On a new device the user re-enters them.
-  const safeSites = sites.map(({ appPassword, ...rest }) => rest);
+  // Include credentials in cloud sync — RLS ensures only the user
+  // can read their own row. This allows sign-out → sign-in to fully
+  // restore all connected sites without re-entering app passwords.
+  const safeSites = sites.map(({ ...site }) => site);
 
   const payload = {
     user_id: userId,

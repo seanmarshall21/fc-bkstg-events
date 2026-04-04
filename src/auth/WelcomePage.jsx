@@ -8,17 +8,7 @@ import { ArrowRight } from 'lucide-react';
 export default function WelcomePage({ onDismiss }) {
   const navigate = useNavigate();
 
-  const handleGoHome = () => {
-    onDismiss();
-    navigate('/');
-  };
-
-  const handleConnectSite = () => {
-    onDismiss();
-    navigate('/add-site');
-  };
-
-  const handleLogin = () => {
+  const handleSignIn = () => {
     onDismiss();
     navigate('/login');
   };
@@ -48,42 +38,17 @@ export default function WelcomePage({ onDismiss }) {
         {/* Action buttons */}
         <div className="mt-10 space-y-3">
           <button
-            onClick={handleGoHome}
-            className="w-full flex items-center justify-center gap-2 py-3.5 px-6 rounded-xl bg-white border border-surface-3 text-sm font-semibold text-gray-900 shadow-sm hover:shadow-md transition-all"
-          >
-            Go to Home Page
-            <ArrowRight className="w-4 h-4" />
-          </button>
-
-          <button
-            onClick={handleConnectSite}
+            onClick={handleSignIn}
             className="vc-btn vc-btn--primary w-full py-3.5 text-base"
           >
-            Connect a Site
+            Sign In
             <ArrowRight className="w-4 h-4" />
           </button>
         </div>
 
-        {/* Login link */}
-        <p className="text-xs text-gray-500 mt-8">
-          Already have an account?{' '}
-          <button
-            onClick={handleLogin}
-            className="text-vc-600 hover:text-vc-500 transition-colors font-medium underline underline-offset-2"
-          >
-            Sign in
-          </button>
-        </p>
-
         {/* Help link */}
-        <p className="text-xs text-gray-400 mt-3">
-          Need help?{' '}
-          <button
-            onClick={handleGoHome}
-            className="text-vc-600 hover:text-vc-500 transition-colors underline underline-offset-2"
-          >
-            See setup guide
-          </button>
+        <p className="text-xs text-gray-400 mt-6">
+          Sign in to connect sites and manage your events.
         </p>
       </div>
     </div>

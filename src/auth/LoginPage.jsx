@@ -199,12 +199,12 @@ export default function LoginPage() {
           </button>
         </p>
 
-        {/* Skip for now */}
+        {/* Back to welcome */}
         <button
           onClick={() => navigate('/')}
           className="block mx-auto mt-4 text-xs text-gray-400 hover:text-gray-600 transition-colors"
         >
-          Skip for now
+          Back
         </button>
       </div>
     </div>

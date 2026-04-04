@@ -107,6 +107,8 @@ export default function ArtistDetail() {
       });
     } catch (err) {
       console.error('Failed to fetch artist:', err);
+      // If WP endpoint also fails, show an error state with the post ID
+      setArtist({ title: `Artist #${id}`, _fetchError: true });
     } finally {
       setLoading(false);
     }

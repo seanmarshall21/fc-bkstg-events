@@ -5,12 +5,12 @@ import EventSelector from '../../components/EventSelector';
 import { Loader2, ShieldCheck, RefreshCw, Eye, EyeOff, AlertTriangle } from 'lucide-react';
 
 export default function ConfidentialView() {
-  const { getClient, activeEventId, hasSites } = useAuth();
+  const { getClient, activeEventId, events, hasSites } = useAuth();
   const [eventData, setEventData] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
 
   const fetchEventData = useCallback(async () => {
-    if (!activeEventId) return;
+    if (!activeEventId) { setEventData(null); return; }
     const client = getClient();
     if (!client) return;
     setLoading(true);
@@ -39,29 +39,27 @@ export default function ConfidentialView() {
   return (
     <div className="p-4 pb-8 animate-fade-in">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-semibold text-gray-900">Confidentiality</h2>
-        <button onClick={fetchEventData} disabled={loading} className="vc-btn vc-btn--ghost !px-2.5">
+        <h2 className="text-xl font-bold text-gray-900">Confidentiality</h2>
+        <button onClick={fetchEventData} disabled={loading} className="p-2 rounded-lg hover:bg-surface-2 text-gray-400 hover:text-gray-600 transition-colors">
           <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
         </button>
       </div>
 
-      <div className="mb-4">
-        <EventSelector />
-      </div>
+      <div className="border-b border-surface-3 mb-4" />
 
-      {!activeEventId && (
-        <div className="text-center py-20 text-gray-400 text-sm">
-          Select an event to view confidentiality settings.
+      {events.length > 0 && (
+        <div className="mb-4">
+          <EventSelector />
         </div>
       )}
 
-      {activeEventId && loading && (
+      {loading && (
         <div className="flex items-center justify-center py-20">
           <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
         </div>
       )}
 
-      {activeEventId && !loading && phases.length > 0 && (
+      {!loading && phases.length > 0 && (
         <div className="space-y-3">
           {phases.map((phase, i) => (
             <div key={i} className="vc-card">
@@ -88,11 +86,16 @@ export default function ConfidentialView() {
         </div>
       )}
 
-      {activeEventId && !loading && phases.length === 0 && (
-        <div className="text-center py-20 text-gray-400 text-sm">
-          No announce phases configured for this event.
-          <br />
-          <span className="text-xs text-gray-400">Set these up in WP Admin &rarr; Event &rarr; Announce Phases</span>
+      {!loading && phases.length === 0 && (
+        <div className="flex flex-col items-center justify-center py-16 text-gray-400">
+          <p className="text-base font-bold text-gray-800 mb-1">No Announce Phases</p>
+          <p className="text-sm text-gray-400 text-center">
+            {activeEventId
+              ? 'No announce phases configured for this event.'
+              : events.length > 0
+                ? 'Select an event above to view its confidentiality settings.'
+                : 'This site has no events configured. Add an event first.'}
+          </p>
         </div>
       )}
     </div>

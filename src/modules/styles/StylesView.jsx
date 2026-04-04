@@ -5,12 +5,12 @@ import EventSelector from '../../components/EventSelector';
 import { Loader2, Palette, RefreshCw } from 'lucide-react';
 
 export default function StylesView() {
-  const { getClient, activeEventId, hasSites } = useAuth();
+  const { getClient, activeEventId, events, hasSites } = useAuth();
   const [styles, setStyles] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
 
   const fetchStyles = useCallback(async () => {
-    if (!activeEventId) return;
+    if (!activeEventId) { setStyles(null); return; }
     const client = getClient();
     if (!client) return;
     setLoading(true);
@@ -38,31 +38,30 @@ export default function StylesView() {
   return (
     <div className="p-4 pb-8 animate-fade-in">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-semibold text-gray-900">Event Styles</h2>
-        <button onClick={fetchStyles} disabled={loading} className="vc-btn vc-btn--ghost !px-2.5">
+        <div className="flex items-center gap-2">
+          <h2 className="text-xl font-bold text-gray-900">Event Styles</h2>
+        </div>
+        <button onClick={fetchStyles} disabled={loading} className="p-2 rounded-lg hover:bg-surface-2 text-gray-400 hover:text-gray-600 transition-colors">
           <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
         </button>
       </div>
 
-      <div className="mb-4">
-        <EventSelector />
-      </div>
+      <div className="border-b border-surface-3 mb-4" />
 
-      {!activeEventId && (
-        <div className="text-center py-20 text-gray-400 text-sm">
-          Select an event to view styles.
+      {events.length > 0 && (
+        <div className="mb-4">
+          <EventSelector />
         </div>
       )}
 
-      {activeEventId && loading && (
+      {loading && (
         <div className="flex items-center justify-center py-20">
           <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
         </div>
       )}
 
-      {activeEventId && !loading && styles && (
+      {!loading && styles && (
         <div className="space-y-4">
-          {/* Color Properties */}
           {styles.properties && (
             <div className="vc-card">
               <h3 className="text-sm font-medium text-gray-700 mb-3">CSS Properties</h3>
@@ -70,10 +69,7 @@ export default function StylesView() {
                 {Object.entries(styles.properties).map(([key, val]) => (
                   <div key={key} className="flex items-center gap-2 text-xs">
                     {val.startsWith('#') || val.startsWith('rgb') ? (
-                      <div
-                        className="w-5 h-5 rounded border border-surface-3 shrink-0"
-                        style={{ backgroundColor: val }}
-                      />
+                      <div className="w-5 h-5 rounded border border-surface-3 shrink-0" style={{ backgroundColor: val }} />
                     ) : (
                       <Palette className="w-4 h-4 text-gray-400 shrink-0" />
                     )}
@@ -87,7 +83,6 @@ export default function StylesView() {
             </div>
           )}
 
-          {/* Logos */}
           {styles.logos && (
             <div className="vc-card">
               <h3 className="text-sm font-medium text-gray-700 mb-3">Logos</h3>
@@ -104,7 +99,6 @@ export default function StylesView() {
             </div>
           )}
 
-          {/* Textures */}
           {styles.textures && (
             <div className="vc-card">
               <h3 className="text-sm font-medium text-gray-700 mb-3">Textures</h3>
@@ -123,9 +117,16 @@ export default function StylesView() {
         </div>
       )}
 
-      {activeEventId && !loading && !styles && (
-        <div className="text-center py-20 text-gray-400 text-sm">
-          No style data available for this event
+      {!loading && !styles && (
+        <div className="flex flex-col items-center justify-center py-16 text-gray-400">
+          <p className="text-base font-bold text-gray-800 mb-1">No Style Data</p>
+          <p className="text-sm text-gray-400">
+            {activeEventId
+              ? 'No style data available for this event.'
+              : events.length > 0
+                ? 'Select an event above to view its styles.'
+                : 'This site has no events configured. Add an event first.'}
+          </p>
         </div>
       )}
     </div>

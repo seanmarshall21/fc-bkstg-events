@@ -1,0 +1,128 @@
+// ============================================================================
+// AuthContext.jsx — diff-style changes for Supabase Tier 1 + Tier 2 hydration
+// Apply these edits to your existing src/context/AuthContext.jsx
+// ============================================================================
+
+  // ---------- IMPORTS ----------
+  import { createContext, useContext, useEffect, useState, useCallback } from 'react';
++ import { supabase } from '../services/supabaseClient';
++ import {
++   syncFromServer,
++   wipeLocal,
++   migrateFromLocalStorage
++ } from '../services/connectedSitesService';
+
+  const AuthContext = createContext(null);
+
+  export function AuthProvider({ children }) {
+    const [user, setUser]       = useState(null);
+    const [loading, setLoading] = useState(true);
++   const [sitesReady, setSitesReady] = useState(false);
+
++   // hasActiveSession: truthy only when BOTH Tier 1 user AND local cache are hydrated
++   const hasActiveSession = Boolean(user) && sitesReady;
+
+    // --------------------------------------------------------------------
+-   // Session bootstrap
++   // Session bootstrap — on mount, restore Supabase session & hydrate sites
+    // --------------------------------------------------------------------
+    useEffect(() => {
+-     // existing bootstrap...
++     let mounted = true;
++
++     (async () => {
++       const { data: { session } } = await supabase.auth.getSession();
++       if (!mounted) return;
++
++       if (session?.user) {
++         setUser(session.user);
++         try {
++           // one-shot migration from legacy localStorage → Supabase
++           await migrateFromLocalStorage(session.user.id);
++           await syncFromServer();
++           setSitesReady(true);
++         } catch (e) {
++           console.error('[auth] sync failed', e);
++           setSitesReady(false);
++         }
++       }
++       setLoading(false);
++     })();
++
++     // React to auth changes from anywhere (OAuth redirect, refresh, other tab)
++     const { data: sub } = supabase.auth.onAuthStateChange(async (event, session) => {
++       if (event === 'SIGNED_IN' && session?.user) {
++         setUser(session.user);
++         try {
++           await migrateFromLocalStorage(session.user.id);
++           await syncFromServer();
++           setSitesReady(true);
++         } catch (e) {
++           console.error('[auth] sync failed', e);
++           setSitesReady(false);
++         }
++       } else if (event === 'SIGNED_OUT') {
++         await wipeLocal();
++         setUser(null);
++         setSitesReady(false);
++       } else if (event === 'TOKEN_REFRESHED' && session?.user) {
++         setUser(session.user);
++       }
++     });
++
++     return () => {
++       mounted = false;
++       sub?.subscription?.unsubscribe();
++     };
+    }, []);
+
+    // --------------------------------------------------------------------
+-   // signIn / signOut handlers
++   // Auth actions
+    // --------------------------------------------------------------------
++   const signInWithGoogle = useCallback(async () => {
++     const { error } = await supabase.auth.signInWithOAuth({
++       provider: 'google',
++       options: { redirectTo: `${window.location.origin}/auth/callback` }
++     });
++     if (error) throw error;
++   }, []);
++
++   const signInWithPassword = useCallback(async (email, password) => {
++     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
++     if (error) throw error;
++     return data.user;
++     // onAuthStateChange handles hydration — do NOT duplicate here
++   }, []);
++
++   const signOut = useCallback(async () => {
++     // Wipe FIRST so local data is gone even if the network call fails
++     await wipeLocal();
++     setSitesReady(false);
++     setUser(null);
++     await supabase.auth.signOut();
++   }, []);
+
+    // --------------------------------------------------------------------
+    // Context value
+    // --------------------------------------------------------------------
+    return (
+      <AuthContext.Provider value={{
+        user,
+        loading,
++       sitesReady,
++       hasActiveSession,
++       signInWithGoogle,
++       signInWithPassword,
++       signOut
+      }}>
+        {children}
+      </AuthContext.Provider>
+    );
+  }
+
+  export const useAuth = () => {
+    const ctx = useContext(AuthContext);
+    if (!ctx) throw new Error('useAuth must be used inside <AuthProvider>');
+    return ctx;
+  };

@@ -1,0 +1,188 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --vc-radius: 12px;
+    --vc-radius-sm: 8px;
+    --vc-transition: 200ms cubic-bezier(0.4, 0, 0.2, 1);
+    color-scheme: light;
+  }
+
+  body {
+    @apply bg-surface-0 text-gray-900 antialiased;
+    margin: 0;
+    -webkit-tap-highlight-color: transparent;
+    overscroll-behavior: none;
+  }
+
+  /* Prevent iOS auto-zoom on form fields (requires 16px minimum) */
+  input, select, textarea {
+    font-size: 16px;
+  }
+
+  html, body {
+    overflow: hidden;
+    height: 100%;
+    height: 100dvh;
+  }
+
+  #root {
+    height: 100%;
+    height: 100dvh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    background-image: url('/bkgnds/Dirty Marble Mobile.jpg');
+    background-size: cover;
+    background-position: center top;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+  }
+}
+
+@layer components {
+  /* ── Tiles ─────────────────────────────────────────── */
+  .vc-tile {
+    @apply relative flex flex-col items-start justify-end
+           rounded-2xl p-4 overflow-hidden
+           transition-all duration-200 ease-out
+           active:scale-[0.97] cursor-pointer
+           bg-white border border-surface-3
+           shadow-sm hover:shadow-md;
+    min-height: 120px;
+  }
+
+  /* ── Cards ─────────────────────────────────────────── */
+  .vc-card {
+    @apply bg-white border border-surface-3 rounded-2xl p-4
+           transition-all duration-150 shadow-sm;
+  }
+
+  /* ── Inputs ────────────────────────────────────────── */
+  .vc-input {
+    @apply w-full rounded-xl
+           px-3.5 py-3 text-gray-900 text-base
+           placeholder:text-gray-400
+           focus:outline-none focus:ring-2 focus:ring-vc-500/20
+           transition-all duration-150;
+    font-size: 16px; /* Prevents iOS auto-zoom on focus */
+    background-color: rgba(252, 252, 252, 0.75);
+    border: 1px solid transparent;
+  }
+  .vc-input:hover {
+    background-color: rgba(252, 252, 252, 0.85);
+  }
+  .vc-input:focus {
+    background-color: rgba(252, 252, 252, 0.95);
+    border-color: var(--vc-500, #7c3aed);
+  }
+
+  /* ── Field containers (detail view card fields) ──── */
+  .vc-field-bg {
+    background-color: rgba(252, 252, 252, 0.75);
+    border-radius: 10px;
+    padding: 0.75rem 0.875rem;
+    transition: background-color 150ms ease;
+  }
+  .vc-field-bg:hover {
+    background-color: rgba(252, 252, 252, 0.85);
+  }
+  .vc-field-bg:focus-within {
+    background-color: rgba(252, 252, 252, 0.95);
+  }
+
+  /* ── Buttons ───────────────────────────────────────── */
+  .vc-btn {
+    @apply inline-flex items-center justify-center gap-2
+           px-4 py-2.5 rounded-xl text-sm font-medium
+           transition-all duration-150 ease-out
+           active:scale-[0.97] cursor-pointer
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .vc-btn--primary {
+    @apply bg-vc-700 text-white hover:bg-vc-600 shadow-lg shadow-vc-700/20;
+  }
+
+  .vc-btn--secondary {
+    @apply bg-surface-2 text-gray-600 border border-surface-3
+           hover:bg-surface-3 hover:text-gray-900;
+  }
+
+  .vc-btn--danger {
+    @apply bg-red-50 text-red-600 border border-red-200
+           hover:bg-red-100;
+  }
+
+  .vc-btn--ghost {
+    @apply bg-transparent text-gray-500 hover:bg-surface-2 hover:text-gray-700;
+  }
+
+  /* ── Badges ────────────────────────────────────────── */
+  .vc-badge {
+    @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium;
+  }
+
+  .vc-badge--green { @apply bg-emerald-50 text-emerald-700 border border-emerald-200; }
+  .vc-badge--amber { @apply bg-amber-50 text-amber-700 border border-amber-200; }
+  .vc-badge--red { @apply bg-red-50 text-red-700 border border-red-200; }
+  .vc-badge--blue { @apply bg-vc-50 text-vc-700 border border-vc-200; }
+  .vc-badge--gray { @apply bg-gray-100 text-gray-500 border border-gray-200; }
+  .vc-badge--purple { @apply bg-purple-50 text-purple-700 border border-purple-200; }
+
+  /* ── Scrollable ────────────────────────────────────── */
+  .vc-scroll {
+    @apply flex-1 overflow-y-auto overflow-x-hidden;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
+    min-height: 0; /* critical for flex children to scroll */
+  }
+
+  .vc-scroll::-webkit-scrollbar { width: 4px; }
+  .vc-scroll::-webkit-scrollbar-track { background: transparent; }
+  .vc-scroll::-webkit-scrollbar-thumb { @apply bg-surface-4 rounded-full; }
+}
+
+@layer utilities {
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  .line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+}
+
+/* ── Animations ────────────────────────────────────── */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-4px); }
+  40%, 80% { transform: translateX(4px); }
+}
+
+.animate-shake {
+  animation: shake 0.4s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(100%); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-slide-up {
+  animation: slideUp 0.3s ease-out;
+}

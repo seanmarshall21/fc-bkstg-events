@@ -1,8 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthContext';
-import { VC_ENDPOINTS } from '../../api/endpoints';
+import { VC_ENDPOINTS, WP_ENDPOINTS } from '../../api/endpoints';
 import ContentList from '../../components/ui/ContentList';
+import DraggableList from '../../components/DraggableList';
+import useDragReorder from '../../hooks/useDragReorder';
 import EventSelector from '../../components/EventSelector';
 import { useFavorites } from '../../hooks/useFavorites';
 
@@ -12,6 +14,7 @@ export default function SponsorList() {
   const navigate = useNavigate();
   const [sponsors, setSponsors] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [showReorder, setShowReorder] = useState(false);
 
   const fetchSponsors = useCallback(async () => {
     const client = getClient();
@@ -50,10 +53,75 @@ export default function SponsorList() {
     return <span className={`vc-badge ${map[tier] || 'vc-badge--blue'}`}>{tier}</span>;
   };
 
+  const handleReorder = useCallback(async (reorderedItems) => {
+    const client = getClient();
+    if (!client) return;
+
+    try {
+      // Fire all menu_order updates in parallel
+      const requests = reorderedItems.map((item, newIndex) =>
+        client.post(WP_ENDPOINTS.sponsors.single(item.id), {
+          menu_order: newIndex,
+        })
+      );
+      await Promise.all(requests);
+      setSponsors(reorderedItems);
+      setShowReorder(false);
+    } catch (err) {
+      console.error('Failed to save sponsor order:', err);
+    }
+  }, [getClient]);
+
   if (!hasSites) {
     return (
       <div className="p-6 text-center py-20">
         <p className="text-sm text-gray-400">Connect a site to view sponsors.</p>
+      </div>
+    );
+  }
+
+  if (showReorder) {
+    return (
+      <div className="animate-fade-in">
+        {events.length > 0 && (
+          <div className="px-4 pt-4 mb-0">
+            <EventSelector />
+          </div>
+        )}
+        <div className="p-4 pb-8">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-bold text-gray-900">Sponsors</h2>
+            <button
+              onClick={() => setShowReorder(false)}
+              className="px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-gray-900 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+            >
+              Done
+            </button>
+          </div>
+          <DraggableList
+            items={sponsors}
+            keyExtractor={(item) => item.id}
+            onReorder={handleReorder}
+            renderItem={(sponsor) => (
+              <div className="flex items-center gap-3">
+                {sponsor.logo ? (
+                  <img src={sponsor.logo} alt="" className="w-10 h-10 rounded-lg object-contain bg-surface-1 p-1 shrink-0 border border-surface-3" />
+                ) : (
+                  <div className="w-10 h-10 rounded-lg bg-surface-2 shrink-0" />
+                )}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-gray-800 truncate">{sponsor.name}</span>
+                    {tierBadge(sponsor._tier)}
+                  </div>
+                  {sponsor.url && (
+                    <span className="text-xs text-gray-400 truncate block mt-0.5">{sponsor.url}</span>
+                  )}
+                </div>
+              </div>
+            )}
+          />
+        </div>
       </div>
     );
   }
@@ -65,6 +133,15 @@ export default function SponsorList() {
           <EventSelector />
         </div>
       )}
+
+      <div className="flex items-center justify-end px-4 pt-4 pb-2">
+        <button
+          onClick={() => setShowReorder(true)}
+          className="px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-gray-900 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+        >
+          Reorder
+        </button>
+      </div>
 
       <ContentList
         title="Sponsors"

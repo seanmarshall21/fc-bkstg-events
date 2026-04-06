@@ -4,6 +4,8 @@ import { useAuth } from '../../auth/AuthContext';
 import { WP_ENDPOINTS } from '../../api/endpoints';
 import useSchema, { buildDefaultValues, buildAcfPayload, extractValues } from '../../hooks/useSchema';
 import FieldEditor from '../../components/ui/FieldEditor';
+import PhotoUpload from '../../components/PhotoUpload';
+import { setFeaturedMedia } from '../../services/mediaUploadService';
 import { Loader2 } from 'lucide-react';
 
 /**
@@ -138,19 +140,72 @@ export default function ArtistDetail() {
     );
   }
 
+  const handlePhotoChange = useCallback(async (url, mediaObject) => {
+    // Update local form state
+    setArtist(prev => ({
+      ...prev,
+      vc_artist_photo: url,
+    }));
+
+    // Set as featured image if we have the post ID
+    if (!isCreate && artist?._wp?.id) {
+      try {
+        await setFeaturedMedia({
+          siteUrl: activeSite?.url,
+          username: activeSite?.username,
+          appPassword: activeSite?.appPassword,
+          postId: artist._wp.id,
+          mediaId: mediaObject.id,
+          postType: 'vc_artist',
+        });
+      } catch (err) {
+        console.error('Failed to set featured media:', err);
+      }
+    }
+  }, [activeSite, isCreate, artist?._wp?.id]);
+
+  const handlePhotoRemove = useCallback(() => {
+    setArtist(prev => ({
+      ...prev,
+      vc_artist_photo: '',
+    }));
+  }, []);
+
   return (
-    <FieldEditor
-      schema={schema}
-      values={artist}
-      onSave={handleSave}
-      onCancel={() => navigate(-1)}
-      getClient={getClient}
-      saving={saving}
-      mode={isCreate ? 'create' : 'edit'}
-      layout="detail"
-      photoFieldName="vc_artist_photo"
-      titleFieldName="title"
-      badgeFieldName="vc_artist_booking_status"
-    />
+    <div className="space-y-6">
+      {/* Photo upload section */}
+      {activeSite && (
+        <div className="bg-white rounded-lg border border-gray-200 p-6">
+          <label className="block text-sm font-medium text-gray-900 mb-4">
+            Artist Photo
+          </label>
+          <PhotoUpload
+            value={artist?.vc_artist_photo || ''}
+            onChange={handlePhotoChange}
+            onRemove={handlePhotoRemove}
+            aspectRatio="circle"
+            maxSize={2}
+            siteUrl={activeSite.url}
+            wpUsername={activeSite.username}
+            wpAppPassword={activeSite.appPassword}
+          />
+        </div>
+      )}
+
+      {/* Form fields */}
+      <FieldEditor
+        schema={schema}
+        values={artist}
+        onSave={handleSave}
+        onCancel={() => navigate(-1)}
+        getClient={getClient}
+        saving={saving}
+        mode={isCreate ? 'create' : 'edit'}
+        layout="detail"
+        photoFieldName="vc_artist_photo"
+        titleFieldName="title"
+        badgeFieldName="vc_artist_booking_status"
+      />
+    </div>
   );
 }

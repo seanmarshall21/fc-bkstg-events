@@ -3,6 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthContext';
 import { WP_ENDPOINTS } from '../../api/endpoints';
 import FieldEditor from '../../components/ui/FieldEditor';
+import PhotoUpload from '../../components/PhotoUpload';
+import { setFeaturedMedia } from '../../services/mediaUploadService';
 import { Loader2 } from 'lucide-react';
 import { decodeHtml } from '../../utils/helpers';
 
@@ -21,7 +23,7 @@ const SPONSOR_FIELDS = [
 export default function SponsorDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { getClient } = useAuth();
+  const { getClient, activeSite } = useAuth();
   const [sponsor, setSponsor] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -86,6 +88,8 @@ export default function SponsorDetail() {
           vc_sponsor_activation_details: values.vc_sponsor_activation_details,
           vc_sponsor_contact_name: values.vc_sponsor_contact_name,
           vc_sponsor_contact_email: values.vc_sponsor_contact_email,
+          vc_sponsor_logo: values.vc_sponsor_logo,
+          vc_sponsor_logo_light: values.vc_sponsor_logo_light,
         },
       };
 
@@ -102,19 +106,72 @@ export default function SponsorDetail() {
     }
   };
 
+  const handleLogoChange = useCallback(async (url, mediaObject) => {
+    // Update local form state
+    setSponsor(prev => ({
+      ...prev,
+      vc_sponsor_logo: url,
+    }));
+
+    // Set as featured image if we have the post ID
+    if (!isCreate && sponsor?.id) {
+      try {
+        await setFeaturedMedia({
+          siteUrl: activeSite?.url,
+          username: activeSite?.username,
+          appPassword: activeSite?.appPassword,
+          postId: sponsor.id,
+          mediaId: mediaObject.id,
+          postType: 'vc_sponsor',
+        });
+      } catch (err) {
+        console.error('Failed to set featured media:', err);
+      }
+    }
+  }, [activeSite, isCreate, sponsor?.id]);
+
+  const handleLogoRemove = useCallback(() => {
+    setSponsor(prev => ({
+      ...prev,
+      vc_sponsor_logo: '',
+    }));
+  }, []);
+
   if (loading) return <div className="flex items-center justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-gray-400" /></div>;
   if (!sponsor) return <div className="p-4 text-center text-gray-400">Sponsor not found</div>;
 
   return (
-    <FieldEditor
-      title={isCreate ? 'New Sponsor' : (sponsor.title || 'Edit Sponsor')}
-      fields={SPONSOR_FIELDS}
-      initialValues={sponsor}
-      onSave={handleSave}
-      onCancel={() => navigate('/sponsors')}
-      saving={saving}
-      mode={isCreate ? 'create' : 'edit'}
-      layout="form"
-    />
+    <div className="space-y-6">
+      {/* Logo upload section */}
+      {activeSite && (
+        <div className="bg-white rounded-lg border border-gray-200 p-6">
+          <label className="block text-sm font-medium text-gray-900 mb-4">
+            Sponsor Logo (Dark BG)
+          </label>
+          <PhotoUpload
+            value={sponsor?.vc_sponsor_logo || ''}
+            onChange={handleLogoChange}
+            onRemove={handleLogoRemove}
+            aspectRatio="landscape"
+            maxSize={2}
+            siteUrl={activeSite.url}
+            wpUsername={activeSite.username}
+            wpAppPassword={activeSite.appPassword}
+          />
+        </div>
+      )}
+
+      {/* Form fields */}
+      <FieldEditor
+        title={isCreate ? 'New Sponsor' : (sponsor.title || 'Edit Sponsor')}
+        fields={SPONSOR_FIELDS}
+        initialValues={sponsor}
+        onSave={handleSave}
+        onCancel={() => navigate('/sponsors')}
+        saving={saving}
+        mode={isCreate ? 'create' : 'edit'}
+        layout="form"
+      />
+    </div>
   );
 }

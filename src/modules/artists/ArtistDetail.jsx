@@ -32,7 +32,7 @@ export default function ArtistDetail() {
     restBase,
     loading: schemaLoading,
     error: schemaError,
-  } = useSchema('vc_artist', { skip: !activeSite });
+  } = useSchema('vc_artist', { skip: !activeSite, apiBase: activeSite ? `${activeSite.url}/wp-json/vc/v1` : '/wp-json/vc/v1' });
 
   // Build form values from WP post + ACF data
   const fetchArtist = useCallback(async () => {

@@ -27,7 +27,10 @@ export function useSchema(postType, options = {}) {
     nonce = (typeof window !== 'undefined' && window.vcEmConfig?.nonce) || null,
     ttl = DEFAULT_TTL,
     enabled = true,
+    skip = false,        // alias: skip=true === enabled=false
   } = options;
+
+  const isEnabled = enabled && !skip;
 
   const [schema, setSchema] = useState(() => {
     const cached = schemaCache.get(postType);
@@ -44,7 +47,7 @@ export function useSchema(postType, options = {}) {
   }, []);
 
   const fetchSchema = useCallback(async ({ force = false } = {}) => {
-    if (!postType || !enabled) return;
+    if (!postType || !isEnabled) return;
 
     const cached = schemaCache.get(postType);
     if (!force && cached && Date.now() - cached.fetchedAt < ttl) {
@@ -102,17 +105,21 @@ export function useSchema(postType, options = {}) {
     } finally {
       inflight.delete(postType);
     }
-  }, [postType, apiBase, nonce, ttl, enabled]);
+  }, [postType, apiBase, nonce, ttl, isEnabled]);
 
   useEffect(() => {
-    if (!schema && enabled) {
+    if (!schema && isEnabled) {
       fetchSchema().catch(() => {});
     }
-  }, [postType, enabled, fetchSchema, schema]);
+  }, [postType, isEnabled, fetchSchema, schema]);
 
   const refresh = useCallback(() => fetchSchema({ force: true }), [fetchSchema]);
 
-  return { schema, loading, error, refresh };
+  // Derived conveniences
+  const fields = flattenSchemaFields(schema);
+  const restBase = schema?.rest_base || postType;
+
+  return { schema, fields, restBase, loading, error, refresh };
 }
 
 /**
@@ -159,6 +166,69 @@ export function clearSchemaCache(postType) {
   } else {
     schemaCache.clear();
   }
+}
+
+/**
+ * Build a default values object from a flat array of schema fields.
+ * Used to initialise form state for new records.
+ */
+export function buildDefaultValues(fields) {
+  const defaults = {};
+  for (const field of fields) {
+    switch (field.type) {
+      case 'number':
+      case 'range':
+        defaults[field.name] = field.default_value ?? 0;
+        break;
+      case 'true_false':
+        defaults[field.name] = field.default_value ?? false;
+        break;
+      case 'checkbox':
+        defaults[field.name] = [];
+        break;
+      case 'repeater':
+        defaults[field.name] = [];
+        break;
+      case 'group':
+        defaults[field.name] = {};
+        break;
+      case 'image':
+      case 'file':
+        defaults[field.name] = null;
+        break;
+      default:
+        defaults[field.name] = field.default_value ?? '';
+    }
+  }
+  return defaults;
+}
+
+/**
+ * Extract form values from a WP ACF response object using schema field definitions.
+ * Falls back to field default when the ACF key is absent.
+ */
+export function extractValues(fields, acf) {
+  const values = {};
+  for (const field of fields) {
+    values[field.name] = field.name in acf
+      ? acf[field.name]
+      : (field.default_value ?? '');
+  }
+  return values;
+}
+
+/**
+ * Build an ACF-compatible payload from form values, filtered to only
+ * keys that exist in the schema. Safe to POST directly as the `acf` property.
+ */
+export function buildAcfPayload(fields, values) {
+  const payload = {};
+  for (const field of fields) {
+    if (field.name in values) {
+      payload[field.name] = values[field.name];
+    }
+  }
+  return payload;
 }
 
 export default useSchema;

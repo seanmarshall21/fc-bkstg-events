@@ -28,6 +28,8 @@ export function useSchema(postType, options = {}) {
     ttl = DEFAULT_TTL,
     enabled = true,
     skip = false,        // alias: skip=true === enabled=false
+    username = null,
+    appPassword = null,
   } = options;
 
   const isEnabled = enabled && !skip;
@@ -73,6 +75,9 @@ export function useSchema(postType, options = {}) {
     const url = `${apiBase}/schema/${encodeURIComponent(postType)}${force ? '?refresh=1' : ''}`;
     const headers = { 'Content-Type': 'application/json' };
     if (nonce) headers['X-WP-Nonce'] = nonce;
+    if (username && appPassword) {
+      headers['Authorization'] = 'Basic ' + btoa(`${username}:${appPassword}`);
+    }
 
     const promise = fetch(url, {
       method: 'GET',

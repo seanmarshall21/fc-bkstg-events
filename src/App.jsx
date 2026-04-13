@@ -9,6 +9,7 @@ import SettingsPage from './components/SettingsPage';
 import SearchPage from './components/SearchPage';
 import FavoritesPage from './components/FavoritesPage';
 import AddSitePage from './sites/AddSitePage';
+import UpdateToast from './components/UpdateToast';
 
 // Modules
 import ArtistList from './modules/artists/ArtistList';
@@ -104,6 +105,7 @@ export default function App() {
     <BrowserRouter>
       <AuthProvider>
         <AppRoutes />
+        <UpdateToast />
       </AuthProvider>
     </BrowserRouter>
   );

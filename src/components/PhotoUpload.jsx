@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { uploadToWpMedia, compressImage } from './mediaUploadService';
+import { uploadToWpMedia, compressImage } from '../services/mediaUploadService';
 
 /**
  * PhotoUpload - Universal photo upload component for WP media library

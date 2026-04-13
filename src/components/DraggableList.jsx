@@ -1,5 +1,5 @@
 import React from 'react';
-import useDragReorder from './useDragReorder';
+import useDragReorder from '../hooks/useDragReorder';
 
 /**
  * DraggableList

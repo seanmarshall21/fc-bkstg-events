@@ -124,7 +124,8 @@ export function useSchema(postType, options = {}) {
   const refresh = useCallback(() => fetchSchema({ force: true }), [fetchSchema]);
 
   // Derived conveniences
-  const fields = flattenSchemaFields(schema);
+  // useMemo: stable array ref prevents fetchArtist from re-creating every render
+  const fields = useMemo(() => flattenSchemaFields(schema), [schema]);
   const restBase = schema?.rest_base || postType;
 
   return { schema, fields, restBase, loading, error, refresh };

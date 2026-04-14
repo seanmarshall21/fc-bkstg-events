@@ -119,7 +119,35 @@ export default function ArtistDetail() {
     }
   };
 
-  // Loading states
+
+  // Photo handlers — must be declared before any conditional returns (Rules of Hooks)
+  const handlePhotoChange = useCallback(async (url, mediaObject) => {
+    setArtist(prev => ({ ...prev, vc_artist_photo: url }));
+
+    if (!isCreate && artist?._wp?.id) {
+      try {
+        await setFeaturedMedia({
+          siteUrl: activeSite?.url,
+          username: activeSite?.username,
+          appPassword: activeSite?.appPassword,
+          postId: artist._wp.id,
+          mediaId: mediaObject.id,
+          postType: 'vc_artist',
+        });
+      } catch (err) {
+        console.error('Failed to set featured media:', err);
+      }
+    }
+  }, [activeSite, isCreate, artist?._wp?.id]);
+
+  const handlePhotoRemove = useCallback(() => {
+    setArtist(prev => ({ ...prev, vc_artist_photo: '' }));
+  }, []);
+
+  // ── Loading / error states ──────────────────────────────────────
+  // Must come AFTER all hooks above.
+
+  if (schemaLoading || loading)
   if (schemaLoading || loading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -144,37 +172,6 @@ export default function ArtistDetail() {
       </div>
     );
   }
-
-  const handlePhotoChange = useCallback(async (url, mediaObject) => {
-    // Update local form state
-    setArtist(prev => ({
-      ...prev,
-      vc_artist_photo: url,
-    }));
-
-    // Set as featured image if we have the post ID
-    if (!isCreate && artist?._wp?.id) {
-      try {
-        await setFeaturedMedia({
-          siteUrl: activeSite?.url,
-          username: activeSite?.username,
-          appPassword: activeSite?.appPassword,
-          postId: artist._wp.id,
-          mediaId: mediaObject.id,
-          postType: 'vc_artist',
-        });
-      } catch (err) {
-        console.error('Failed to set featured media:', err);
-      }
-    }
-  }, [activeSite, isCreate, artist?._wp?.id]);
-
-  const handlePhotoRemove = useCallback(() => {
-    setArtist(prev => ({
-      ...prev,
-      vc_artist_photo: '',
-    }));
-  }, []);
 
   return (
     <div className="space-y-6">

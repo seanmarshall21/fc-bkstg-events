@@ -101,17 +101,14 @@ export default function ArtistDetail() {
         : {};
 
       if (isCreate) {
-        const { data: newPost } = await client.post(WP_ENDPOINTS.artists.list, {
-          title: values.title,
-          status: 'publish',
-          acf: acfPayload,
-        });
+        const body = { title: values.title, status: 'publish' };
+        if (Object.keys(acfPayload).length > 0) body.acf = acfPayload;
+        const { data: newPost } = await client.post(WP_ENDPOINTS.artists.list, body);
         navigate(`/artists/${newPost.id}`, { replace: true });
       } else {
-        await client.post(WP_ENDPOINTS.artists.single(id), {
-          title: values.title,
-          acf: acfPayload,
-        });
+        const editBody = { title: values.title };
+        if (Object.keys(acfPayload).length > 0) editBody.acf = acfPayload;
+        await client.post(WP_ENDPOINTS.artists.single(id), editBody);
         await fetchArtist();
       }
     } finally {

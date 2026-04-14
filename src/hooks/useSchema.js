@@ -13,7 +13,7 @@
  *   }
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 // Module-level cache — persists across component mounts within a session
 const schemaCache = new Map();

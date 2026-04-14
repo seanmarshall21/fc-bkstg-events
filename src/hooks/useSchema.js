@@ -84,7 +84,6 @@ export function useSchema(postType, options = {}) {
 
     const promise = fetch(url, {
       method: 'GET',
-      credentials: 'include',
       headers,
     }).then(async (res) => {
       if (!res.ok) {
@@ -113,7 +112,8 @@ export function useSchema(postType, options = {}) {
     } finally {
       inflight.delete(postType);
     }
-  }, [postType, apiBase, nonce, ttl, isEnabled]);
+  // username + appPassword included — stale closure would send wrong auth header
+  }, [postType, apiBase, nonce, ttl, isEnabled, username, appPassword]);
 
   useEffect(() => {
     if (!schema && isEnabled) {
@@ -135,8 +135,8 @@ export function useSchema(postType, options = {}) {
  * Useful when you want to render all fields in one form without section headers.
  */
 export function flattenSchemaFields(schema) {
-  if (!schema?.field_groups) return [];
-  return schema.field_groups.reduce(
+  if (!schema?.groups) return [];
+  return schema.groups.reduce(
     (acc, group) => acc.concat(group.fields || []),
     []
   );
@@ -147,7 +147,7 @@ export function flattenSchemaFields(schema) {
  * nested sub_fields inside groups/repeaters.
  */
 export function findFieldByName(schema, name) {
-  if (!schema?.field_groups) return null;
+  if (!schema?.groups) return null;
   const walk = (fields) => {
     for (const f of fields) {
       if (f.name === name) return f;
@@ -158,7 +158,7 @@ export function findFieldByName(schema, name) {
     }
     return null;
   };
-  for (const g of schema.field_groups) {
+  for (const g of schema.groups) {
     const found = walk(g.fields || []);
     if (found) return found;
   }

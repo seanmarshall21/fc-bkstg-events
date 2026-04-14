@@ -147,7 +147,24 @@ export default function ArtistDetail() {
   // ── Loading / error states ──────────────────────────────────────
   // Must come AFTER all hooks above.
 
-  if (schemaLoading || loading)
+  // Wait for auth to bootstrap
+  if (!activeSite) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+      </div>
+    );
+  }
+
+  // Credentials ready but schema not yet loaded — prevent premature render with null schema
+  if (activeSite.appPassword && !schema && !schemaError) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+      </div>
+    );
+  }
+
   if (schemaLoading || loading) {
     return (
       <div className="flex items-center justify-center py-20">

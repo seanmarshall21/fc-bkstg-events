@@ -69,6 +69,9 @@ export function useSchema(postType, options = {}) {
       }
     }
 
+    // Guard: never fetch with relative base and no credentials.
+    if ((!apiBase || apiBase.startsWith('/')) && !username && !appPassword && !nonce) return;
+
     setLoading(true);
     setError(null);
 

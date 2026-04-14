@@ -33,7 +33,7 @@ export default function ArtistDetail() {
     loading: schemaLoading,
     error: schemaError,
   } = useSchema('vc_artist', {
-    skip: !activeSite,
+    skip: !activeSite?.appPassword,
     apiBase: activeSite ? `${activeSite.url}/wp-json/vc/v1` : '/wp-json/vc/v1',
     username: activeSite?.username,
     appPassword: activeSite?.appPassword,

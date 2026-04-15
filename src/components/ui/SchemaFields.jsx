@@ -108,7 +108,7 @@ function NumberField({ field, value, onChange }) {
 /* ─── Select ────────────────────────────────────────────────── */
 
 function SelectField({ field, value, onChange }) {
-  const choices = normalizeChoices(field.choices);
+  const choices = normalizeChoices(field.choices || field.options);
   return (
     <FieldWrapper field={field}>
       <div className="vc-field-bg">
@@ -131,7 +131,7 @@ function SelectField({ field, value, onChange }) {
 /* ─── Radio ─────────────────────────────────────────────────── */
 
 function RadioField({ field, value, onChange }) {
-  const choices = normalizeChoices(field.choices);
+  const choices = normalizeChoices(field.choices || field.options);
   return (
     <FieldWrapper field={field}>
       <div className="space-y-1.5">
@@ -156,7 +156,7 @@ function RadioField({ field, value, onChange }) {
 /* ─── Checkbox (multi-select) ───────────────────────────────── */
 
 function CheckboxField({ field, value, onChange }) {
-  const choices = normalizeChoices(field.choices);
+  const choices = normalizeChoices(field.choices || field.options);
   const selected = Array.isArray(value) ? value : [];
   const toggle = (val) => {
     const next = selected.includes(val)

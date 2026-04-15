@@ -52,25 +52,25 @@ export default function FieldEditor({
 
   // Auto-detect special fields from schema
   const photoField = useMemo(() => {
-    if (photoFieldName) return allFields.find(f => f.name === photoFieldName);
+    if (photoFieldName) return allFields.find(f => (f.name || f.key) === photoFieldName);
     return allFields.find(f => f.type === 'image');
   }, [allFields, photoFieldName]);
 
   const badgeField = useMemo(() => {
-    if (badgeFieldName) return allFields.find(f => f.name === badgeFieldName);
-    // Auto-detect: first select field with status/booking in name
+    if (badgeFieldName) return allFields.find(f => (f.name || f.key) === badgeFieldName);
+    // Auto-detect: first select field with status/booking in name (guard against missing name)
     return allFields.find(f =>
-      f.type === 'select' && (f.name.includes('status') || f.name.includes('booking'))
+      f.type === 'select' && f.name && (f.name.includes('status') || f.name.includes('booking'))
     );
   }, [allFields, badgeFieldName]);
 
   // Regular fields = everything except photo, badge, and title (title handled separately)
   const regularFields = useMemo(() => {
     const specialNames = new Set([
-      photoField?.name,
-      badgeField?.name,
+      photoField ? (photoField.name || photoField.key) : null,
+      badgeField ? (badgeField.name || badgeField.key) : null,
     ].filter(Boolean));
-    return allFields.filter(f => !specialNames.has(f.name));
+    return allFields.filter(f => !specialNames.has(f.name || f.key));
   }, [allFields, photoField, badgeField]);
 
   // State
@@ -141,7 +141,7 @@ export default function FieldEditor({
         <SaveToast status={saveStatus} message={saveMessage} />
 
         <form onSubmit={handleSubmit}>
-          {/* Photo avatar — skipped when handled externally */}
+          {/* Photo avatar — skipped when handled externally (e.g. ArtistDetail has its own PhotoUpload) */}
           {photoField && renderPhotoInEditor && (
             <AvatarUpload
               value={values[photoField.name]}
@@ -167,9 +167,9 @@ export default function FieldEditor({
           {badgeField && (
             <div className="flex justify-center mb-5">
               <StatusBadge
-                value={values[badgeField.name] || ''}
+                value={values[badgeField.name || badgeField.key] || ''}
                 choices={badgeField.choices}
-                onChange={(val) => handleChange(badgeField.name, val)}
+                onChange={(val) => handleChange(badgeField.name || badgeField.key, val)}
               />
             </div>
           )}
@@ -177,14 +177,15 @@ export default function FieldEditor({
           {/* Dynamic fields */}
           <div className="space-y-3">
             {regularFields.map(field => {
+              const fieldId = field.name || field.key;
               // Group fields: pass nested values
               if (field.type === 'group') {
                 return (
                   <SchemaField
                     key={field.key || field.name}
                     field={field}
-                    value={values[field.name] || {}}
-                    onChange={(val) => handleChange(field.name, val)}
+                    value={values[fieldId] || {}}
+                    onChange={(val) => handleChange(fieldId, val)}
                     getClient={getClient}
                     depth={0}
                   />
@@ -195,8 +196,8 @@ export default function FieldEditor({
                 <SchemaField
                   key={field.key || field.name}
                   field={field}
-                  value={values[field.name] ?? ''}
-                  onChange={(val) => handleChange(field.name, val)}
+                  value={values[fieldId] ?? ''}
+                  onChange={(val) => handleChange(fieldId, val)}
                   getClient={getClient}
                   depth={0}
                 />
@@ -250,16 +251,19 @@ export default function FieldEditor({
           </div>
         </div>
 
-        {allFields.map(field => (
-          <SchemaField
-            key={field.key || field.name}
-            field={field}
-            value={field.type === 'group' ? (values[field.name] || {}) : (values[field.name] ?? '')}
-            onChange={(val) => handleChange(field.name, val)}
-            getClient={getClient}
-            depth={0}
-          />
-        ))}
+        {allFields.map(field => {
+          const fieldId = field.name || field.key;
+          return (
+            <SchemaField
+              key={field.key || field.name}
+              field={field}
+              value={field.type === 'group' ? (values[fieldId] || {}) : (values[fieldId] ?? '')}
+              onChange={(val) => handleChange(fieldId, val)}
+              getClient={getClient}
+              depth={0}
+            />
+          );
+        })}
       </form>
     </div>
   );

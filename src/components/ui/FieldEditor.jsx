@@ -39,6 +39,7 @@ export default function FieldEditor({
   mode = 'edit',
   layout = 'detail',
   photoFieldName,
+  renderPhotoInEditor = true,
   titleFieldName = 'title',
   badgeFieldName,
 }) {
@@ -140,8 +141,8 @@ export default function FieldEditor({
         <SaveToast status={saveStatus} message={saveMessage} />
 
         <form onSubmit={handleSubmit}>
-          {/* Photo avatar */}
-          {photoField && (
+          {/* Photo avatar — skipped when handled externally */}
+          {photoField && renderPhotoInEditor && (
             <AvatarUpload
               value={values[photoField.name]}
               onChange={(val) => handleChange(photoField.name, val)}

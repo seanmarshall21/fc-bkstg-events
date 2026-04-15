@@ -219,6 +219,7 @@ export default function ArtistDetail() {
         mode={isCreate ? 'create' : 'edit'}
         layout="detail"
         photoFieldName="vc_artist_photo"
+        renderPhotoInEditor={false}
         titleFieldName="title"
         badgeFieldName="vc_artist_booking_status"
       />

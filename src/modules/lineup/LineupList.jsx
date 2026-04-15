@@ -40,8 +40,13 @@ export default function LineupList() {
               });
             });
           });
-          setSlots(flat);
-          return;
+          // Only use VC data if it actually returned slots — new slots with no
+          // stage/day assignment won't appear in the structured response, so fall
+          // through to WP REST which shows all slots regardless of assignment.
+          if (flat.length > 0) {
+            setSlots(flat);
+            return;
+          }
         } catch (vcErr) {
           console.warn('VC lineup endpoint failed, falling back to WP:', vcErr.message);
         }

@@ -8,8 +8,8 @@
  *   {
  *     post_type: 'vc_artist',
  *     label: 'Artist',
- *     field_groups: [{ key, title, fields: [...] }],
- *     generated_at: '2026-04-05T...'
+ *     groups: [{ key, title, fields: [...] }],
+ *     generated: '2026-04-05T...'
  *   }
  */
 
@@ -69,8 +69,13 @@ export function useSchema(postType, options = {}) {
       }
     }
 
-    // Guard: never fetch with relative base and no credentials.
-    if ((!apiBase || apiBase.startsWith('/')) && !username && !appPassword && !nonce) return;
+    // Guard: never fire a schema fetch against the relative base without credentials.
+    // This prevents a timing race where activeSite exists but credentials haven't
+    // loaded yet, which would fire an unauthenticated request.
+    const isRelativeBase = !apiBase || apiBase.startsWith('/');
+    if (isRelativeBase && !username && !appPassword && !nonce) {
+      return;
+    }
 
     setLoading(true);
     setError(null);
@@ -82,6 +87,10 @@ export function useSchema(postType, options = {}) {
       headers['Authorization'] = 'Basic ' + btoa(`${username}:${appPassword}`);
     }
 
+    // NOTE: No `credentials: 'include'` — we use Basic Auth headers, not cookies.
+    // credentials:include on cross-origin requests requires the server to return
+    // Access-Control-Allow-Credentials:true, which WP doesn't set by default,
+    // causing iOS Safari to silently drop the response.
     const promise = fetch(url, {
       method: 'GET',
       headers,
@@ -123,8 +132,9 @@ export function useSchema(postType, options = {}) {
 
   const refresh = useCallback(() => fetchSchema({ force: true }), [fetchSchema]);
 
-  // Derived conveniences
-  // useMemo: stable array ref prevents fetchArtist from re-creating every render
+  // Derived conveniences — WP plugin returns 'groups', not 'field_groups'
+  // useMemo ensures stable array ref across renders — prevents fetchArtist from
+  // re-creating every render and resetting form state via its useEffect dependency.
   const fields = useMemo(() => flattenSchemaFields(schema), [schema]);
   const restBase = schema?.rest_base || postType;
 
@@ -132,7 +142,7 @@ export function useSchema(postType, options = {}) {
 }
 
 /**
- * Flatten all fields across field_groups into a single flat array.
+ * Flatten all fields across groups into a single flat array.
  * Useful when you want to render all fields in one form without section headers.
  */
 export function flattenSchemaFields(schema) {
@@ -229,13 +239,35 @@ export function extractValues(fields, acf) {
 /**
  * Build an ACF-compatible payload from form values, filtered to only
  * keys that exist in the schema. Safe to POST directly as the `acf` property.
+ *
+ * Normalizes post_object and taxonomy values to IDs — ACF's update_callback
+ * expects integer IDs, not full post/term objects.
  */
 export function buildAcfPayload(fields, values) {
   const payload = {};
   for (const field of fields) {
-    if (field.name in values) {
-      payload[field.name] = values[field.name];
+    if (!(field.name in values)) continue;
+    let val = values[field.name];
+
+    if (field.type === 'post_object' || field.type === 'relationship') {
+      // Extract post ID(s) from object(s)
+      if (Array.isArray(val)) {
+        val = val.map(v => (v && typeof v === 'object') ? (v.ID || v.id) : v).filter(Boolean);
+      } else if (val && typeof val === 'object') {
+        val = val.ID || val.id || null;
+      }
     }
+
+    if (field.type === 'taxonomy') {
+      // Extract term ID(s) from object(s)
+      if (Array.isArray(val)) {
+        val = val.map(v => (v && typeof v === 'object') ? v.id : v).filter(Boolean);
+      } else if (val && typeof val === 'object') {
+        val = val.id || null;
+      }
+    }
+
+    payload[field.name] = val;
   }
   return payload;
 }

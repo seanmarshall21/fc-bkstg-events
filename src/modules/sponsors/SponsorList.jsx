@@ -21,18 +21,37 @@ export default function SponsorList() {
     if (!client) return;
     setLoading(true);
     try {
-      const params = {};
-      if (activeEventId) {
-        params.event_id = activeEventId;
-      }
-      const { data } = await client.get(VC_ENDPOINTS.sponsors.list, params);
-      const flat = [];
-      data.forEach(tier => {
-        tier.sponsors?.forEach(s => {
-          flat.push({ ...s, _tier: tier.tier_label, _tierSlug: tier.tier });
+      // Try VC endpoint first — returns tier-structured data
+      try {
+        const params = {};
+        if (activeEventId) params.event_id = activeEventId;
+        const { data } = await client.get(VC_ENDPOINTS.sponsors.list, params);
+        const flat = [];
+        data.forEach(tier => {
+          tier.sponsors?.forEach(s => {
+            flat.push({ ...s, _tier: tier.tier_label, _tierSlug: tier.tier });
+          });
         });
-      });
-      setSponsors(flat);
+        // Only use VC data if it returned sponsors — new sponsors without a tier
+        // won't appear in the structured response, fall through to WP REST.
+        if (flat.length > 0) {
+          setSponsors(flat);
+          return;
+        }
+      } catch (vcErr) {
+        console.warn('VC sponsors endpoint failed, falling back to WP:', vcErr.message);
+      }
+
+      // WP REST fallback — shows all sponsors regardless of tier assignment
+      const { data } = await client.get(WP_ENDPOINTS.sponsors.list, { per_page: 200, context: 'edit' });
+      setSponsors(data.map(s => ({
+        id: s.id,
+        name: s.title?.rendered || s.title?.raw || `Sponsor #${s.id}`,
+        logo: s.acf?.vc_sponsor_logo || '',
+        url: s.acf?.vc_sponsor_url || '',
+        _tier: s.acf?.vc_sponsor_tier || '',
+        _tierSlug: s.acf?.vc_sponsor_tier || '',
+      })));
     } catch (err) {
       console.error('Failed to fetch sponsors:', err);
     } finally {

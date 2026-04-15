@@ -37,9 +37,9 @@ const STATUS_CYCLE = ['confidential', 'teaser', 'live'];
 // ── Confirm sheet ──────────────────────────────────────────────
 function ConfirmSheet({ phase, onConfirm, onCancel }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40" onClick={onCancel}>
+    <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/40" onClick={onCancel}>
       <div
-        className="w-full max-w-lg bg-white rounded-t-2xl p-6 pb-10 shadow-xl"
+        className="w-full max-w-lg bg-white rounded-t-2xl p-6 pb-16 shadow-xl"
         onClick={e => e.stopPropagation()}
       >
         <p className="text-sm text-gray-500 mb-1">Activate phase</p>

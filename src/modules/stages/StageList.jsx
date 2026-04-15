@@ -28,7 +28,7 @@ function CreateStageSheet({ onClose, onCreated, getClient }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40" onClick={onClose}>
+    <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/40" onClick={onClose}>
       <div
         className="w-full max-w-lg bg-white rounded-t-2xl p-6 pb-10 shadow-xl"
         onClick={e => e.stopPropagation()}
@@ -98,7 +98,7 @@ function EditStageSheet({ stage, onClose, onSaved, onDeleted, getClient }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40" onClick={onClose}>
+    <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/40" onClick={onClose}>
       <div
         className="w-full max-w-lg bg-white rounded-t-2xl p-6 pb-10 shadow-xl"
         onClick={e => e.stopPropagation()}

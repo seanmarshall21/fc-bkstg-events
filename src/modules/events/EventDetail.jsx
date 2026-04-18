@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthContext';
+import ZooEventDetail from './ZooEventDetail';
 import { WP_ENDPOINTS } from '../../api/endpoints';
 import useSchema, { buildDefaultValues, buildAcfPayload, extractValues } from '../../hooks/useSchema';
 import FieldEditor from '../../components/ui/FieldEditor';
@@ -107,6 +108,9 @@ export default function EventDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { getClient, activeSite } = useAuth();
+
+  // Zoo Agency gets its own purpose-built detail component
+  if (activeSite?.slug === 'zoo-agency') return <ZooEventDetail />;
   const [event, setEvent]             = useState(null);
   const [loading, setLoading]         = useState(true);
   const [saving, setSaving]           = useState(false);

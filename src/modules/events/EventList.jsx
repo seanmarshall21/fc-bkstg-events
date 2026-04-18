@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthContext';
+import ZooEventList from './ZooEventList';
 import { WP_ENDPOINTS } from '../../api/endpoints';
 import ContentList from '../../components/ui/ContentList';
 import { decodeHtml } from '../../utils/helpers';
@@ -9,6 +10,9 @@ import { CheckCircle2, Circle } from 'lucide-react';
 
 export default function EventList() {
   const { getClient, activeSite, hasSites, activeSiteId, activeEventId, setActiveEvent } = useAuth();
+
+  // Zoo Agency gets its own purpose-built list component
+  if (activeSite?.slug === 'zoo-agency') return <ZooEventList />;
   const { isFavorite, toggleFavorite } = useFavorites(activeSiteId);
   const navigate = useNavigate();
   const [events, setEvents] = useState([]);

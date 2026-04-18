@@ -122,13 +122,13 @@ class VC_EP_Schema_Endpoint {
         $schema = [
             'post_type'    => $post_type,
             'label'        => get_post_type_object($post_type)->labels->singular_name ?? $post_type,
-            'field_groups' => [],
+            'groups'       => [],
             'generated_at' => current_time('c'),
         ];
 
         foreach ($field_groups as $group) {
             $fields = acf_get_fields($group['key']);
-            $schema['field_groups'][] = [
+            $schema['groups'][] = [
                 'key'    => $group['key'],
                 'title'  => $group['title'],
                 'fields' => self::normalize_fields($fields ?: []),

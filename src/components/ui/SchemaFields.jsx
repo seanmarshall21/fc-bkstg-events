@@ -364,7 +364,10 @@ function TaxonomyField({ field, value, onChange, getClient }) {
     try {
       const params = { per_page: 50, hide_empty: false };
       if (q) params.search = q;
-      const { data } = await client.get(`/wp/v2/${field.taxonomy}`, params);
+      // WP REST uses non-obvious endpoint names for built-in taxonomies
+      const WP_TAXONOMY_REST_MAP = { post_tag: 'tags', category: 'categories' };
+      const restBase = WP_TAXONOMY_REST_MAP[field.taxonomy] || field.taxonomy;
+      const { data } = await client.get(`/wp/v2/${restBase}`, params);
       setTerms(data);
     } catch (err) {
       console.error('Failed to fetch terms:', err);

@@ -10,16 +10,27 @@ import { Plus, Search, SlidersHorizontal, Loader2, ChevronRight, MoreVertical } 
  *
  * Differences from the generic EventList:
  *  - Reads ACF fields: vc_ep_event_icon, vc_ep_title, vc_ep_season, vc_ep_confidential
- *  - Groups events by year (derived from vc_ep_dates.vc_ep_start_date, Ymd format)
+ *  - Groups events by year (derived from vc_ep_dates.start_date, return_format m/d/Y)
  *  - Per-row Confidential toggle with live WP PATCH
  *  - Year-group header with bulk Confidential toggle
+ *
+ * ACF sub-field names (short, no vc_ep_ prefix):
+ *  vc_ep_dates   → start_date, end_date, tbd.enabled, tbd.text
+ *  vc_ep_details → city, state, venue, established, capacity, tags, contacts[].email
+ *  vc_ep_media   → logo_horizontal, logo_vertical, images[].image, videos.vimeo_url, videos.mp4_url
+ *  vc_ep_social  → website, instagram, facebook, spotify, twitter, tiktok, soundcloud, other
+ *  Flat fields   → year (number), brand (select), event_image (image)
  */
 
 // ── Helpers ────────────────────────────────────────────────────
 
 function getEventYear(ev) {
-  const dateStr = ev.acf?.vc_ep_dates?.vc_ep_start_date;
-  if (dateStr && dateStr.length >= 4) return dateStr.slice(0, 4);
+  const dateStr = ev.acf?.vc_ep_dates?.start_date;
+  if (!dateStr) return 'TBD';
+  // ACF return_format is m/d/Y (e.g. "04/20/2026") — year is last 4 chars
+  if (dateStr.includes('/')) return dateStr.slice(-4);
+  // Ymd fallback (e.g. "20260420")
+  if (dateStr.length >= 4) return dateStr.slice(0, 4);
   return 'TBD';
 }
 
@@ -46,11 +57,12 @@ function groupByYear(events) {
     groups[year].push(ev);
   }
   // Sort each group by start_date ascending
+  // m/d/Y format sorts correctly after converting to Date
   for (const year of Object.keys(groups)) {
     groups[year].sort((a, b) => {
-      const da = a.acf?.vc_ep_dates?.vc_ep_start_date || '';
-      const db = b.acf?.vc_ep_dates?.vc_ep_start_date || '';
-      return da.localeCompare(db);
+      const da = a.acf?.vc_ep_dates?.start_date || '';
+      const db = b.acf?.vc_ep_dates?.start_date || '';
+      return new Date(da) - new Date(db);
     });
   }
   // Return sorted years (numeric ascending, TBD last)

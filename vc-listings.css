@@ -1,13 +1,33 @@
 /* ==========================================================================
-   vc-listings.css
-   VC Listings — Zoo Agency Event Properties
-   Namespace: vc_ (Vivo Creative)
+   v1.4.0
+   2026-04-23 PDT
+
+   emh-listings.css
+   emh Listings — Zoo Agency Event Properties
+   Namespace: emh_ (controls + card internals / PHP targets)
 
    Fonts required:
     · Acumin Variable Concept (Adobe Fonts) — year headers, titles, dates
     · Inter (Google Fonts) — all UI / meta text
 
-   Load order: <head> → vc-listings.css, then footer → vc-listings.js
+   Load order: <head> → emh-listings.css, then footer → emh-listings.js
+
+   Changelog:
+   v1.4.1 — 2026-04-23 — .emh_cntrl_parent: sticky top:0 z-index:10 with opaque
+                          bg + bottom shadow. Padding split into top/bottom to keep
+                          breathing room above and below controls within sticky bar.
+   v1.4.0 — 2026-04-23 — Single-markup architecture. grid-view / list-view on
+                          .emh_listings_repeater drives all layout differences via
+                          descendant selectors. No show/hide — one repeater_view
+                          per card, CSS reflows it. Fixed: foot direction (grid=row,
+                          list=col), responsive selectors corrected (.grid-view not
+                          .grid-view .emh_listings_view), hover img scale fixed to
+                          shared selector, contradictory section 14 removed, dead
+                          trailing-underscore selector removed, align-items value
+                          corrected, duplicate emh_listings_head rules collapsed.
+   v1.3.0 — 2026-04-23 — Working draft; dual-markup remnants, section 14 conflicts
+   v1.2.0 — 2026-04-23 — Full class rename to emh_listings_* / emh_cntrl_*
+   v1.1.0 — 2026-04-23 — Search widget selectors renamed emh-search-* → emh_search_*
    ========================================================================== */
 
 
@@ -15,45 +35,45 @@
    0. TOKENS
    -------------------------------------------------------------------------- */
 :root {
-  /* Colors */
-  --vc-bg:               #ececec;
-  --vc-card-bg:          rgba(252, 252, 252, 0.5);
-  --vc-card-border:      #000000;
-  --vc-text-primary:     #282828;
-  --vc-text-muted:       #979797;
-  --vc-text-placeholder: #bdbdbd;
-  --vc-input-bg:         #fcfcfc;
-  --vc-input-border:     #bdbdbd;
-  --vc-btn-dark-bg:      #555555;
-  --vc-btn-dark-color:   #ececec;
-  --vc-contact-border:   #3d3d3d;
+  /* Colors — consume --zoo-* where available, hard-code fallbacks */
+  --emh-bg:               var(--zoo-light, #ececec);
+  --emh-card-bg:          rgba(252, 252, 252, 0.5);
+  --emh-card-border:      var(--zoo-text, #282828);
+  --emh-text-primary:     var(--zoo-text, #282828);
+  --emh-text-muted:       var(--zoo-dark, #7d7d7d);
+  --emh-text-placeholder: var(--zoo-mid, #b5b5b5);
+  --emh-input-bg:         var(--zoo-light, #ececec);
+  --emh-input-border:     var(--zoo-dark, #7d7d7d);
+  --emh-btn-dark-bg:      var(--zoo-dark, #7d7d7d);
+  --emh-btn-dark-color:   var(--zoo-light, #ececec);
+  --emh-contact-border:   var(--zoo-text, #282828);
 
   /* Shape */
-  --vc-card-radius:      12px;
-  --vc-pill-radius:      99px;
-  --vc-btn-radius:       9px;
+  --emh-card-radius:  12px;
+  --emh-pill-radius:  99px;
+  --emh-btn-radius:   9px;
 
   /* Layout */
-  --vc-max-width:        1400px;
-  --vc-card-gap:         20px;
+  --emh-max-width: 1400px;
+  --emh-card-gap:  20px;
 
   /* Typography */
-  --vc-display-font: 'Acumin Variable Concept', 'Helvetica Neue', Arial, sans-serif;
-  --vc-ui-font:      'Inter', system-ui, -apple-system, sans-serif;
+  --emh-display-font: 'Acumin Variable Concept', 'Acumin', 'Helvetica Neue', Arial, sans-serif;
+  --emh-ui-font:      'Inter', 'Helvetica Neue', Arial, sans-serif;
 }
 
 
 /* --------------------------------------------------------------------------
-   1. OUTER WRAPPER & CONTAINER
+   1. OUTER WRAPPER
    -------------------------------------------------------------------------- */
-.vc_listings_wrap {
+.emh_listings_wrap {
   width: 100%;
-  background: var(--vc-bg);
+  background: var(--emh-bg);
   padding: 48px 0 80px;
 }
 
-.vc_listings_container {
-  max-width: var(--vc-max-width);
+.emh_listings_container {
+  max-width: var(--emh-max-width);
   margin: 0 auto;
   padding: 0 20px;
 }
@@ -62,37 +82,57 @@
 /* --------------------------------------------------------------------------
    2. CONTROLS BAR
    -------------------------------------------------------------------------- */
-.vc_listings_controls {
+.emh_cntrl_parent {
   display: flex;
-  align-items: center;
+  flex-direction: row;
+  justify-content: space-between;
   gap: 12px;
-  margin-bottom: 32px;
   flex-wrap: wrap;
+
+  /* Sticky bar — content scrolls behind */
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--emh-bg);
+  padding-top: 16px;
+  padding-bottom: 16px;
+  margin-bottom: 16px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
 }
 
-.vc_listings_controls_group {
+.emh_cntrl_fltr_grp {
   display: flex;
   align-items: center;
   gap: 12px;
 }
 
-/* Pushes right-side controls (search, view toggles) to far right */
-.vc_listings_controls_spacer {
+.emh_cntrl_spacer {
   flex: 1 1 auto;
 }
 
+/* ── Controls section split (two-group) ── */
+.emh_cntrl_section {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.emh_cntrl_section:last-child {
+  margin-left: auto;
+}
+
 /* ── Sort buttons ── */
-.vc_listings_sort_name,
-.vc_listings_sort_date {
+.emh_cntrl_sort_name,
+.emh_cntrl_sort_date {
   height: 40px;
   padding: 0 16px;
-  border: 2px solid var(--vc-input-border);
-  border-radius: var(--vc-pill-radius);
+  border: 2px solid var(--emh-input-border);
+  border-radius: var(--emh-pill-radius);
   background: transparent;
-  font-family: var(--vc-ui-font);
+  font-family: var(--emh-ui-font);
   font-size: 12px;
   font-weight: 600;
-  color: var(--vc-text-primary);
+  color: var(--emh-text-primary);
   cursor: pointer;
   white-space: nowrap;
   display: inline-flex;
@@ -101,67 +141,65 @@
   transition: background 0.18s, border-color 0.18s, color 0.18s;
 }
 
-.vc_listings_sort_name.vc_active,
-.vc_listings_sort_date.vc_active {
-  background: var(--vc-btn-dark-bg);
-  border-color: var(--vc-btn-dark-bg);
-  color: var(--vc-btn-dark-color);
+.emh_cntrl_sort_name.emh_active,
+.emh_cntrl_sort_date.emh_active {
+  background: var(--emh-btn-dark-bg);
+  border-color: var(--emh-btn-dark-bg);
+  color: var(--emh-btn-dark-color);
 }
 
-.vc_listings_sort_name[data-sort-dir="asc"]::after,
-.vc_listings_sort_date[data-sort-dir="asc"]::after  { content: '↑'; }
-.vc_listings_sort_name[data-sort-dir="desc"]::after,
-.vc_listings_sort_date[data-sort-dir="desc"]::after { content: '↓'; }
+.emh_cntrl_sort_name[data-sort-dir="asc"]::after,
+.emh_cntrl_sort_date[data-sort-dir="asc"]::after  { content: '↑'; }
+.emh_cntrl_sort_name[data-sort-dir="desc"]::after,
+.emh_cntrl_sort_date[data-sort-dir="desc"]::after { content: '↓'; }
 
 /* ── Filter selects — pill style ── */
-.vc_listings_filter_brand,
-.vc_listings_filter_location,
-.vc_listings_filter_year {
-  height: 40px;
+.emh_cntrl_fltr_brand select,
+.emh_cntrl_fltr_venue select,
+.emh_cntrl_fltr_year select {
+  height: 32px;
   padding: 0 34px 0 14px;
-  border: 2px solid var(--vc-input-border);
-  border-radius: var(--vc-pill-radius);
-  background-color: var(--vc-input-bg);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23bdbdbd' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  border: 2px solid var(--emh-input-border);
+  border-radius: var(--emh-pill-radius);
+  background-color: var(--emh-input-bg);
   background-repeat: no-repeat;
   background-position: right 12px center;
   appearance: none;
   -webkit-appearance: none;
-  font-family: var(--vc-ui-font);
+  font-family: var(--emh-ui-font);
   font-size: 13px;
-  color: var(--vc-text-primary);
+  color: var(--emh-text-primary);
   cursor: pointer;
   min-width: 90px;
   transition: border-color 0.18s;
 }
 
-.vc_listings_filter_brand:focus,
-.vc_listings_filter_location:focus,
-.vc_listings_filter_year:focus {
+.emh_cntrl_fltr_brand select:focus,
+.emh_cntrl_fltr_venue select:focus,
+.emh_cntrl_fltr_year select:focus {
   outline: none;
-  border-color: var(--vc-text-primary);
+  border-color: var(--emh-text-primary);
 }
 
-/* ── Past events toggle ── */
-/* Wrap the checkbox in a <label class="vc_listings_filter_past_wrap"> */
-.vc_listings_filter_past_wrap {
+/* ── Past events toggle — wrap checkbox in <label class="emh_cntrl_fltr_past"> ── */
+.emh_cntrl_fltr_past {
   display: flex;
   align-items: center;
   gap: 7px;
-  font-family: var(--vc-ui-font);
+  font-family: var(--emh-ui-font);
   font-size: 8px;
   font-weight: 600;
-  color: var(--vc-text-muted);
+  color: var(--emh-text-muted);
   cursor: pointer;
   user-select: none;
 }
 
-.vc_listings_filter_past {
+.emh_cntrl_fltr_past input[type="checkbox"] {
   width: 36px;
   height: 20px;
   appearance: none;
   -webkit-appearance: none;
-  background: var(--vc-input-border);
+  background: var(--emh-input-border);
   border-radius: 10px;
   position: relative;
   cursor: pointer;
@@ -169,7 +207,7 @@
   transition: background 0.18s;
 }
 
-.vc_listings_filter_past::after {
+.emh_cntrl_fltr_past input[type="checkbox"]::after {
   content: '';
   position: absolute;
   width: 14px;
@@ -181,47 +219,23 @@
   transition: transform 0.18s;
 }
 
-.vc_listings_filter_past:checked {
-  background: var(--vc-text-primary);
+.emh_cntrl_fltr_past input[type="checkbox"]:checked {
+  background: var(--emh-text-primary);
 }
 
-.vc_listings_filter_past:checked::after {
+.emh_cntrl_fltr_past input[type="checkbox"]:checked::after {
   transform: translateX(16px);
 }
 
-/* ── Search input ── */
-.vc_listings_search {
-  height: 40px;
-  padding: 0 16px;
-  border: 2px solid var(--vc-input-border);
-  border-radius: var(--vc-pill-radius);
-  background: var(--vc-input-bg);
-  font-family: var(--vc-ui-font);
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--vc-text-primary);
-  min-width: 200px;
-  transition: border-color 0.18s;
-}
-
-.vc_listings_search::placeholder {
-  color: var(--vc-text-placeholder);
-}
-
-.vc_listings_search:focus {
-  outline: none;
-  border-color: var(--vc-text-primary);
-}
-
 /* ── View toggle buttons ── */
-.vc_listings_toggle_grid,
-.vc_listings_toggle_list {
+.emh_cntrl_togl_grid,
+.emh_cntrl_togl_list {
   width: 40px;
   height: 40px;
-  border: 2px solid var(--vc-input-border);
-  border-radius: var(--vc-btn-radius);
+  border: 2px solid var(--emh-input-border);
+  border-radius: var(--emh-btn-radius);
   background: transparent;
-  color: var(--vc-text-placeholder);
+  color: var(--emh-text-placeholder);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -230,114 +244,159 @@
   transition: background 0.18s, border-color 0.18s, color 0.18s;
 }
 
-.vc_listings_toggle_grid svg,
-.vc_listings_toggle_list svg {
+.emh_cntrl_togl_grid svg,
+.emh_cntrl_togl_list svg {
   width: 16px;
   height: 16px;
   fill: currentColor;
 }
 
-.vc_listings_toggle_grid.vc_active,
-.vc_listings_toggle_list.vc_active {
-  background: var(--vc-btn-dark-bg);
-  border-color: var(--vc-btn-dark-bg);
-  color: var(--vc-btn-dark-color);
+.emh_cntrl_togl_grid.emh_active,
+.emh_cntrl_togl_list.emh_active {
+  background: var(--emh-btn-dark-bg);
+  border-color: var(--emh-btn-dark-bg);
+  color: var(--emh-btn-dark-color);
+}
+
+.emh_cntrl_nav_btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 
 /* --------------------------------------------------------------------------
    3. YEAR GROUP
    -------------------------------------------------------------------------- */
-.vc_listings_year_group {
+.emh_listings_year_group {
   margin-bottom: 40px;
 }
 
-.vc_listings_year_header {
+.emh_listings_year_header {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  border-bottom: 2px solid var(--vc-card-border);
+  border-bottom: 2px solid var(--emh-card-border);
   padding-bottom: 4px;
   margin-bottom: 20px;
 }
 
-.vc_listings_year_label {
-  font-family: var(--vc-display-font);
+.emh_listings_year_label {
+  font-family: var(--emh-display-font);
   font-variation-settings: 'wght' 300;
   font-weight: 300;
   font-size: 28px;
   line-height: 30px;
-  color: var(--vc-text-primary);
+  color: var(--emh-text-primary);
 }
 
-.vc_listings_year_meta {
-  font-family: var(--vc-ui-font);
+.emh_listings_year_meta {
+  font-family: var(--emh-ui-font);
   font-size: 13px;
   font-weight: 400;
   letter-spacing: -0.02em;
   text-transform: uppercase;
-  color: var(--vc-text-primary);
+  color: var(--emh-text-primary);
 }
 
 
 /* --------------------------------------------------------------------------
    4. REPEATER — GRID & LIST MODES
+   JS toggles .grid-view / .list-view on .emh_listings_repeater.
+   All card layout differences driven by descendant selectors below.
    -------------------------------------------------------------------------- */
-.vc_listings_repeater--grid {
+.grid-view {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: var(--vc-card-gap);
+  gap: var(--emh-card-gap);
 }
 
-.vc_listings_repeater--list {
+.list-view {
   display: flex;
   flex-direction: column;
-  gap: var(--vc-card-gap);
+  gap: var(--emh-card-gap);
+  width: 100%;
 }
 
 
 /* --------------------------------------------------------------------------
    5. ITEM — SHARED SHELL
    -------------------------------------------------------------------------- */
-.vc_listings_repeater_item {
-  background: var(--vc-card-bg);
-  border: 2px solid var(--vc-card-border);
-  border-radius: var(--vc-card-radius);
+.emh_listings_parent {
+  background: var(--emh-card-bg);
+  border: 2px solid var(--emh-card-border);
+  border-radius: var(--emh-card-radius);
   overflow: hidden;
   cursor: pointer;
   position: relative;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-.vc_listings_repeater_item:hover {
+/* Grid: card flows as a column */
+.grid-view .emh_listings_parent {
+  display: flex;
+  flex-direction: column;
+}
+
+/* List: card is a full-width horizontal row */
+.list-view .emh_listings_parent {
+  display: flex;
+  flex-direction: row;
+  width: 100%;
+}
+
+.emh_listings_parent:hover {
   transform: translateY(-2px);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
 }
 
-.vc_listings_repeater_item:focus-visible {
-  outline: 2px solid var(--vc-text-primary);
+.emh_listings_parent:focus-visible {
+  outline: 2px solid var(--emh-text-primary);
   outline-offset: 2px;
 }
 
-
-/* --------------------------------------------------------------------------
-   6. TILE / GRID VIEW
-   -------------------------------------------------------------------------- */
-.vc_listings_repeater_view_tile {
+/* ── Inner view wrapper — single markup per card ── */
+.grid-view .emh_listings_repeater_view {
   display: flex;
   flex-direction: column;
   height: 100%;
 }
 
-/* Image */
-.vc_listings_repeater_view_tile .vc_listings_item_image {
+.list-view .emh_listings_repeater_view {
+  display: flex;
+  flex-direction: row;
+  width: 100%;
+  min-height: 240px;
+}
+
+
+/* --------------------------------------------------------------------------
+   6. IMAGE CONTAINER
+   -------------------------------------------------------------------------- */
+
+/* Grid: full width, locked aspect ratio */
+.grid-view .emh_listings_cont_image {
   width: 100%;
   aspect-ratio: 452 / 281;
   overflow: hidden;
   flex-shrink: 0;
+  position: relative;
 }
 
-.vc_listings_repeater_view_tile .vc_listings_item_image img {
+/* List: left column, fills card height */
+.list-view .emh_listings_cont_image {
+  width: 25%;
+  max-width: 400px;
+  flex-shrink: 0;
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+}
+
+/* Shared image — works for both views */
+.emh_listings_cont_image img {
   width: 100%;
   height: 100%;
   object-fit: cover;
@@ -345,69 +404,109 @@
   transition: transform 0.4s ease;
 }
 
-.vc_listings_repeater_item:hover
-  .vc_listings_repeater_view_tile
-  .vc_listings_item_image img {
+/* Hover scale — shared selector, works in both views */
+.emh_listings_parent:hover .emh_listings_cont_image img {
   transform: scale(1.03);
 }
 
-/* Content */
-.vc_listings_repeater_view_tile .vc_listings_item_content {
+
+/* --------------------------------------------------------------------------
+   7. CONTENT AREA
+   -------------------------------------------------------------------------- */
+
+/* Grid: stacks everything vertically */
+.grid-view .emh_listings_content {
   display: flex;
   flex-direction: column;
   gap: 14px;
-  padding: 30px 20px;
-  border-top: 2px solid var(--vc-card-border);
+  padding: 24px 20px 20px;
   flex: 1;
 }
 
-/* Header row: date + brand logo */
-.vc_listings_item_header_row {
+/* List: content area sits right of image, children flow as a row */
+.list-view .emh_listings_content {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
+  flex-direction: row;
+  flex: 1;
+  padding: 24px 20px;
+  border-left: 2px solid var(--emh-card-border);
+  gap: 0;
+  overflow: hidden;
+  min-width: 0;
 }
 
-/* Date block */
-.vc_listings_item_date {
+
+/* --------------------------------------------------------------------------
+   8. HEAD — date block + brand logo
+   -------------------------------------------------------------------------- */
+
+/* Grid: date and logo side by side */
+.grid-view .emh_listings_head {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  justify-content: space-between;
+  align-self: stretch;
+}
+
+/* List: date on top, logo pinned to bottom — fills column height */
+.list-view .emh_listings_head {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-self: stretch;
+  flex-shrink: 0;
+  width: 90px;
+  padding-right: 20px;
+  border-right: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+/* Date block — always stacked vertically */
+.emh_listings_cont_date {
   display: flex;
   flex-direction: column;
   line-height: 1;
   gap: 1px;
 }
 
-.vc_listings_item_date_month {
-  font-family: var(--vc-ui-font);
+.emh_listings_date_month {
+  font-family: var(--emh-ui-font);
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--vc-text-primary);
+  color: var(--emh-text-primary);
 }
 
-.vc_listings_item_date_day {
-  font-family: var(--vc-display-font);
+.emh_listings_date_day {
+  font-family: var(--emh-display-font);
   font-variation-settings: 'wght' 700;
   font-weight: 700;
   font-size: 30px;
   line-height: 1;
-  color: var(--vc-text-primary);
+  color: var(--emh-text-primary);
+  word-break: break-word;
+  hyphens: none;
 }
 
-.vc_listings_item_date_year {
-  font-family: var(--vc-ui-font);
+/* Smaller in list head column — less horizontal space */
+.list-view .emh_listings_date_day {
+  font-size: 24px;
+}
+
+.emh_listings_date_year {
+  font-family: var(--emh-ui-font);
   font-size: 10px;
   font-weight: 400;
-  color: var(--vc-text-muted);
+  color: var(--emh-text-muted);
 }
 
-.vc_listings_item_date_year::before {
+.emh_listings_date_year::before {
   content: '_';
 }
 
 /* Brand logo */
-.vc_listings_item_brand_logo {
+.emh_listings_logo {
   flex-shrink: 0;
   max-height: 32px;
   max-width: 100px;
@@ -416,264 +515,20 @@
   object-position: right center;
 }
 
-/* Title */
-.vc_listings_item_title {
-  font-family: var(--vc-display-font);
-  font-variation-settings: 'wght' 700;
-  font-weight: 700;
-  font-size: 26px;
-  line-height: 1.1;
-  color: var(--vc-text-primary);
-  margin: 0;
-}
-
-/* Season */
-.vc_listings_item_season {
-  font-family: var(--vc-ui-font);
-  font-size: 13px;
-  font-weight: 400;
-  color: var(--vc-text-primary);
-  margin-top: -6px;
-}
-
-.vc_listings_item_season::before {
-  content: '_';
-}
-
-/* Tag pills */
-.vc_listings_item_tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 5px;
-  align-items: center;
-}
-
-.vc_listings_item_tag {
-  display: inline-flex;
-  align-items: center;
-  height: 22px;
-  padding: 0 8px;
-  border: 1px solid var(--vc-text-primary);
-  border-radius: 99px;
-  font-family: var(--vc-ui-font);
-  font-size: 9px;
-  font-weight: 600;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: var(--vc-text-primary);
-  white-space: nowrap;
-  line-height: 1;
-}
-
-/* Metadata 2-column grid */
-.vc_listings_item_meta_grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px 20px;
-}
-
-.vc_listings_item_meta_cell {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
-
-.vc_listings_item_meta_label {
-  font-family: var(--vc-ui-font);
-  font-size: 8px;
-  font-weight: 700;
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
-  color: var(--vc-text-muted);
-}
-
-.vc_listings_item_meta_value {
-  font-family: var(--vc-ui-font);
-  font-size: 12px;
-  font-weight: 400;
-  color: var(--vc-text-primary);
-  line-height: 1.3;
-}
-
-/* Smaller tags when nested in meta grid (genre cell) */
-.vc_listings_item_meta_value .vc_listings_item_tags {
-  gap: 4px;
-  margin-top: 2px;
-}
-
-.vc_listings_item_meta_value .vc_listings_item_tag {
-  height: 18px;
-  padding: 0 6px;
-  font-size: 8px;
-}
-
-/* Footer: small meta + social + contact */
-.vc_listings_item_footer {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  margin-top: auto;
-  padding-top: 16px;
-  border-top: 1px solid rgba(0, 0, 0, 0.1);
-}
-
-.vc_listings_item_footer_row {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.vc_listings_item_footer_meta {
-  font-family: var(--vc-ui-font);
-  font-size: 8px;
-  color: var(--vc-text-muted);
-  line-height: 1.7;
-}
-
-.vc_listings_item_footer_meta span {
-  display: block;
-}
-
-/* Social links */
-.vc_listings_item_social {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-}
-
-.vc_listings_item_social_link {
-  font-family: var(--vc-ui-font);
-  font-size: 9px;
-  font-weight: 600;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: var(--vc-text-primary);
-  text-decoration: none;
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  white-space: nowrap;
-}
-
-.vc_listings_item_social_link::after {
-  content: '→';
-  font-size: 10px;
-  font-weight: 400;
-}
-
-.vc_listings_item_social_link:hover {
-  text-decoration: underline;
-}
-
-/* Contact button */
-.vc_listings_item_contact {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  height: 46px;
-  padding: 0 18px;
-  border: 1px solid var(--vc-contact-border);
-  border-radius: var(--vc-contact-radius, 999px);
-  background: transparent;
-  font-family: var(--vc-ui-font);
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--vc-text-primary);
-  text-decoration: none;
-  cursor: pointer;
-  transition: background 0.18s, color 0.18s;
-}
-
-.vc_listings_item_contact::after {
-  content: '→';
-  font-size: 14px;
-  font-weight: 400;
-}
-
-.vc_listings_item_contact:hover {
-  background: var(--vc-text-primary);
-  color: #fff;
+/* Smaller, left-aligned logo in list head column */
+.list-view .emh_listings_logo {
+  max-height: 28px;
+  max-width: 80px;
+  object-position: left center;
 }
 
 
 /* --------------------------------------------------------------------------
-   7. LIST VIEW
+   9. MAIN COLUMN
+   Center content column in list view; in grid view the natural flex column
+   handles layout without this wrapper.
    -------------------------------------------------------------------------- */
-.vc_listings_repeater_view_list {
-  display: flex;
-  flex-direction: row;
-  min-height: 281px;
-}
-
-/* Image */
-.vc_listings_repeater_view_list .vc_listings_item_image {
-  width: 383px;
-  flex-shrink: 0;
-  overflow: hidden;
-}
-
-.vc_listings_repeater_view_list .vc_listings_item_image img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-  transition: transform 0.4s ease;
-}
-
-.vc_listings_repeater_item:hover
-  .vc_listings_repeater_view_list
-  .vc_listings_item_image img {
-  transform: scale(1.03);
-}
-
-/* Content area — right of image */
-.vc_listings_repeater_view_list .vc_listings_item_content {
-  display: flex;
-  flex-direction: row;
-  flex: 1;
-  padding: 30px 20px;
-  border-left: 2px solid var(--vc-card-border);
-  gap: 0;
-  overflow: hidden;
-}
-
-/* Date + brand logo column */
-.vc_listings_item_date_col {
-  width: 90px;
-  flex-shrink: 0;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  padding-right: 20px;
-  border-right: 1px solid rgba(0, 0, 0, 0.1);
-}
-
-.vc_listings_repeater_view_list .vc_listings_item_date {
-  gap: 2px;
-}
-
-.vc_listings_repeater_view_list .vc_listings_item_date_month {
-  font-size: 11px;
-}
-
-.vc_listings_repeater_view_list .vc_listings_item_date_day {
-  font-size: 28px;
-  line-height: 1;
-}
-
-.vc_listings_item_logo {
-  max-height: 28px;
-  max-width: 80px;
-  width: auto;
-  object-fit: contain;
-}
-
-/* Main content column */
-.vc_listings_item_main_col {
+.emh_listings_main_col {
   flex: 1;
   min-width: 0;
   display: flex;
@@ -682,16 +537,257 @@
   padding: 0 20px;
 }
 
-.vc_listings_repeater_view_list .vc_listings_item_title {
+
+/* --------------------------------------------------------------------------
+   10. TITLE & SEASON
+   -------------------------------------------------------------------------- */
+.emh_listings_title {
+  font-family: var(--emh-display-font);
+  font-variation-settings: 'wght' 700;
+  font-weight: 700;
+  font-size: 26px;
+  line-height: 1.1;
+  color: var(--emh-text-primary);
+  margin: 0;
+}
+
+.list-view .emh_listings_title {
   font-size: 22px;
 }
 
-.vc_listings_repeater_view_list .vc_listings_item_season {
+.emh_listings_season {
+  font-family: var(--emh-ui-font);
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--emh-text-primary);
+  margin-top: -6px;
+}
+
+.emh_listings_season::before {
+  content: '_';
+}
+
+.list-view .emh_listings_season {
   margin-top: -4px;
 }
 
-/* Right aside: metadata + social + contact */
-.vc_listings_item_aside {
+
+/* --------------------------------------------------------------------------
+   11. TAG CHIPS
+   emh_listings_row_tag, emh_listings_chip_tag — PHP injection targets: DO NOT RENAME
+   -------------------------------------------------------------------------- */
+.emh_listings_row_tag,
+.emh_listings_cont_tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  align-items: center;
+}
+
+.emh_listings_chip_tag {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 8px;
+  border: 1px solid var(--emh-text-primary);
+  border-radius: 99px;
+  font-family: var(--emh-ui-font);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--emh-text-primary);
+  white-space: nowrap;
+  line-height: 1;
+}
+
+
+/* --------------------------------------------------------------------------
+   12. METADATA GRID
+   -------------------------------------------------------------------------- */
+.emh_listings_cont_meta {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 20px;
+}
+
+.emh_listings_meta_grp {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.emh_listings_eyebrow {
+  font-family: var(--emh-ui-font);
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--emh-text-muted);
+}
+
+.emh_listings_data {
+  font-family: var(--emh-ui-font);
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--emh-text-primary);
+  line-height: 1.3;
+}
+
+/* Smaller chips inside a metadata value cell
+   emh_listings_chip_tag_large, emh_listings_genre_cont — PHP injection targets: DO NOT RENAME */
+.emh_listings_data .emh_listings_row_tag,
+.emh_listings_data .emh_listings_cont_tags {
+  gap: 4px;
+  margin-top: 2px;
+}
+
+.emh_listings_data .emh_listings_chip_tag,
+.emh_listings_data .emh_listings_chip_tag_large {
+  height: 18px;
+  padding: 0 6px;
+  font-size: 8px;
+}
+
+/* emh_listings_chip_tag_large — genre pill, slightly larger variant */
+.emh_listings_chip_tag_large {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 10px;
+  border: 1px solid var(--emh-text-primary);
+  border-radius: 99px;
+  font-family: var(--emh-ui-font);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--emh-text-primary);
+  white-space: nowrap;
+  line-height: 1;
+}
+
+/* emh_listings_genre_cont — genre chip container */
+.emh_listings_genre_cont {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  align-items: center;
+}
+
+
+/* --------------------------------------------------------------------------
+   13. FOOT — social links + contact CTA
+   Grid: items in a row (social left, contact right)
+   List: items stacked (social on top, contact below)
+   -------------------------------------------------------------------------- */
+.emh_listings_foot {
+  display: flex;
+  gap: 12px;
+  margin-top: auto;
+  padding-top: 16px;
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.grid-view .emh_listings_foot {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.list-view .emh_listings_foot {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.emh_listings_foot_row {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.emh_listings_foot_meta {
+  font-family: var(--emh-ui-font);
+  font-size: 8px;
+  color: var(--emh-text-muted);
+  line-height: 1.7;
+}
+
+.emh_listings_foot_meta span {
+  display: block;
+}
+
+/* Social links */
+.emh_listings_social {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.emh_listings_social_link {
+  font-family: var(--emh-ui-font);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--emh-text-primary);
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  white-space: nowrap;
+}
+
+.emh_listings_social_link::after {
+  content: '→';
+  font-size: 10px;
+  font-weight: 400;
+}
+
+.emh_listings_social_link:hover {
+  text-decoration: underline;
+}
+
+/* Contact button */
+.emh_listings_contact {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  height: 46px;
+  padding: 0 18px;
+  border: 1px solid var(--emh-contact-border);
+  border-radius: var(--emh-pill-radius);
+  background: transparent;
+  font-family: var(--emh-ui-font);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--emh-text-primary);
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.18s, color 0.18s;
+}
+
+.emh_listings_contact::after {
+  content: '→';
+  font-size: 14px;
+  font-weight: 400;
+}
+
+.emh_listings_contact:hover {
+  background: var(--emh-text-primary);
+  color: #fff;
+}
+
+
+/* --------------------------------------------------------------------------
+   14. ASIDE (list view right column)
+   Rightmost column in list view: social links + contact CTA.
+   -------------------------------------------------------------------------- */
+.emh_listings_aside {
   width: 181px;
   flex-shrink: 0;
   display: flex;
@@ -701,18 +797,18 @@
   border-left: 1px solid rgba(0, 0, 0, 0.1);
 }
 
-.vc_listings_item_aside .vc_listings_item_footer_meta {
+.emh_listings_aside .emh_listings_foot_meta {
   font-size: 8px;
   line-height: 1.7;
 }
 
-.vc_listings_item_aside .vc_listings_item_social {
+.emh_listings_aside .emh_listings_social {
   flex-direction: column;
   align-items: flex-start;
   gap: 5px;
 }
 
-.vc_listings_item_aside .vc_listings_item_contact {
+.emh_listings_aside .emh_listings_contact {
   height: 38px;
   padding: 0 14px;
   font-size: 10px;
@@ -720,9 +816,9 @@
 
 
 /* --------------------------------------------------------------------------
-   8. MODAL
+   15. MODAL
    -------------------------------------------------------------------------- */
-.vc_listings_modal {
+.emh_listings_modal {
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.72);
@@ -735,34 +831,34 @@
   transition: opacity 0.22s ease;
 }
 
-.vc_listings_modal--open {
+.emh_listings_modal--open {
   opacity: 1;
   pointer-events: all;
 }
 
-.vc_modal_open {
+.emh_modal_open {
   overflow: hidden;
 }
 
-.vc_listings_modal_inner {
-  background: var(--vc-input-bg);
-  border: 2px solid var(--vc-card-border);
-  border-radius: var(--vc-card-radius);
+.emh_listings_modal_inner {
+  background: var(--emh-input-bg);
+  border: 2px solid var(--emh-card-border);
+  border-radius: var(--emh-card-radius);
   width: min(900px, 92vw);
   max-height: 90vh;
   overflow-y: auto;
   position: relative;
 }
 
-.vc_listings_modal_close {
+.emh_listings_modal_close {
   position: absolute;
   top: 14px;
   right: 14px;
   width: 36px;
   height: 36px;
-  border: 2px solid var(--vc-card-border);
+  border: 2px solid var(--emh-card-border);
   border-radius: 50%;
-  background: var(--vc-input-bg);
+  background: var(--emh-input-bg);
   font-size: 18px;
   line-height: 1;
   cursor: pointer;
@@ -771,105 +867,108 @@
   justify-content: center;
   z-index: 1;
   transition: background 0.18s, color 0.18s;
-  color: var(--vc-text-primary);
+  color: var(--emh-text-primary);
 }
 
-.vc_listings_modal_close:hover {
-  background: var(--vc-text-primary);
+.emh_listings_modal_close:hover {
+  background: var(--emh-text-primary);
   color: #fff;
 }
 
-.vc_listings_modal_media {
+.emh_listings_modal_media {
   width: 100%;
   aspect-ratio: 16 / 9;
   background: #000;
   overflow: hidden;
 }
 
-.vc_listings_modal_video {
+.emh_listings_modal_video {
   width: 100%;
   height: 100%;
   border: none;
   display: block;
 }
 
-.vc_listings_modal_image {
+.emh_listings_modal_image {
   width: 100%;
   height: 100%;
   object-fit: cover;
   display: block;
 }
 
-.vc_listings_modal_info {
+.emh_listings_modal_info {
   padding: 30px;
 }
 
-.vc_listings_modal_title {
-  font-family: var(--vc-display-font);
+.emh_listings_modal_title {
+  font-family: var(--emh-display-font);
   font-variation-settings: 'wght' 700;
   font-size: 30px;
   line-height: 1.1;
-  color: var(--vc-text-primary);
+  color: var(--emh-text-primary);
   margin: 0 0 12px;
 }
 
-.vc_listings_modal_meta {
+.emh_listings_modal_meta {
   display: flex;
   align-items: center;
   gap: 16px;
   flex-wrap: wrap;
 }
 
-.vc_listings_modal_meta span {
-  font-family: var(--vc-ui-font);
+.emh_listings_modal_meta span {
+  font-family: var(--emh-ui-font);
   font-size: 13px;
-  color: var(--vc-text-muted);
+  color: var(--emh-text-muted);
 }
 
-.vc_listings_modal_brand {
+.emh_listings_modal_brand {
   font-weight: 600;
-  color: var(--vc-text-primary);
+  color: var(--emh-text-primary);
 }
 
 
 /* --------------------------------------------------------------------------
-   9. RESPONSIVE
+   16. RESPONSIVE
    -------------------------------------------------------------------------- */
 @media (max-width: 1200px) {
-  .vc_listings_repeater--grid {
+  .grid-view {
     grid-template-columns: repeat(2, 1fr);
   }
 }
 
 @media (max-width: 900px) {
-  .vc_listings_repeater_view_list .vc_listings_item_image {
+  .list-view .emh_listings_cont_image {
     width: 260px;
   }
 }
 
 @media (max-width: 768px) {
-  .vc_listings_repeater--grid {
+  .grid-view {
     grid-template-columns: 1fr;
   }
 
   /* Stack list rows vertically on mobile */
-  .vc_listings_repeater_view_list {
+  .list-view .emh_listings_repeater_view {
     flex-direction: column;
     min-height: 0;
   }
 
-  .vc_listings_repeater_view_list .vc_listings_item_image {
+  .list-view .emh_listings_cont_image {
     width: 100%;
     height: 220px;
+    max-width: none;
+    align-self: auto;
   }
 
-  .vc_listings_repeater_view_list .vc_listings_item_content {
+  .list-view .emh_listings_content {
     flex-direction: column;
     border-left: none;
-    border-top: 2px solid var(--vc-card-border);
+    border-top: 2px solid var(--emh-card-border);
   }
 
-  .vc_listings_item_date_col {
+  /* Head reverts to row on mobile — date + logo side by side */
+  .list-view .emh_listings_head {
     width: 100%;
     flex-direction: row;
     align-items: center;
@@ -880,11 +979,11 @@
     border-bottom: 1px solid rgba(0, 0, 0, 0.1);
   }
 
-  .vc_listings_item_main_col {
+  .emh_listings_main_col {
     padding: 0;
   }
 
-  .vc_listings_item_aside {
+  .emh_listings_aside {
     width: 100%;
     flex-direction: row;
     align-items: center;
@@ -893,42 +992,45 @@
     border-left: none;
     border-top: 1px solid rgba(0, 0, 0, 0.1);
   }
+
+  /* Foot reverts to row on mobile regardless of view */
+  .list-view .emh_listings_foot {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
 }
 
 @media (max-width: 560px) {
   :root {
-    --vc-card-gap: 12px;
+    --emh-card-gap: 12px;
   }
 
-  .vc_listings_year_label {
+  .emh_listings_year_label {
     font-size: 22px;
   }
 
-  .vc_listings_controls {
+  .emh_cntrl_parent {
     gap: 8px;
   }
 
-  .vc_listings_search {
-    min-width: 140px;
-  }
-
-  .vc_listings_item_title {
+  .emh_listings_title {
     font-size: 22px;
   }
 }
 
 
 /* --------------------------------------------------------------------------
-   10. SEARCH WIDGET ANIMATION
+   17. SEARCH WIDGET
    -------------------------------------------------------------------------- */
-.vc-search-wrapper {
+.emh_search_wrapper {
   overflow: hidden;
   display: flex;
   align-items: center;
   position: relative;
 }
 
-.vc-search-toggle {
+.emh_search_toggle {
   width: 28px;
   height: 28px;
   display: flex;
@@ -936,17 +1038,17 @@
   justify-content: center;
   cursor: pointer;
   flex-shrink: 0;
-  color: var(--vc-text-primary);
+  color: var(--emh-text-primary);
 }
 
-.vc-search-toggle svg,
-.vc-search-toggle .ct-fancy-icon svg {
+.emh_search_toggle svg,
+.emh_search_toggle .ct-fancy-icon svg {
   width: 16px;
   height: 16px;
   fill: currentColor;
 }
 
-.vc-search-expanded {
+.emh_search_expanded {
   display: none;
   align-items: center;
   gap: 6px;
@@ -954,7 +1056,7 @@
   min-width: 0;
 }
 
-.vc-search-field-wrapper {
+.emh_search_field {
   flex: 1;
 }
 
@@ -962,28 +1064,28 @@
   width: 100%;
   border: none;
   background: transparent;
-  font-family: var(--vc-ui-font);
+  font-family: var(--emh-ui-font);
   font-size: 13px;
-  color: var(--vc-text-primary);
+  color: var(--emh-text-primary);
   outline: none;
 }
 
 #vc-search::placeholder {
-  color: var(--vc-text-placeholder);
+  color: var(--emh-text-placeholder);
 }
 
-.vc-search-clear {
+.emh_search_clear {
   cursor: pointer;
   opacity: 0;
   visibility: hidden;
   transition: opacity 0.15s, visibility 0.15s;
   display: flex;
   align-items: center;
-  color: var(--vc-text-muted);
+  color: var(--emh-text-muted);
 }
 
-.vc-search-clear svg,
-.vc-search-clear .ct-fancy-icon svg {
+.emh_search_clear svg,
+.emh_search_clear .ct-fancy-icon svg {
   width: 12px;
   height: 12px;
   fill: currentColor;
@@ -991,84 +1093,59 @@
 
 
 /* --------------------------------------------------------------------------
-   11. DATE — TBD STATE & RANGE VARIANTS
+   18. DATE — TBD STATE & RANGE VARIANTS
    -------------------------------------------------------------------------- */
-.vc_listings_item_date_tbd {
-  font-family: var(--vc-ui-font);
+.emh_listings_date_tbd {
+  font-family: var(--emh-ui-font);
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--vc-text-muted);
+  color: var(--emh-text-muted);
 }
 
-/* Override: date_day handles ranges — may be longer string */
-.vc_listings_item_date_day {
-  font-family: var(--vc-display-font);
-  font-variation-settings: 'wght' 700;
-  font-weight: 700;
-  font-size: 30px;
-  line-height: 1;
-  color: var(--vc-text-primary);
-  word-break: break-word;
-  hyphens: none;
-}
-
-/* Cross-month range is longer — reduce size in narrow list column */
-.vc_listings_item_date_col .vc_listings_item_date_day {
-  font-size: 24px;
-}
-
-.vc_listings_repeater_view_tile .vc_listings_item_date,
-.vc_listings_repeater_view_list .vc_listings_item_date {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  line-height: 1;
+/* Cross-month range date_day in list head column — less horizontal room */
+.list-view .emh_listings_cont_date .emh_listings_date_day {
+  font-size: 22px;
 }
 
 
 /* --------------------------------------------------------------------------
-   12. NTH YEAR
+   19. NTH YEAR
    -------------------------------------------------------------------------- */
-.vc_listings_item_nth_year {
-  font-family: var(--vc-ui-font);
+.emh_listings_nth_year {
+  font-family: var(--emh-ui-font);
   font-size: 8px;
   font-weight: 600;
   letter-spacing: 0.05em;
   text-transform: uppercase;
-  color: var(--vc-text-muted);
+  color: var(--emh-text-muted);
 }
 
 
 /* --------------------------------------------------------------------------
-   13. CONTROLS — section layout (two-group split)
+   20. VIDEO HOVER — LAZY VIMEO IFRAME
+   Container: .emh_listings_video_wrap inside .emh_listings_cont_image
+   Iframe renders with data-src; JS sets src on first card mouseenter.
    -------------------------------------------------------------------------- */
-.vc_listings_controls_section {
-  display: flex;
-  align-items: center;
-  gap: 12px;
+.emh_listings_video_wrap {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
 }
 
-.vc_listings_controls_section:last-child {
-  margin-left: auto;
+.emh_listings_video_wrap iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  pointer-events: none;
+  border: none;
 }
 
-
-/* --------------------------------------------------------------------------
-   14. VIEW SHOW / HIDE
-   Both .vc_listings_repeater_view_tile and .vc_listings_repeater_view_list
-   render inside every item. JS toggles emh_listings_view_grid /
-   emh_listings_view_list on .emh_listings_repeater to control which shows.
-   -------------------------------------------------------------------------- */
-
-/* Default: hide list view until JS fires (grid is default) */
-.vc_listings_repeater_view_list { display: none; }
-
-/* Grid active — JS adds emh_listings_view_grid to the repeater wrapper */
-.emh_listings_view_grid .vc_listings_repeater_view_tile { display: flex; flex-direction: column; }
-.emh_listings_view_grid .vc_listings_repeater_view_list { display: none; }
-
-/* List active — JS adds emh_listings_view_list to the repeater wrapper */
-.emh_listings_view_list .vc_listings_repeater_view_tile { display: none; }
-.emh_listings_view_list .vc_listings_repeater_view_list { display: flex; flex-direction: row; }
+.emh_listings_parent:hover .emh_listings_video_wrap iframe {
+  opacity: 1;
+}

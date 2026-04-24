@@ -1,7 +1,26 @@
 # CLAUDE.md — Zoo Agency · EMH Event Property Listings
 
 > **Session context for AI assistants.** Read this first before any Zoo Agency WordPress work.
-> Last updated: 2026-04-22
+> Last updated: 2026-04-23 (session 5)
+
+---
+
+## File Versioning Convention
+
+**Reference/doc files** (`.md`, specs, layer stacks, build frameworks):
+- Version in the **filename**: `vc-listings-layer-stack-v2.md`
+- First line of file: version number (`# v2.0`)
+- Second line of file: date and timestamp (`# 2026-04-23 02:15 PDT`)
+- Keep prior version around briefly, then delete once the new one is confirmed good
+
+**Deployed asset files** (`.js`, `.css`, `.php` — anything consumed by WPCode, a `<script>` tag, or a PHP include):
+- **Filename stays stable** — never version the filename (changing it breaks references)
+- Version lives in the **file header comment**, lines 1–2 of the block:
+  ```
+  v3.2.0
+  2026-04-23 02:15 PDT
+  ```
+- Changelog entries go in the header block beneath the timestamp
 
 ---
 
@@ -11,7 +30,34 @@
 
 **Default to native Oxygen elements.** Use Code Blocks only when Oxygen's dynamic data picker genuinely cannot resolve the field (nested ACF groups, taxonomy term arrays, formatted output). For everything else — structure, flat ACF fields, images, simple text — use native elements.
 
-**Hybrid is the right pattern for the card repeater:** native Oxygen divs for card structure, Code Blocks only for the ~5–6 fields that require PHP (date formatting, genre/tag chips). This is preferable to a single monolithic PHP Code Block even if it means more nodes.
+**Hybrid is the right pattern for the card repeater:** native Oxygen divs for card structure, Code Blocks only for the fields that genuinely require PHP. The actual short list is: tag chips, genre chips, nth year, and the video iframe. Everything else — images, logos, text, social links, date (built with Oxygen dynamic data + conditional visibility), meta labels/values — is native Oxygen.
+
+**Minimum Code Block list for cards:**
+1. Tag chips — WP_Term[] → pill HTML
+2. Genre chips — WP_Term[] → pill HTML
+3. Nth year — `vc_nth_year()` calculation
+4. Video iframe — Vimeo embed with `data-src` (lazy-loaded by JS on hover)
+5. Contact mailto href — combines `zoo_contact_emails` (options page) + `vc_ep_title` (per-post)
+
+---
+
+## Card Video — Hover Autoplay Behavior
+
+**No player UI.** No play button. On card hover the video starts automatically and covers the image. On mouseout the video remains loaded but hidden.
+
+**Vimeo field format:** Store a clean standard URL in `video → vimeo_url` — e.g. `https://vimeo.com/1085752382`. Do NOT paste Vimeo's embed generator output (it includes tracking noise and is missing `background=1`). The Code Block constructs the proper embed URL. Access via `get_field('video')['vimeo_url']` — `video` is a top-level group, NOT nested inside `vc_ep_media`.
+
+**Correct embed URL pattern:**
+```
+https://player.vimeo.com/video/{ID}?background=1&autoplay=1&muted=1&loop=1&autopause=0
+```
+`background=1` is the critical parameter — it disables all Vimeo UI and locks the player into silent background-video mode.
+
+**Lazy loading:** The iframe renders with `data-src` (not `src`). `vc-listings.js` sets `src` from `data-src` on the first `mouseenter` of the card. Idle cards never load the Vimeo iframe. The `vc_vimeo_id()` helper in `functions.php` extracts the numeric ID from any Vimeo URL format.
+
+**CSS:** The iframe is `position:absolute; inset:0; width:100%; height:100%; opacity:0; transition:opacity 0.4s; pointer-events:none;` inside a `position:relative; overflow:hidden` container. Parent card `:hover` brings opacity to 1.
+
+**JS version:** v3.2.0 — `initHoverVideo()` added to `vc-listings.js` (WPCode #3607).
 
 ---
 
@@ -54,7 +100,7 @@ This is a filterable event property listings system. A custom CPT (`vc_event_pro
 
 ## ACF Field Structure — `vc_event_property`
 
-All field paths verified against ACF JSON export (2026-04-22).
+All field paths verified against ACF JSON export (2026-04-23, Sean's working version).
 
 ```
 FLAT (top-level, not in group)
@@ -65,36 +111,48 @@ FLAT (top-level, not in group)
   vc_ep_season              get_field('vc_ep_season')                     text
   vc_ep_confidential        get_field('vc_ep_confidential')               true_false
   vc_ep_private_visibility  get_field('vc_ep_private_visibility')         true_false
-  tags                      get_field('tags')                             taxonomy → WP_Term[]
+  capacity_label            get_field('capacity_label')                   text (default "Capacity")
+  capacity_amount           get_field('capacity_amount')                  text (e.g. "12,000 attendees")
+  genre_label               get_field('genre_label')                      text (default "Genre")
   genre_selection           get_field('genre_selection')                  taxonomy → WP_Term[]
+  custom_data_item_tf       get_field('custom_data_item_tf')              true_false
+  tags                      get_field('tags')                             taxonomy → WP_Term[]
+  contact_emails            get_field('contact_emails')                   text (comma-separated, per-post)
 
 DATES TAB — get_field('vc_ep_dates') → group
   ['start_date']            Ymd string: "20260420"
   ['end_date']              Ymd string (or empty)
-  ['tbd']['enabled']        bool
-  ['tbd']['text']           string (default "TBD")
+
+TBD — get_field('tbd') → group  ← SEPARATE top-level group, NOT inside vc_ep_dates
+  ['enabled']               bool
+  ['text']                  string (default "TBD")
 
 DETAILS TAB — get_field('vc_ep_details') → group
   ['city']                  text
   ['state']                 text (e.g. "CA")
   ['venue']                 text
   ['established']           number (e.g. 2015)
-  ['capacity']['label']     text (default "Capacity")
-  ['capacity']['capacity']  text (e.g. "12,000 attendees")
-  ['genres']['label']       text (default "Genre") ← label only; terms via genre_selection
-  ['use_custom_data']['custom_data']['custom_data_item_tf']   bool
-  ['use_custom_data']['custom_data']['replace_field']          "Capacity"|"Genre"
-  ['use_custom_data']['custom_data_item']['custom_data_label'] text
-  ['use_custom_data']['custom_data_item']['custom_data_text']  text
+
+CUSTOM DATA — get_field('custom_data_item') → group  ← top-level, not nested
+  ['custom_data_label']     text
+  ['custom_data_text']      text
 
 MEDIA TAB — get_field('vc_ep_media') → group
   ['logo_horizontal']       image array → ['url']
   ['logo_vertical']         image array → ['url']
   ['event_image']           image array → ['url']   ← card image
-  ['video']['vimeo_url']    URL string
-  ['video']['mp4_url']      URL string
-  ['more_images']           repeater → ['image']['url']
-  ['more_videos']           repeater → ['vimeo_url'], ['mp4_url']
+
+VIDEO — get_field('video') → group  ← SEPARATE top-level group, NOT inside vc_ep_media
+  ['vimeo_url']             URL string
+  ['mp4_url']               URL string
+
+MORE IMAGES — get_field('more_images') → repeater  ← top-level, NOT inside vc_ep_media
+  ['image']                 image array → ['url']
+
+MORE VIDEOS — get_field('more_videos') → repeater  ← top-level, NOT inside vc_ep_media
+  ['vimeo_url']             URL string
+  ['mp4_url']               URL string
+  ['other']                 URL string
 
 LINKS TAB — get_field('vc_ep_social') → group
   ['website'], ['instagram'], ['facebook']
@@ -104,19 +162,30 @@ LINKS TAB — get_field('vc_ep_social') → group
 **CRITICAL ACF NOTES:**
 - `tags` and `genre_selection` are **top-level taxonomy fields** (NOT inside a group).
 - Both have `save_terms: 0` and `load_terms: 0` — bypasses `wp_set_object_terms()`. Data stored as serialized post meta only. **Do not change this.**
-- The `vc_ep_details → genres → genres` path from earlier docs is **stale** — genres moved to flat `genre_selection` field.
-- `contact_emails` per-post field has been **removed**. Emails now come from Zoo Agency ACF Options Page (see below).
+- `tags` and `genre_selection` return `WP_Term[]` objects — NOT readable via Oxygen dynamic data picker. Must use Code Blocks with `vc_render_chips()`.
+- `video` is a **top-level group** (`get_field('video')`), NOT nested inside `vc_ep_media`. Any code reading `$media['video']` is wrong.
+- `tbd` is a **top-level group** (`get_field('tbd')`), NOT nested inside `vc_ep_dates`.
+- `capacity_label` and `capacity_amount` are **flat top-level fields** — old path `$details['capacity']['capacity']` no longer exists.
+- `contact_emails` is a **per-post field** (still in the group). Zoo Agency options page field is `zoo_contact_emails` (accessed via `get_field('zoo_contact_emails', 'option')`). Both exist — per-post overrides if populated, options page is the fallback.
+- `vc_ep_details` group now contains ONLY: city, state, venue, established. Capacity, genre label, and custom data all moved to flat top-level fields.
 
 ---
 
 ## ACF Options Page — Zoo Agency
 
-**Built (2026-04-22):**
-- Registered via WPCode #3598 (PHP, Admin Only, Active) — `acf_add_options_page()` with slug `zoo-agency`
+**Built (2026-04-22), updated slug confirmed 2026-04-23:**
+- Options page title: **Zoo Admin** — menu slug: `zoo-admin`
+- Registered via ACF Pro → Options Pages (not WPCode #3598 — that snippet is off)
 - ACF field group: "Zoo Agency Settings" — post ID 3599
 - Field: `zoo_contact_emails` — Text, comma-separated email addresses
-- Access in PHP: `get_field('zoo_contact_emails', 'option')`
+- Access in PHP: `get_field('zoo_contact_emails', 'option')` — slug-agnostic
 - Used by CTA mailto shortcode (`crssd_mailto`) and card contact link
+
+**Zoo Event Styles field group** (imported 2026-04-23):
+- Group key: `group_zoo_event_styles` — separate from `group_vc_event_property_fields`
+- Must be assigned to `zoo-admin` options page in ACF location rule after import
+- Outputs `--zoo-*` CSS custom properties via WPCode PHP snippet (see below)
+- Completely separate namespace from `--vc-*` listing variables
 
 ---
 
@@ -185,8 +254,8 @@ These are set by WPCode #3589 (emh-listings-data-attrs.php), not Oxygen custom a
 
 | File | Purpose | Status |
 |---|---|---|
-| `vc-listings.js` (v3.0.0) | WPCode #3531 · JS · Footer | Production |
-| `vc-listings.css` | WPCode or enqueued · CSS | Production |
+| `vc-listings.js` (v3.2.0) | WPCode #3607 · JS · Footer | Production |
+| `vc-listings.css` (v1.2.0) | WPCode #3608 · CSS · Site Wide Header | Production |
 | `emh-listings-data-attrs.php` | WPCode #3589 · PHP · wp_footer priority 99 | Production |
 | `diagnostic-acf-fields.php` | WPCode diagnostic · admin_notices | **DELETE — temp only** |
 | `vc-listings-build-framework.md` | Full build reference, field map, PHP helpers, both repeater versions | Reference |
@@ -199,13 +268,14 @@ These are set by WPCode #3589 (emh-listings-data-attrs.php), not Oxygen custom a
 
 | ID | Name | Type | Hook | Status |
 |---|---|---|---|---|
-| #3531 | vc-listings.js | JavaScript | Footer | Active |
+| #3607 | VC Event Property Listings Controller — v3.2.0 (vc-listings.js) | JavaScript | Footer | Active |
+| #3608 | VC Event Property Listing Style — v1.2.0 (vc-listings.css, EMH classes) | CSS Snippet | Site Wide Header | Active |
 | #3589 | emh-listings-data-attrs.php | PHP | Run Everywhere (guarded) | Active |
 | #3597 | EMH — Remove Duplicate Taxonomy Metaboxes | PHP | Admin Only | Active |
-| #3598 | Zoo Agency — ACF Options Page | PHP | Admin Only | Active |
 | #3601 | EMH — PHP Memory Limit | PHP | Run Everywhere | Active |
-| #3602 | vc-listings.css | CSS Snippet | Site Wide Header | Active |
-| — | diagnostic-acf-fields.php | PHP | — | **DELETE** |
+| #3602 | VC Event Property Listing Style — v1.1.0 (old VC classes) | CSS Snippet | Site Wide Header | **DEACTIVATE** |
+| #3535 | Old EMH CSS — v3.0.0 | CSS Snippet | — | Off — leave off |
+| #3598 | Zoo Agency — ACF Options Page | PHP | Admin Only | Off — replaced by Zoo Admin options page |
 
 **WPCode #3589 guards** (top of wp_footer callback — do not remove):
 ```php
@@ -215,7 +285,7 @@ This prevents the `get_posts(-1)` query from running on every admin/AJAX request
 
 ---
 
-## JavaScript — vc-listings.js v3.0.0
+## JavaScript — vc-listings.js v3.2.0
 
 **Selectors (EMH class prefix in JS, not vc_):**
 ```js
@@ -280,9 +350,17 @@ CSS is **complete and deployed** via WPCode #3602 (CSS Snippet, Site Wide Header
 ## Known Issues / Pending Work
 
 ### Active
-- **PHP Code Block in Oxygen** — Version A repeater markup needs to be added to Oxygen post 815 as a PHP Code Block. CSS is deployed and ready; page `/event-properties-grid/` currently renders blank because the Code Block hasn't been wired in yet. See `vc-listings-build-framework.md` → "VERSION A" for the full PHP.
+- **WPCode #3589 capacity reads** — Still reads `$details['capacity']['capacity']` and `$details['capacity']['label']`. Must update to `get_field('capacity_label')` and `get_field('capacity_amount')` (flat top-level fields).
+- **WPCode #3589 video reads** — Any code reading `$media['video']['vimeo_url']` must change to `get_field('video')['vimeo_url']` (video is top-level, not inside vc_ep_media).
+- **WPCode #3589 tbd reads** — If reading `$dates['tbd']`, change to `get_field('tbd')` (top-level group, not inside vc_ep_dates).
+- **Card build** — Tile + list panels not yet built in Oxygen. Two-panel tab approach confirmed (see View Toggle Architecture section). PHP Code Block outputs both loops.
+- **WPCode #3602** — Old VC CSS snippet, still active. Deactivate once #3608 confirmed stable.
 
-### Resolved (for reference)
+### Resolved (session 2)
+- **CSS class mismatch** — `.vc_listings_repeater--grid/--list` corrected to `.emh_listings_view_grid/list` in WPCode #3602. Deployed.
+- **vc-listings.js v3.1.0** — `initHoverVideo()` added and deployed to WPCode #3531. Confirmed live on `/event-properties-grid/` (inlined in page source, `emhListings_refresh` is `function` in global scope).
+
+### Resolved (prior sessions)
 - **memory_limit** — WP File Manager and WPCode File Editor (PRO) don't allow `.user.ini` access for this admin user. Resolved via WPCode #3601: `@ini_set('memory_limit', '512M')` running on all requests. Remove if `memory_limit = 512M` is ever set directly in `.user.ini` via SSH/FTP.
 - **Zoo Agency Options Page** — built via WPCode #3598 + ACF field group (post ID 3599). See ACF Options Page section above.
 - **Duplicate taxonomy metaboxes** — `event-tag` and `event-genre` native WP metaboxes showed alongside ACF fields on `vc_event_property` edit screen. ACF Pro 6.x removed the "Meta Box → Hidden" Presentation tab option for Taxonomy fields. Fixed via WPCode #3597: `remove_meta_box()` on `add_meta_boxes` hook, priority 99, admin_only.
@@ -301,13 +379,23 @@ If an ACF field silently fails to save (data appears in POST at `acf/save_post` 
 
 ---
 
-## Repeater Architecture Decision
+## View Toggle Architecture
 
-**Version A (PHP Code Block) is the chosen approach** — a single PHP Code Block in Oxygen outputs the full repeater HTML. Surrounding structure (section, container, controls bar, year headers) can be native Oxygen elements.
+**Two-panel tab approach** — same pattern used on underthebigskyfest.com/after-parties/. Two complete PHP-rendered panels (tile and list), JS toggle shows one and hides the other. No GSAP Flip for the toggle — hard CSS swap.
 
-Version B (Easy Posts + Code Blocks) was documented but rejected — too many Code Blocks per item, Oxygen dynamic data can't handle nested group fields or taxonomy term objects.
+```
+.emh_listings_panel--tile   (default visible)
+.emh_listings_panel--list   (hidden by default)
+```
 
-Full PHP repeater code: see `vc-listings-build-framework.md` → "VERSION A" section.
+Toggle buttons add `is-active` to the target panel and remove it from the other. Filters apply data attributes and hide/show `.emh_listings_parent` items in whichever panel is active.
+
+**Why not GSAP Flip for the toggle:** Flip animates positional changes on shared elements. Two separate full renders with different markup have no shared elements to animate between — it's the wrong tool. Flip is still used for filter animations (items entering/leaving when filters change).
+
+**PHP Code Block structure in Oxygen:**
+- One Code Block outputs both panels — tile loop first, list loop second
+- Each loop iterates the same `WP_Query` result
+- Native Oxygen elements handle outer structure (section, controls bar, year headers)
 
 ---
 
@@ -317,7 +405,7 @@ Full PHP repeater code: see `vc-listings-build-framework.md` → "VERSION A" sec
 |---|---|
 | Helper functions (`vc_ordinal`, etc.) | Child theme `functions.php` |
 | CTA mailto shortcode | Child theme `functions.php` or WPCode PHP snippet |
-| Listings JS | WPCode #3531 (JavaScript, footer) |
+| Listings JS | WPCode #3607 (JavaScript, footer) |
 | Data attrs + chip injection | WPCode #3589 (PHP, All Pages, priority 99) |
 | `acf_add_options_page()` | WPCode PHP snippet or functions.php |
 | CSS | WPCode or child theme style.css |

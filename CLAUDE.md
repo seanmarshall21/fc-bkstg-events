@@ -1,7 +1,7 @@
 # CLAUDE.md — Zoo Agency · EMH Event Property Listings
 
 > **Session context for AI assistants.** Read this first before any Zoo Agency WordPress work.
-> Last updated: 2026-04-23 (session 5)
+> Last updated: 2026-04-24 (session 6)
 
 ---
 
@@ -255,7 +255,7 @@ These are set by WPCode #3589 (emh-listings-data-attrs.php), not Oxygen custom a
 | File | Purpose | Status |
 |---|---|---|
 | `vc-listings.js` (v3.2.0) | WPCode #3607 · JS · Footer | Production |
-| `vc-listings.css` (v1.2.0) | WPCode #3608 · CSS · Site Wide Header | Production |
+| `vc-listings.css` (v1.7.0) | WPCode #3750 · CSS · Site Wide Header | Production |
 | `emh-listings-data-attrs.php` | WPCode #3589 · PHP · wp_footer priority 99 | Production |
 | `diagnostic-acf-fields.php` | WPCode diagnostic · admin_notices | **DELETE — temp only** |
 | `vc-listings-build-framework.md` | Full build reference, field map, PHP helpers, both repeater versions | Reference |
@@ -269,7 +269,8 @@ These are set by WPCode #3589 (emh-listings-data-attrs.php), not Oxygen custom a
 | ID | Name | Type | Hook | Status |
 |---|---|---|---|---|
 | #3607 | VC Event Property Listings Controller — v3.2.0 (vc-listings.js) | JavaScript | Footer | Active |
-| #3608 | VC Event Property Listing Style — v1.2.0 (vc-listings.css, EMH classes) | CSS Snippet | Site Wide Header | Active |
+| #3750 | VC Event Property Listing Style — Version 1.5.1 (vc-listings.css) | CSS Snippet | Site Wide Header | Active — **v1.7.0 content** (title lags) |
+| #3608 | VC Event Property Listing Style — v1.2.0 (vc-listings.css, EMH classes) | CSS Snippet | Site Wide Header | **DEACTIVATE** — superseded by #3750 |
 | #3589 | emh-listings-data-attrs.php | PHP | Run Everywhere (guarded) | Active |
 | #3597 | EMH — Remove Duplicate Taxonomy Metaboxes | PHP | Admin Only | Active |
 | #3601 | EMH — PHP Memory Limit | PHP | Run Everywhere | Active |
@@ -343,7 +344,7 @@ emh_extract_term_names($field_value): array  // safe taxonomy extraction (all re
 --vc-pill-radius:     99px
 ```
 
-CSS is **complete and deployed** via WPCode #3602 (CSS Snippet, Site Wide Header, Active). Tokens confirmed resolving on `/event-properties-grid/`. 14 sections written: tokens, wrapper, controls, year group, repeater grid/list modes, tile view, list view, modal, responsive, search widget, TBD dates, nth year, controls section split, view show/hide.
+CSS is **complete and deployed** via WPCode #3750 (CSS Snippet, Site Wide Header, Active — v1.7.0). Tokens confirmed resolving on `/event-properties-grid/`. 22 sections written: tokens, wrapper, controls, year group, repeater grid/list modes, tile view, list view, modal, responsive, search widget, TBD dates, nth year, controls section split, view show/hide, ZFC chips (§21), ZFC bar outer wrapper (§22). Local file: 1269 lines.
 
 ---
 
@@ -354,7 +355,14 @@ CSS is **complete and deployed** via WPCode #3602 (CSS Snippet, Site Wide Header
 - **WPCode #3589 video reads** — Any code reading `$media['video']['vimeo_url']` must change to `get_field('video')['vimeo_url']` (video is top-level, not inside vc_ep_media).
 - **WPCode #3589 tbd reads** — If reading `$dates['tbd']`, change to `get_field('tbd')` (top-level group, not inside vc_ep_dates).
 - **Card build** — Tile + list panels not yet built in Oxygen. Two-panel tab approach confirmed (see View Toggle Architecture section). PHP Code Block outputs both loops.
-- **WPCode #3602** — Old VC CSS snippet, still active. Deactivate once #3608 confirmed stable.
+- **WPCode #3608 + #3602** — Both old CSS snippets still active. Deactivate both once #3750 confirmed stable on frontend.
+- **Template 3753 — not yet assigned to a page** — ZFC controls UI built and saved (nodes 568/569/575, `zfc_bar_wrap` class confirmed). Needs a test page with Oxygen location rule pointing to post 3753 for frontend render verification.
+
+### Resolved (session 6 — 2026-04-24)
+- **WPCode #3750 CSS at v1.7.0** — Sections 21 (ZFC chips) and 22 (ZFC bar outer wrapper) added. Deployed, 39597 chars confirmed in CodeMirror.
+- **Template 3753 node 568 class format** — Was `classes: []` (empty array), fixed to `classes: {"0":"zfc_bar_wrap"}`. WP admin save regenerated shortcodes correctly.
+- **Oxygen class format discovery** — `classes` must be `{"0":"name"}` (object with numeric keys). Array format `["name"]` compiles to `{}` in shortcodes. Critical for any future JSON surgery.
+- **Oxygen `save_post` hook discovery** — Oxygen recompiles `ct_builder_json` → `ct_builder_shortcodes` server-side on every WP admin "Update" click. No need to trigger the Oxygen builder's internal Angular save. Updating `ct_builder_json` via WP admin Update is sufficient to regenerate shortcodes.
 
 ### Resolved (session 2)
 - **CSS class mismatch** — `.vc_listings_repeater--grid/--list` corrected to `.emh_listings_view_grid/list` in WPCode #3602. Deployed.
@@ -376,6 +384,105 @@ If an ACF field silently fails to save (data appears in POST at `acf/save_post` 
 ## Diagnostic Snippet — DELETE WHEN DONE
 
 `diagnostic-acf-fields.php` in this workspace is a temporary WPCode snippet. Remove it from WPCode as soon as the contact_emails issue is confirmed resolved. It hooks into `admin_notices`, `acf/save_post`, and `save_post` — leaving it active degrades admin UX.
+
+---
+
+## Oxygen Builder — Critical Implementation Notes
+
+### Recompile Trigger (save_post hook)
+Oxygen recompiles `ct_builder_json` → `ct_builder_shortcodes` **server-side on every WP admin "Update" click**. You do NOT need to trigger the Oxygen builder's internal Angular save. The workflow for JSON surgery is:
+1. Read `ct_builder_json` post meta
+2. Parse, modify, re-stringify
+3. Set via `document.querySelector('#ct_builder_json').value = JSON.stringify(json)`
+4. Click the WP admin "Update" button
+
+Shortcodes will regenerate automatically via `save_post`. The Oxygen builder's `savePage()` AJAX call is irrelevant for this workflow.
+
+### Class Format (critical)
+Oxygen stores classes as a **plain object with numeric keys**, not a JS array:
+```js
+// CORRECT — compiles to class="zfc_bar_wrap" in shortcodes
+node.options.classes = {"0": "zfc_bar_wrap"};
+
+// WRONG — compiles to classes:{} (empty) in shortcodes
+node.options.classes = ["zfc_bar_wrap"];
+```
+This applies to any programmatic modification of Oxygen JSON. Always use `{"0":"class1","1":"class2"}` format.
+
+### nicename vs classes
+`nicename` is the builder display label only (visible in Oxygen sidebar). It has no effect on rendered HTML. `classes` is what becomes the HTML class attribute. Both can differ.
+
+---
+
+## ZFC Filter System (Zero Filter Chips)
+
+**Template:** Post 3753 — "VC Listings Repeater — New Controls UI"
+**Status:** Built and saved. Not yet assigned to a page for frontend verification.
+
+### Architecture
+Replaces the old dropdown filter bar with a horizontal chip multi-select bar. Each filter dimension has a group of chips; clicking a chip toggles it, clicking again deselects. Multiple chips within a group = OR logic. Multiple groups = AND logic (item must match at least one chip per active group).
+
+### Template 3753 Node Structure
+```
+[568]  .zfc_bar_wrap         — outer div: sticky, full-width, flex row
+[569]    Code Block           — ZFC markup (Brand / Venue / Year / Past chips)
+[575]    .zfc_bar_actions     — right cluster: search toggle + grid/list toggle
+```
+
+Node 568 and 575 are native Oxygen divs. Node 569 is a PHP Code Block.
+
+### ZFC HTML Structure (output of Code Block node 569)
+```html
+<div class="zfc_wrap">
+  <div class="zfc_group" data-zfc-filter="brand">
+    <span class="zfc_label">Brand</span>
+    <div class="zfc_chips"><!-- populated by JS: buildZFCOptions() --></div>
+  </div>
+  <div class="zfc_group" data-zfc-filter="venue">...</div>
+  <div class="zfc_group" data-zfc-filter="year">...</div>
+  <div class="zfc_group" data-zfc-filter="past">
+    <span class="zfc_label">Past</span>
+    <div class="zfc_chips">
+      <button class="zfc_chip" data-zfc-value="1">Past Events</button>
+    </div>
+  </div>
+</div>
+```
+
+### ZFC JavaScript (vc-listings.js — functions)
+```js
+buildZFCOptions()      // reads data-brand/venue/year from .emh_listings_parent items,
+                       // deduplicates, injects .zfc_chip buttons into each .zfc_group
+matchesZFCFilters(item)// checks item data-attrs against zfcState; returns bool
+initZFC()              // attaches click handlers to chips, sets zfcActive flag,
+                       // calls applyFilters() on change
+```
+
+**State object:** `zfcState` — `{ brand: Set, venue: Set, year: Set, past: Set }` — each Set holds currently active filter values. Empty Set = no filter for that dimension.
+
+**`zfcActive` flag:** Set to `true` once `initZFC()` attaches. Prevents double-init.
+
+**`window.emhListings_refresh()`** — called by WPCode #3589 after chip injection — also rebuilds ZFC options.
+
+### ZFC CSS Classes
+```
+.zfc_bar_wrap        outer sticky container (§22 of vc-listings.css)
+.zfc_bar_actions     right action cluster (search + view toggle)
+.zfc_wrap            inner flex row of filter groups
+.zfc_group           one filter dimension (has data-zfc-filter attr)
+.zfc_label           group label text
+.zfc_chips           chip row within a group
+.zfc_chip            individual chip button
+.zfc_chip.is-active  selected state
+```
+
+### Data Attributes on Chip Groups
+```
+data-zfc-filter="brand"   matches data-brand on .emh_listings_parent
+data-zfc-filter="venue"   matches data-venue
+data-zfc-filter="year"    matches data-year
+data-zfc-filter="past"    matches data-is-past
+```
 
 ---
 

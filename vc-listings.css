@@ -1,5 +1,5 @@
 /* ==========================================================================
-   v1.4.0
+   v1.7.0
    2026-04-23 PDT
 
    emh-listings.css
@@ -13,6 +13,11 @@
    Load order: <head> → emh-listings.css, then footer → emh-listings.js
 
    Changelog:
+   v1.7.0 — 2026-04-23 — Sections 21–22: ZFC chip styles + ZFC bar outer wrapper
+                          (.zfc_bar_wrap sticky, .zfc_bar_actions). Mirrors sticky
+                          behavior of .emh_cntrl_parent.
+   v1.6.0 — 2026-04-23 — Section 21: ZFC chip filter system (deployed to #3750)
+   v1.5.x — internal drafts (not deployed)
    v1.4.1 — 2026-04-23 — .emh_cntrl_parent: sticky top:0 z-index:10 with opaque
                           bg + bottom shadow. Padding split into top/bottom to keep
                           breathing room above and below controls within sticky bar.
@@ -1148,4 +1153,262 @@
 
 .emh_listings_parent:hover .emh_listings_video_wrap iframe {
   opacity: 1;
+}
+
+
+/* --------------------------------------------------------------------------
+   21. ZFC — FLYOUT DRAWER FILTER SYSTEM
+   Toggle button slides a drawer open (GSAP width). Each filter dimension
+   has a flyout trigger (LABEL ↓) + floating panel that overlays the grid.
+   Multi-select within group (OR), AND between groups.
+   -------------------------------------------------------------------------- */
+
+/* Root container — flex row, toggle + drawer side by side */
+.zfc_wrap {
+  display: flex;
+  align-items: center;
+  gap: 0;
+}
+
+/* ── Toggle button ── */
+.zfc_toggle {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  color: var(--vc-text-muted, #979797);
+  transition: color 0.18s, background 0.18s;
+}
+
+.zfc_toggle:hover {
+  color: var(--vc-text-primary, #282828);
+}
+
+/* Open state — no extra fill, icon color shifts */
+.zfc_toggle.is-open {
+  color: var(--vc-text-primary, #282828);
+}
+
+/* Dot indicator when filters are active and drawer is closed */
+.zfc_toggle.has-active:not(.is-open)::after {
+  content: '';
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--vc-text-primary, #282828);
+}
+
+/* Toggle needs relative so ::after positions correctly */
+.zfc_toggle {
+  position: relative;
+}
+
+/* ── Drawer — GSAP animates width 0 → natural ── */
+.zfc_drawer {
+  width: 0;           /* set by GSAP */
+  overflow: hidden;   /* clips during animation; JS sets visible once open */
+}
+
+.zfc_drawer_inner {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding-left: 6px;
+  white-space: nowrap;
+}
+
+/* ── Flyout wrapper — needs relative for absolute panel ── */
+.zfc_flyout {
+  position: relative;
+}
+
+/* ── Flyout trigger button ── */
+.zfc_flyout_trigger {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 10px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: 'Acumin Variable Concept', 'Acumin Pro', sans-serif;
+  font-variation-settings: 'wdth' 75, 'wght' 500;
+  font-size: 12px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--vc-text-muted, #979797);
+  white-space: nowrap;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.zfc_flyout_trigger:hover {
+  color: var(--vc-text-primary, #282828);
+}
+
+/* Panel open — border shows, no fill */
+.zfc_flyout_trigger.is-open {
+  border-color: var(--vc-text-muted, #979797);
+  color: var(--vc-text-primary, #282828);
+}
+
+/* Has active selections — filled grey box per Figma */
+.zfc_flyout_trigger.is-active {
+  background: var(--vc-bg, #ececec);
+  border-color: var(--vc-text-muted, #979797);
+  color: var(--vc-text-primary, #282828);
+}
+
+/* Count badge injected by JS: "(2)" */
+.zfc_count {
+  font-size: 11px;
+  opacity: 0.7;
+}
+
+/* Chevron — CSS triangle */
+.zfc_chevron {
+  display: inline-block;
+  width: 0;
+  height: 0;
+  border-left: 3.5px solid transparent;
+  border-right: 3.5px solid transparent;
+  border-top: 4px solid currentColor;
+  transition: transform 0.18s;
+  flex-shrink: 0;
+}
+
+.zfc_flyout_trigger.is-open .zfc_chevron {
+  transform: rotate(180deg);
+}
+
+/* ── Flyout panel — absolute, overlays card grid ── */
+.zfc_flyout_panel {
+  display: none;
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  min-width: 140px;
+  max-height: 280px;
+  overflow-y: auto;
+  background: rgba(236, 236, 236, 0.92);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  border: 1.5px solid var(--vc-text-muted, #979797);
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  padding: 5px;
+  z-index: 200;
+  scrollbar-width: thin;
+}
+
+.zfc_flyout_panel.is-open {
+  display: block;
+}
+
+/* Option buttons inside panel */
+.zfc_option {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 6px 10px;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: 'Acumin Variable Concept', 'Acumin Pro', sans-serif;
+  font-variation-settings: 'wdth' 75, 'wght' 500;
+  font-size: 12px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--vc-text-muted, #979797);
+  white-space: nowrap;
+  transition: background 0.1s, color 0.1s;
+}
+
+.zfc_option:hover {
+  background: rgba(0, 0, 0, 0.06);
+  color: var(--vc-text-primary, #282828);
+}
+
+.zfc_option.is-active {
+  color: var(--vc-text-primary, #282828);
+  background: rgba(0, 0, 0, 0.09);
+}
+
+/* ── Past Events pill toggle ── */
+.zfc_past {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 28px;
+  padding: 0 12px;
+  background: transparent;
+  border: 1px solid var(--vc-text-muted, #979797);
+  border-radius: 16px;
+  cursor: pointer;
+  font-family: 'Acumin Variable Concept', 'Acumin Pro', sans-serif;
+  font-variation-settings: 'wdth' 75, 'wght' 500;
+  font-size: 12px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--vc-text-muted, #979797);
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.zfc_past:hover,
+.zfc_past.is-active {
+  background: var(--vc-bg, #ececec);
+  border-color: var(--vc-text-primary, #282828);
+  color: var(--vc-text-primary, #282828);
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+  .zfc_flyout_panel {
+    max-height: 220px;
+  }
+}
+
+
+/* --------------------------------------------------------------------------
+   22. ZFC BAR — OUTER WRAPPER & ACTIONS
+   .zfc_bar_wrap — sticky full-width flex container (filter left, actions right)
+   .zfc_bar_actions — right cluster: search toggle + grid/list view buttons
+   Base layout (space-between, 100%, flex-wrap, padding) set in Oxygen.
+   -------------------------------------------------------------------------- */
+.zfc_bar_wrap {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: var(--emh-bg, var(--vc-bg, #ececec));
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+}
+
+.zfc_bar_actions {
+  /* Layout set in Oxygen: flex, center, gap 8px, flex-shrink 0 */
+}
+
+@media (max-width: 768px) {
+  .zfc_bar_wrap {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .zfc_bar_actions {
+    flex-shrink: 0;
+    margin-left: auto;
+  }
 }

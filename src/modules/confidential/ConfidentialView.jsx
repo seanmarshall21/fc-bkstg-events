@@ -137,7 +137,9 @@ export default function ConfidentialView() {
   // ── Master toggle ────────────────────────────────────────────
   const toggleMaster = useCallback(() => {
     const current = eventData?.acf?.vc_confidential_master;
-    saveField({ acf: { vc_confidential_master: !current } });
+    // Write both fields to keep vc_ep_confidential (per-post ACF) in sync with
+    // vc_confidential_master (announce phases / PHP engine field)
+    saveField({ acf: { vc_confidential_master: !current, vc_ep_confidential: !current } });
   }, [saveField, eventData]);
 
   // ── Announce phase status cycle ───────────────────────────────

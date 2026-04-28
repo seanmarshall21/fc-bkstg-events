@@ -5,7 +5,7 @@ import { WP_ENDPOINTS } from '../../api/endpoints';
 import useSchema, { buildDefaultValues, buildAcfPayload, extractValues } from '../../hooks/useSchema';
 import SchemaField, { AvatarUpload } from '../../components/ui/SchemaFields';
 import { decodeHtml } from '../../utils/helpers';
-import { ChevronLeft, Loader2, Link as LinkIcon, CheckCircle, AlertCircle } from 'lucide-react';
+import { ChevronLeft, Loader2, Link as LinkIcon, CheckCircle, AlertCircle, ShieldCheck, ShieldOff } from 'lucide-react';
 
 /**
  * ZooEventDetail — Zoo Agency-specific event detail/create form.
@@ -63,12 +63,13 @@ export default function ZooEventDetail() {
 
   const isCreate = id === 'new';
 
-  const [event,      setEvent]      = useState(null);
-  const [values,     setValues]     = useState({});
-  const [loading,    setLoading]    = useState(true);
-  const [saving,     setSaving]     = useState(false);
-  const [saveStatus, setSaveStatus] = useState(null);
-  const [saveMsg,    setSaveMsg]    = useState('');
+  const [event,          setEvent]          = useState(null);
+  const [values,         setValues]         = useState({});
+  const [loading,        setLoading]        = useState(true);
+  const [saving,         setSaving]         = useState(false);
+  const [saveStatus,     setSaveStatus]     = useState(null);
+  const [saveMsg,        setSaveMsg]        = useState('');
+  const [confToggling,   setConfToggling]   = useState(false);
 
   // ── Schema ──────────────────────────────────────────────────
   const {
@@ -162,6 +163,37 @@ export default function ZooEventDetail() {
     }
   }, [getClient, id, isCreate, schemaFields, values, navigate, fetchEvent]);
 
+  // ── Confidential master toggle (independent of form save) ──
+  const handleToggleConfidential = useCallback(async () => {
+    const client = getClient();
+    if (!client || isCreate || confToggling) return;
+
+    const current = Boolean(event?.acf?.vc_ep_confidential);
+    const next    = !current;
+
+    // Optimistic update
+    setEvent(prev => prev ? {
+      ...prev,
+      acf: { ...prev.acf, vc_ep_confidential: next, vc_confidential_master: next },
+    } : prev);
+    setConfToggling(true);
+
+    try {
+      await client.post(WP_ENDPOINTS.events.single(id), {
+        acf: { vc_ep_confidential: next, vc_confidential_master: next },
+      });
+    } catch (err) {
+      console.error('[ZooEventDetail] confidential toggle failed:', err);
+      // Revert
+      setEvent(prev => prev ? {
+        ...prev,
+        acf: { ...prev.acf, vc_ep_confidential: current, vc_confidential_master: current },
+      } : prev);
+    } finally {
+      setConfToggling(false);
+    }
+  }, [getClient, id, isCreate, event, confToggling]);
+
   // ── Permalink display ───────────────────────────────────────
   const permalink = event?.link || event?.permalink || '';
   const slug      = event?.slug || '';
@@ -223,6 +255,41 @@ export default function ZooEventDetail() {
           {saving ? 'Saving…' : 'Save'}
         </button>
       </div>
+
+      {/* ── Confidential master toggle bar ───────────────── */}
+      {!isCreate && event && (() => {
+        const isConf = Boolean(event.acf?.vc_ep_confidential);
+        return (
+          <button
+            type="button"
+            onClick={handleToggleConfidential}
+            disabled={confToggling}
+            className={`w-full flex items-center justify-between px-4 py-2.5 transition-colors ${
+              isConf
+                ? 'bg-[#1a0a0a] text-[#f87171]'
+                : 'bg-[#0a1a0f] text-[#4ade80]'
+            } ${confToggling ? 'opacity-60' : ''}`}
+          >
+            <div className="flex items-center gap-2">
+              {isConf
+                ? <ShieldOff className="w-4 h-4 shrink-0" />
+                : <ShieldCheck className="w-4 h-4 shrink-0" />
+              }
+              <span className="text-[13px] font-semibold">
+                {isConf ? 'Confidential — tap to make live' : 'Live — tap to mark confidential'}
+              </span>
+            </div>
+            {confToggling
+              ? <Loader2 className="w-4 h-4 animate-spin shrink-0" />
+              : (
+                <div className={`w-9 h-[20px] rounded-full relative transition-colors ${isConf ? 'bg-red-800' : 'bg-emerald-800'}`}>
+                  <span className={`absolute top-[2px] w-4 h-4 rounded-full bg-white shadow transition-all ${isConf ? 'left-[2px]' : 'left-[18px]'}`} />
+                </div>
+              )
+            }
+          </button>
+        );
+      })()}
 
       {/* ── Save toast ───────────────────────────────────── */}
       <div className="mt-3">

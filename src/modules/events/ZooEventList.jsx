@@ -9,7 +9,7 @@ import { Plus, Search, SlidersHorizontal, Loader2, ChevronRight, MoreVertical } 
  * ZooEventList — Zoo Agency-specific event list.
  *
  * Differences from the generic EventList:
- *  - Reads ACF fields: vc_ep_event_icon, vc_ep_title, vc_ep_season, vc_ep_confidential
+ *  - Reads ACF fields: vc_ep_event_icon, vc_ep_title, vc_ep_sub_title, vc_ep_confidential
  *  - Groups events by year (derived from vc_ep_dates.start_date, return_format m/d/Y)
  *  - Per-row Confidential toggle with live WP PATCH
  *  - Year-group header with bulk Confidential toggle
@@ -39,7 +39,7 @@ function getEventTitle(ev) {
 }
 
 function getEventSeason(ev) {
-  return ev.acf?.vc_ep_season || '';
+  return ev.acf?.vc_ep_sub_title || '';
 }
 
 function getEventIcon(ev) {
@@ -220,24 +220,24 @@ export default function ZooEventList() {
     const client = getClient();
     if (!client) return;
 
-    // Optimistic update
+    // Optimistic update — keep both fields in sync
     setEvents(prev => prev.map(ev =>
       ev.id === eventId
-        ? { ...ev, acf: { ...ev.acf, vc_ep_confidential: value } }
+        ? { ...ev, acf: { ...ev.acf, vc_ep_confidential: value, vc_confidential_master: value } }
         : ev
     ));
     setToggling(prev => ({ ...prev, [eventId]: true }));
 
     try {
       await client.post(WP_ENDPOINTS.events.single(eventId), {
-        acf: { vc_ep_confidential: value },
+        acf: { vc_ep_confidential: value, vc_confidential_master: value },
       });
     } catch (err) {
       console.error('[ZooEventList] toggle failed:', err);
       // Revert on error
       setEvents(prev => prev.map(ev =>
         ev.id === eventId
-          ? { ...ev, acf: { ...ev.acf, vc_ep_confidential: !value } }
+          ? { ...ev, acf: { ...ev.acf, vc_ep_confidential: !value, vc_confidential_master: !value } }
           : ev
       ));
     } finally {
@@ -253,10 +253,10 @@ export default function ZooEventList() {
     const yearEvents = events.filter(ev => getEventYear(ev) === year);
     if (!yearEvents.length) return;
 
-    // Optimistic update
+    // Optimistic update — keep both fields in sync
     setEvents(prev => prev.map(ev =>
       getEventYear(ev) === year
-        ? { ...ev, acf: { ...ev.acf, vc_ep_confidential: value } }
+        ? { ...ev, acf: { ...ev.acf, vc_ep_confidential: value, vc_confidential_master: value } }
         : ev
     ));
     setBulkSaving(true);
@@ -264,7 +264,7 @@ export default function ZooEventList() {
     try {
       await Promise.all(yearEvents.map(ev =>
         client.post(WP_ENDPOINTS.events.single(ev.id), {
-          acf: { vc_ep_confidential: value },
+          acf: { vc_ep_confidential: value, vc_confidential_master: value },
         })
       ));
     } catch (err) {

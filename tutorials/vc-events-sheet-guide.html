@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>VC Events — Google Sheet Setup Guide</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #f5f4f2;
+    color: #1a1a1a;
+    padding: 40px 24px 80px;
+  }
+
+  .wrap { max-width: 860px; margin: 0 auto; }
+
+  /* ── Header ── */
+  .page-header {
+    display: flex; align-items: flex-start; gap: 16px; margin-bottom: 36px;
+  }
+  .logo {
+    width: 44px; height: 44px; background: #7c5cbf; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .logo svg { width: 22px; height: 22px; color: #fff; }
+  .page-header h1 { font-size: 26px; font-weight: 800; color: #111; line-height: 1.2; }
+  .page-header p  { font-size: 14px; color: #6b7280; margin-top: 4px; line-height: 1.5; }
+
+  /* ── Section ── */
+  section { margin-bottom: 32px; }
+  .section-label {
+    font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+    color: #9ca3af; margin-bottom: 10px;
+  }
+
+  /* ── Cards ── */
+  .card {
+    background: #fff; border: 1px solid #e5e3e0; border-radius: 16px;
+    overflow: hidden;
+  }
+  .card-body { padding: 20px; }
+  .card-body + .card-body { border-top: 1px solid #f0eeed; }
+
+  /* ── Step list ── */
+  .steps { display: flex; flex-direction: column; gap: 0; }
+  .step {
+    display: flex; gap: 16px; padding: 16px 20px;
+    border-bottom: 1px solid #f0eeed;
+  }
+  .step:last-child { border-bottom: none; }
+  .step-num {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: #7c5cbf; color: #fff;
+    font-size: 13px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; margin-top: 1px;
+  }
+  .step-content h3 { font-size: 14px; font-weight: 600; color: #111; margin-bottom: 4px; }
+  .step-content p  { font-size: 13px; color: #6b7280; line-height: 1.55; }
+  .step-content .note {
+    display: inline-block; margin-top: 8px;
+    background: #faf8ff; border: 1px solid #e0d7f7;
+    border-radius: 8px; padding: 8px 12px;
+    font-size: 12px; color: #5b3fa6; line-height: 1.5;
+  }
+  .step-content .note strong { font-weight: 600; }
+
+  /* ── Sheet preview ── */
+  .sheet-wrap {
+    overflow-x: auto;
+    border-radius: 12px;
+    border: 1px solid #e5e3e0;
+    background: #fff;
+  }
+  table.sheet {
+    border-collapse: collapse;
+    font-size: 12px;
+    white-space: nowrap;
+    min-width: 100%;
+  }
+  table.sheet thead tr {
+    background: #f1f0ee;
+  }
+  table.sheet th {
+    padding: 8px 14px;
+    font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em;
+    color: #374151;
+    border-right: 1px solid #e5e3e0;
+    border-bottom: 2px solid #d1cec9;
+    text-align: left;
+    white-space: nowrap;
+  }
+  table.sheet th.required { color: #7c5cbf; }
+  table.sheet th:last-child { border-right: none; }
+
+  table.sheet td {
+    padding: 7px 14px;
+    border-right: 1px solid #f0eeed;
+    border-bottom: 1px solid #f0eeed;
+    color: #374151;
+  }
+  table.sheet td:last-child { border-right: none; }
+  table.sheet tr:last-child td { border-bottom: none; }
+  table.sheet tr:nth-child(even) td { background: #faf9f8; }
+
+  .pill {
+    display: inline-block; padding: 2px 8px; border-radius: 20px;
+    font-size: 11px; font-weight: 600;
+  }
+  .pill-green  { background: #d1fae5; color: #065f46; }
+  .pill-gray   { background: #f3f4f6; color: #6b7280; }
+  .pill-amber  { background: #fef3c7; color: #92400e; }
+
+  /* ── Column reference ── */
+  .col-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 1px;
+    background: #f0eeed;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid #e5e3e0;
+  }
+  .col-item {
+    background: #fff;
+    padding: 12px 16px;
+    display: flex; flex-direction: column; gap: 3px;
+  }
+  .col-item .col-key {
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    font-size: 12px; font-weight: 600; color: #374151;
+  }
+  .col-item .col-key.req { color: #7c5cbf; }
+  .col-item .col-desc { font-size: 12px; color: #9ca3af; }
+  .col-item .col-badge {
+    display: inline-block; margin-top: 2px;
+    padding: 1px 7px; border-radius: 20px;
+    font-size: 10px; font-weight: 600; width: fit-content;
+  }
+  .badge-required  { background: #ede9fb; color: #7c5cbf; }
+  .badge-optional  { background: #f3f4f6; color: #6b7280; }
+  .badge-url       { background: #dbeafe; color: #1e40af; }
+  .badge-flag      { background: #fef3c7; color: #92400e; }
+
+  /* ── URL format box ── */
+  .url-box {
+    background: #1e1e2e; border-radius: 12px; padding: 16px 20px;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    font-size: 12px; color: #cdd6f4; line-height: 1.8;
+    overflow-x: auto;
+  }
+  .url-box .dim  { color: #6c7086; }
+  .url-box .hi   { color: #cba6f7; }
+  .url-box .val  { color: #a6e3a1; }
+
+  /* ── Warning/tip boxes ── */
+  .tip {
+    display: flex; gap: 12px; align-items: flex-start;
+    padding: 14px 16px; border-radius: 12px; font-size: 13px; line-height: 1.55;
+  }
+  .tip-info    { background: #eff6ff; border: 1px solid #bfdbfe; color: #1e40af; }
+  .tip-warn    { background: #fffbeb; border: 1px solid #fde68a; color: #92400e; }
+  .tip-success { background: #ecfdf5; border: 1px solid #a7f3d0; color: #065f46; }
+  .tip svg     { width: 16px; height: 16px; flex-shrink: 0; margin-top: 1px; }
+
+  /* ── Download button ── */
+  .dl-btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 10px 18px; border-radius: 10px;
+    background: #7c5cbf; color: #fff;
+    font-size: 13px; font-weight: 600;
+    border: none; cursor: pointer; text-decoration: none;
+  }
+  .dl-btn:hover { background: #6b4db0; }
+  .dl-btn svg { width: 14px; height: 14px; }
+
+  .divider { border: none; border-top: 1px solid #e5e3e0; margin: 0; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- Header -->
+  <div class="page-header">
+    <div class="logo">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+    </div>
+    <div>
+      <h1>VC Events — Google Sheet Setup</h1>
+      <p>How to format your spreadsheet and connect it to the FC Events app for one-click syncing.</p>
+    </div>
+  </div>
+
+  <!-- How it works -->
+  <section>
+    <p class="section-label">How it works</p>
+    <div class="card">
+      <div class="tip tip-info" style="border-radius:15px 15px 0 0; border-bottom:none;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <span>Google Sheets can publish any tab as a live CSV URL. The app fetches that URL, parses the rows, and runs them through the same import flow — no OAuth, no API keys required. Any time you update the sheet and re-sync in the app, it picks up the latest data without touching photos or any fields not in your sheet.</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Sheet example -->
+  <section>
+    <p class="section-label">Sheet layout — example</p>
+    <div class="sheet-wrap">
+      <table class="sheet">
+        <thead>
+          <tr>
+            <th class="required">slug ★</th>
+            <th>title</th>
+            <th>post_status</th>
+            <th>sub_title</th>
+            <th>start_date</th>
+            <th>end_date</th>
+            <th>city</th>
+            <th>state</th>
+            <th>venue</th>
+            <th>capacity_amount</th>
+            <th>established</th>
+            <th>website</th>
+            <th>instagram</th>
+            <th>confidential</th>
+            <th>private</th>
+            <th>event_phase</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>crssd-fall-2026</strong></td>
+            <td>CRSSD Fall 2026</td>
+            <td><span class="pill pill-green">publish</span></td>
+            <td>Fall '26</td>
+            <td>2026-10-03</td>
+            <td>2026-10-04</td>
+            <td>San Diego</td>
+            <td>CA</td>
+            <td>Waterfront Park</td>
+            <td>5000</td>
+            <td>2013</td>
+            <td>https://crssdfest.com</td>
+            <td>https://instagram.com/crssd</td>
+            <td>0</td>
+            <td>0</td>
+            <td>onsale</td>
+          </tr>
+          <tr>
+            <td><strong>proper-nye-2027</strong></td>
+            <td>Proper NYE 2027</td>
+            <td><span class="pill pill-amber">draft</span></td>
+            <td>NYE '27</td>
+            <td>2026-12-31</td>
+            <td>2027-01-01</td>
+            <td>San Diego</td>
+            <td>CA</td>
+            <td>TBD</td>
+            <td>3000</td>
+            <td>2014</td>
+            <td>https://propernye.com</td>
+            <td>https://instagram.com/propernye</td>
+            <td>1</td>
+            <td>0</td>
+            <td>planning</td>
+          </tr>
+          <tr>
+            <td><strong>utbs-2026</strong></td>
+            <td>Under the Big Sky 2026</td>
+            <td><span class="pill pill-green">publish</span></td>
+            <td>Summer '26</td>
+            <td>2026-07-17</td>
+            <td>2026-07-19</td>
+            <td>Whitefish</td>
+            <td>MT</td>
+            <td>Big Sky Resort</td>
+            <td>8000</td>
+            <td>2016</td>
+            <td>https://underthebigskyfest.com</td>
+            <td>https://instagram.com/utbs</td>
+            <td>0</td>
+            <td>0</td>
+            <td>lineup-phase-1</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p style="font-size:11px; color:#9ca3af; margin-top:8px;">★ slug is the only required column. Include only the columns you want to update — everything else is left untouched.</p>
+  </section>
+
+  <!-- Column reference -->
+  <section>
+    <p class="section-label">All 21 supported columns</p>
+    <div class="col-grid">
+      <div class="col-item">
+        <span class="col-key req">slug</span>
+        <span class="col-desc">Matches to the WP post slug</span>
+        <span class="col-badge badge-required">Required</span>
+      </div>
+      <div class="col-item">
+        <span class="col-key">title</span>
+        <span class="col-desc">Event display name</span>
+        <span class="col-badge badge-optional">Optional</span>
+      </div>
+      <div class="col-item">
+        <span class="col-key">post_status</span>
+        <span class="col-desc">publish or draft</span>
+        <span class="col-badge badge-optional">Optional</span>
+      </div>
+      <div class="col-item">
+        <span class="col-key">sub_title</span>
+        <span class="col-desc">e.g. Fall '26 (season/subtitle label)</span>
+        <span class="col-badge badge-optional">Optional</span>
+      </div>
+      <div class="col-item">
+        <span class="col-key">start_date</span>
+        <span class="col-desc">YYYY-MM-DD</span>
+        <span class="col-badge badge-optional">Optional</span>
+      </div>
+      <div class="col-item">
+        <span class="col-key">end_date</span>
+        <span class="col-desc">YYYY-MM-DD</span>
+        <span class="col-badge badge-optional">Optional</span>
+      </div>
+      <div class="col-item">
+        <span class="col-key">city</span>
+        <span class="col-desc">City name</span>
+        <span class="col-badge badge-optional">Optional</span>
+      </div>
+      <div class="col-item">
+        <span class="col-key">state</span>
+        <span class="col-desc">2-letter state code</span>
+        <span class="col-badge badge-optional">Optional</span>
+      </div>
+      <div class="col-item">
+        <span class="col-key">venue</span>
+        <span class="col-desc">Venue name</span>
+        <span class="col-badge badge-optional">Optional</span>
+      </div>
+      <div class="col-item">
+        <span class="col-key">capacity_amount</span>
+        <span class="col-desc">e.g. 12,000 attendees (display string)</span>
+        <span class="col-badge badge-optional">Optional</span>
+      </div>
+      <div class="col-item">
+        <span class="col-key">established</span>
+        <span class="col-desc">Year as number</span>
+        <span class="col-badge badge-optional">Optional</span>
+      </div>
+      <div class="col-item">
+        <span class="col-key">website</span>
+        <span class="col-desc">Full URL with https://</span>
+        <span class="col-badge badge-url">URL</span>
+      </div>
+      <div class="col-item">
+        <span class="col-key">instagram</span>
+        <span class="col-desc">Full profile URL</span>
+        <span class="col-badge badge-url">URL</span>
+      </div>
+      <div class="col-item">
+        <span class="col-key">facebook</span>
+        <span class="col-desc">Full page URL</span>
+        <span class="col-badge badge-url">URL</span>
+      </div>
+      <div class="col-item">
+        <span class="col-key">spotify</span>
+        <span class="col-desc">Artist/playlist URL</span>
+        <span class="col-badge badge-url">URL</span>
+      </div>
+      <div class="col-item">
+        <span class="col-key">twitter</span>
+        <span class="col-desc">Full profile URL</span>
+        <span class="col-badge badge-url">URL</span>
+      </div>
+      <div class="col-item">
+        <span class="col-key">tiktok</span>
+        <span class="col-desc">Full profile URL</span>
+        <span class="col-badge badge-url">URL</span>
+      </div>
+      <div class="col-item">
+        <span class="col-key">soundcloud</span>
+        <span class="col-desc">Full profile URL</span>
+        <span class="col-badge badge-url">URL</span>
+      </div>
+      <div class="col-item">
+        <span class="col-key">confidential</span>
+        <span class="col-desc">0 = visible, 1 = confidential</span>
+        <span class="col-badge badge-flag">0 or 1</span>
+      </div>
+      <div class="col-item">
+        <span class="col-key">private</span>
+        <span class="col-desc">0 = public, 1 = private</span>
+        <span class="col-badge badge-flag">0 or 1</span>
+      </div>
+      <div class="col-item">
+        <span class="col-key">event_phase</span>
+        <span class="col-desc">planning · save-the-date · lineup-phase-1 · presale · onsale · lineup-phase-2 · set-times-live · event-day · post-event · archived</span>
+        <span class="col-badge badge-optional">Optional</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Setup steps -->
+  <section>
+    <p class="section-label">Publishing your sheet — step by step</p>
+    <div class="card">
+      <div class="steps">
+
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-content">
+            <h3>Create or open your Google Sheet</h3>
+            <p>Row 1 must be your column headers — exact key names from the table above (all lowercase, underscores). Column order doesn't matter. You can include any subset of columns.</p>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-content">
+            <h3>Fill in your event data starting at row 2</h3>
+            <p>Every row needs a <strong>slug</strong> — this is how the importer finds the matching WordPress post. The slug is the URL-friendly name, e.g. <code style="background:#f3f0fa;padding:1px 6px;border-radius:4px;font-size:12px">crssd-fall-2026</code>. Dates must be YYYY-MM-DD format.</p>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-content">
+            <h3>Publish the sheet as CSV</h3>
+            <p>Go to <strong>File → Share → Publish to web</strong>. In the dialog, select the specific tab (sheet) you want to publish, then change the format dropdown from "Web page" to <strong>Comma-separated values (.csv)</strong>. Click <strong>Publish</strong> and confirm.</p>
+            <span class="note">⚠️ Make sure you select <strong>the specific tab</strong>, not "Entire document" — otherwise the URL won't output clean CSV.</span>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-num">4</div>
+          <div class="step-content">
+            <h3>Copy the published URL</h3>
+            <p>After publishing, Google gives you a URL. It looks like this:</p>
+            <div class="url-box" style="margin-top:10px;">
+              <span class="dim">https://docs.google.com/spreadsheets/d/</span><span class="hi">YOUR_SHEET_ID</span><span class="dim">/pub?gid=</span><span class="val">0</span><span class="dim">&single=true&output=csv</span>
+            </div>
+            <span class="note">The <strong>gid</strong> number identifies which tab. If you have multiple tabs, each will have a different gid in its URL.</span>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-num">5</div>
+          <div class="step-content">
+            <h3>Paste the URL into the app</h3>
+            <p>In the FC Events app → Events → ⬆ Import → "Sync from Google Sheet" card. Paste the URL and tap <strong>Fetch & Preview</strong>. You'll see the same preview table as a file upload. Tap Import when ready.</p>
+            <span class="note">✓ The URL is remembered in the app so future syncs are one tap.</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- Tips -->
+  <section>
+    <p class="section-label">Notes & gotchas</p>
+    <div style="display:flex; flex-direction:column; gap:10px;">
+
+      <div class="tip tip-success">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+        <span><strong>Photos are safe.</strong> The importer only writes fields that are present in your sheet. Photos, logos, lineups, and anything else stored in WordPress stay untouched.</span>
+      </div>
+
+      <div class="tip tip-info">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <span><strong>Slug must match exactly.</strong> If a row's slug doesn't match an existing WP post, it's skipped (not created). To create new events, the post must exist in WordPress first.</span>
+      </div>
+
+      <div class="tip tip-warn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        <span><strong>Sheet must be public.</strong> "Publish to web" is different from "Share." The sheet itself can stay private — only the published CSV URL needs to be publicly accessible for the app to fetch it.</span>
+      </div>
+
+      <div class="tip tip-info">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <span><strong>Dates in Google Sheets.</strong> Format the date columns as Plain Text (not Date) to prevent Sheets from auto-converting to MM/DD/YYYY. The importer expects YYYY-MM-DD.</span>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Download template -->
+  <section>
+    <p class="section-label">Starter template</p>
+    <div class="card">
+      <div class="card-body" style="display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap;">
+        <div>
+          <p style="font-size:14px; font-weight:600; color:#111; margin-bottom:4px;">Download the CSV template</p>
+          <p style="font-size:13px; color:#6b7280;">All 21 columns + one example row. Import into Google Sheets via File → Import.</p>
+        </div>
+        <button class="dl-btn" onclick="downloadTemplate()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Download Template
+        </button>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<script>
+const COLUMNS = ['slug','title','post_status','sub_title','start_date','end_date','city','state','venue','capacity_amount','established','website','instagram','facebook','spotify','twitter','tiktok','soundcloud','confidential','private','event_phase'];
+const EXAMPLE  = ["crssd-fall-2026","CRSSD Fall 2026","publish","Fall '26","2026-10-03","2026-10-04","San Diego","CA","Waterfront Park","5,000 attendees","2013","https://crssdfest.com","https://instagram.com/crssd","","","","","","0","0","onsale"];
+
+function downloadTemplate() {
+  const esc = v => /[",\n]/.test(v) ? `"${v.replace(/"/g,'""')}"` : v;
+  const csv = [COLUMNS, EXAMPLE].map(r => r.map(esc).join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'vc-events-import-template.csv'; a.click();
+  URL.revokeObjectURL(url);
+}
+</script>
+</body>
+</html>

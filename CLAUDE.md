@@ -108,7 +108,7 @@ FLAT (top-level, not in group)
   year                      get_field('year')                             number
   vc_ep_event_icon          get_field('vc_ep_event_icon')                 image array
   vc_ep_title               get_field('vc_ep_title')                      text
-  vc_ep_season              get_field('vc_ep_season')                     text
+  vc_ep_sub_title           get_field('vc_ep_sub_title')                  text  ← was vc_ep_season (recreated 2026-04-27)
   vc_ep_confidential        get_field('vc_ep_confidential')               true_false
   vc_ep_private_visibility  get_field('vc_ep_private_visibility')         true_false
   capacity_label            get_field('capacity_label')                   text (default "Capacity")
@@ -116,7 +116,7 @@ FLAT (top-level, not in group)
   genre_label               get_field('genre_label')                      text (default "Genre")
   genre_selection           get_field('genre_selection')                  taxonomy → WP_Term[]
   custom_data_item_tf       get_field('custom_data_item_tf')              true_false
-  tags                      get_field('tags')                             taxonomy → WP_Term[]
+  event_tag_labels          get_field('event_tag_labels')                 taxonomy → WP_Term[]  ← was 'tags' (recreated 2026-04-27)
   contact_emails            get_field('contact_emails')                   text (comma-separated, per-post)
 
 DATES TAB — get_field('vc_ep_dates') → group
@@ -127,11 +127,11 @@ TBD — get_field('tbd') → group  ← SEPARATE top-level group, NOT inside vc_
   ['enabled']               bool
   ['text']                  string (default "TBD")
 
-DETAILS TAB — get_field('vc_ep_details') → group
-  ['city']                  text
-  ['state']                 text (e.g. "CA")
-  ['venue']                 text
-  ['established']           number (e.g. 2015)
+DETAILS TAB — vc_ep_details group REMOVED (2026-04-28). Fields are now FLAT top-level:
+  city                      get_field('city')                             text
+  state                     get_field('state')                            text (e.g. "CA")
+  vc_ep_event_venue         get_field('vc_ep_event_venue')                select (choices: Waterfront Park, Petco Park, Gallagher Square, Big Mtn Ranch, Majestic Valley Arena, Bozeman MT)
+  established               get_field('established')                      number (e.g. 2015)
 
 CUSTOM DATA — get_field('custom_data_item') → group  ← top-level, not nested
   ['custom_data_label']     text
@@ -154,20 +154,29 @@ MORE VIDEOS — get_field('more_videos') → repeater  ← top-level, NOT inside
   ['mp4_url']               URL string
   ['other']                 URL string
 
-LINKS TAB — get_field('vc_ep_social') → group
-  ['website'], ['instagram'], ['facebook']
-  ['spotify'], ['twitter'], ['tiktok'], ['soundcloud'], ['other']
+LINKS TAB (restructured 2026-04-28):
+WEBSITE — get_field('vc_ep_website') → group
+  ['vc_ep_website_label']   text (e.g. "Official Site")
+  ['vc_ep_website_url']     URL string
+
+SOCIAL — get_field('vc_ep_social') → group  ← replaces all individual social link subfields
+  ['vc_ep_social_label']    text (e.g. "Instagram", "Facebook", "Spotify")
+  ['vc_ep_social_url']      URL string
+  NOTE: individual keys ['website'], ['instagram'], ['facebook'], ['spotify'], ['twitter'], ['tiktok'], ['soundcloud'] NO LONGER EXIST
 ```
 
 **CRITICAL ACF NOTES:**
-- `tags` and `genre_selection` are **top-level taxonomy fields** (NOT inside a group).
+- `event_tag_labels` and `genre_selection` are **top-level taxonomy fields** (NOT inside a group).
 - Both have `save_terms: 0` and `load_terms: 0` — bypasses `wp_set_object_terms()`. Data stored as serialized post meta only. **Do not change this.**
-- `tags` and `genre_selection` return `WP_Term[]` objects — NOT readable via Oxygen dynamic data picker. Must use Code Blocks with `vc_render_chips()`.
+- `event_tag_labels` and `genre_selection` return `WP_Term[]` objects — NOT readable via Oxygen dynamic data picker. Must use Code Blocks with `vc_render_chips()`.
+- `event_tag_labels` was recreated from scratch (2026-04-27) — old `tags` field had stale ACF Local JSON definition in `acf-json/` folder that prevented saves. Do NOT rename — recreate if issues arise.
 - `video` is a **top-level group** (`get_field('video')`), NOT nested inside `vc_ep_media`. Any code reading `$media['video']` is wrong.
 - `tbd` is a **top-level group** (`get_field('tbd')`), NOT nested inside `vc_ep_dates`.
 - `capacity_label` and `capacity_amount` are **flat top-level fields** — old path `$details['capacity']['capacity']` no longer exists.
 - `contact_emails` is a **per-post field** (still in the group). Zoo Agency options page field is `zoo_contact_emails` (accessed via `get_field('zoo_contact_emails', 'option')`). Both exist — per-post overrides if populated, options page is the fallback.
-- `vc_ep_details` group now contains ONLY: city, state, venue, established. Capacity, genre label, and custom data all moved to flat top-level fields.
+- **`vc_ep_details` group REMOVED (2026-04-28)** — `city`, `state`, `established` are now flat top-level fields. `venue` is now `vc_ep_event_venue` (select). Any code reading `get_field('vc_ep_details')` is stale.
+- **`vc_ep_website` group (2026-04-28)** — `get_field('vc_ep_website')` returns `['vc_ep_website_label', 'vc_ep_website_url']`. Old `$social['website']` path is gone.
+- **`vc_ep_social` group (2026-04-28)** — `get_field('vc_ep_social')` returns `['vc_ep_social_label', 'vc_ep_social_url']`. All individual subfields (instagram, facebook, spotify, twitter, tiktok, soundcloud) removed from ACF. Any code reading those keys is stale.
 
 ---
 
@@ -242,7 +251,7 @@ This is the main listings template. 274 nodes total. Lives at: **Oxygen → Reus
 **JavaScript filter data attributes on `.emh_listings_parent`:**
 ```
 data-brand    → brand field value
-data-venue    → vc_ep_details → venue
+data-venue    → vc_ep_event_venue (flat select field — was vc_ep_details → venue)
 data-year     → year field value
 data-is-past  → "1" if start_date < today, else "0"
 ```

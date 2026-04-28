@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>VC Event Manager — CSV Field Management Guide</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #f5f4f2;
+    color: #1a1a1a;
+    padding: 48px 24px 80px;
+    line-height: 1.6;
+  }
+
+  .wrap { max-width: 860px; margin: 0 auto; }
+
+  /* ── Cover ── */
+  .cover {
+    background: #1e1e2e;
+    border-radius: 20px;
+    padding: 40px;
+    margin-bottom: 48px;
+  }
+  .cover .eyebrow { font-size: 12px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: #7c5cbf; margin-bottom: 10px; }
+  .cover h1 { font-size: 32px; font-weight: 800; color: #fff; line-height: 1.2; margin-bottom: 8px; }
+  .cover .sub { font-size: 15px; color: #9ca3af; max-width: 540px; }
+
+  /* ── Section labels ── */
+  .section-label {
+    font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+    color: #9ca3af; margin-bottom: 12px; margin-top: 48px;
+  }
+  .section-label:first-of-type { margin-top: 0; }
+
+  /* ── Cards ── */
+  .card {
+    background: #fff;
+    border: 1px solid #e5e3e0;
+    border-radius: 16px;
+    padding: 24px;
+    margin-bottom: 16px;
+  }
+  .card h2 {
+    font-size: 18px; font-weight: 700; color: #7c5cbf; margin-bottom: 8px;
+  }
+  .card h3 {
+    font-size: 15px; font-weight: 700; color: #1a1a1a; margin: 20px 0 8px;
+  }
+  .card h3:first-child { margin-top: 0; }
+  .card p { font-size: 14px; color: #374151; margin-bottom: 10px; }
+  .card p:last-child { margin-bottom: 0; }
+
+  /* ── Step numbers ── */
+  .step {
+    display: flex; gap: 16px; margin-bottom: 20px; align-items: flex-start;
+  }
+  .step:last-child { margin-bottom: 0; }
+  .step-num {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: #7c5cbf; color: #fff;
+    font-size: 13px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; margin-top: 1px;
+  }
+  .step-content h3 { font-size: 14px; font-weight: 700; color: #111; margin: 0 0 4px; }
+  .step-content p  { font-size: 13px; color: #6b7280; margin: 0 0 8px; }
+  .step-content p:last-child { margin-bottom: 0; }
+
+  /* ── Code blocks ── */
+  .code {
+    background: #1e1e2e;
+    border-radius: 10px;
+    padding: 14px 18px;
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+    font-size: 12.5px;
+    color: #cdd6f4;
+    line-height: 1.7;
+    overflow-x: auto;
+    margin: 10px 0;
+  }
+  .code .g { color: #a6e3a1; } /* green — additions */
+  .code .p { color: #cba6f7; } /* purple — keys */
+  .code .y { color: #f9e2af; } /* yellow — values */
+  .code .d { color: #6c7086; } /* dim — comments */
+  .code .r { color: #f38ba8; } /* red — removals */
+
+  /* ── Callout boxes ── */
+  .callout {
+    border-radius: 12px;
+    padding: 14px 16px;
+    font-size: 13px;
+    line-height: 1.55;
+    margin: 12px 0;
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+  }
+  .callout svg { width: 16px; height: 16px; flex-shrink: 0; margin-top: 2px; }
+  .callout-info    { background: #dbeafe; border: 1px solid #93c5fd; color: #1e3a5f; }
+  .callout-warn    { background: #fef3c7; border: 1px solid #fbbf24; color: #78350f; }
+  .callout-success { background: #d1fae5; border: 1px solid #6ee7b7; color: #065f46; }
+  .callout-danger  { background: #fee2e2; border: 1px solid #fca5a5; color: #7f1d1d; }
+  .callout strong  { display: block; font-weight: 700; margin-bottom: 3px; }
+
+  /* ── Tables ── */
+  .ref-table {
+    width: 100%; border-collapse: collapse; font-size: 13px; margin: 12px 0;
+    border-radius: 10px; overflow: hidden;
+    border: 1px solid #e5e3e0;
+  }
+  .ref-table thead tr { background: #1e1e2e; }
+  .ref-table thead th {
+    padding: 10px 14px; text-align: left;
+    font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em;
+    color: #9ca3af;
+  }
+  .ref-table tbody tr { border-bottom: 1px solid #f0eeed; }
+  .ref-table tbody tr:last-child { border-bottom: none; }
+  .ref-table tbody tr:nth-child(even) td { background: #faf9f8; }
+  .ref-table td { padding: 9px 14px; color: #374151; vertical-align: top; }
+  .ref-table td:first-child { font-family: 'SF Mono', monospace; font-size: 12px; color: #7c5cbf; font-weight: 600; white-space: nowrap; }
+
+  /* ── Checklist ── */
+  .checklist {
+    border-radius: 14px; overflow: hidden; border: 1px solid #e5e3e0; margin-bottom: 16px;
+  }
+  .checklist-header {
+    padding: 12px 18px;
+    font-size: 13px; font-weight: 700;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .checklist-header.add  { background: #d1fae5; color: #065f46; }
+  .checklist-header.remove { background: #fee2e2; color: #7f1d1d; }
+  .checklist-body { background: #fff; padding: 4px 0; }
+  .checklist-item {
+    display: flex; align-items: flex-start; gap: 12px;
+    padding: 9px 18px;
+    font-size: 13px; color: #374151;
+    border-bottom: 1px solid #f5f4f2;
+  }
+  .checklist-item:last-child { border-bottom: none; }
+  .check-box {
+    width: 18px; height: 18px; border-radius: 4px; border: 1.5px solid #d1d5db;
+    flex-shrink: 0; margin-top: 1px;
+  }
+
+  /* ── Rule ── */
+  hr { border: none; border-top: 1px solid #e5e3e0; margin: 40px 0; }
+
+  /* ── Inline code ── */
+  code {
+    background: #f0eeff; color: #7c5cbf; font-family: 'SF Mono', monospace;
+    font-size: 12px; padding: 1px 6px; border-radius: 4px; font-weight: 600;
+  }
+
+  /* ── Tag pills ── */
+  .pill {
+    display: inline-block; padding: 2px 8px; border-radius: 20px;
+    font-size: 11px; font-weight: 600; margin-left: 6px;
+  }
+  .pill-php    { background: #e0d7f7; color: #5b3fa6; }
+  .pill-react  { background: #dbeafe; color: #1e3a8a; }
+  .pill-both   { background: #fef3c7; color: #92400e; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- Cover -->
+  <div class="cover">
+    <p class="eyebrow">Vivo Creative · Internal Reference</p>
+    <h1>CSV Field Management Guide</h1>
+    <p class="sub">How to add, remove, and sync fields between ACF, the PHP importer, and the PWA — without breaking anything.</p>
+  </div>
+
+  <!-- How it's wired -->
+  <p class="section-label">How the system is wired</p>
+  <div class="card">
+    <p>The CSV importer is defined in <strong>two places</strong>. Both need to match whenever you add or remove a field.</p>
+
+    <table class="ref-table" style="margin-top:16px;">
+      <thead>
+        <tr><th>File</th><th>What it controls</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>class-vc-admin-importer.php</td>
+          <td>WP admin import page + REST endpoint. Defines which columns are valid and how each one writes to ACF.</td>
+        </tr>
+        <tr>
+          <td>ImportEvents.jsx<br><span style="opacity:.6">ImportArtists.jsx, etc.</span></td>
+          <td>PWA importer UI. Defines the column list for the preview table and template download. The CSV parser accepts any columns — this list governs what the user sees.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="callout callout-info" style="margin-top:16px;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      <div><strong>The short version</strong>ACF is the source of truth for what fields exist. The PHP class controls what the importer is allowed to write. The React component controls what the user sees. All three need to stay in sync.</div>
+    </div>
+  </div>
+
+  <hr>
+
+  <!-- Scenario 1 -->
+  <p class="section-label">Scenario 1 — You added a new field in ACF</p>
+  <div class="card">
+    <h2>Adding a new field to the CSV importer</h2>
+    <p>You created a new field in ACF and want it to be importable via CSV. Three places to update:</p>
+
+    <div style="margin-top:20px;">
+
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-content">
+          <h3>Add it to <code>get_columns()</code> in PHP <span class="pill pill-php">PHP</span></h3>
+          <p>Open <code>class-vc-admin-importer.php</code>. Find <code>get_columns()</code> and add one line:</p>
+          <div class="code"><span class="p">'new_field_key'</span> =&gt; array( <span class="p">'label'</span> =&gt; <span class="y">'Field label here'</span> ),</div>
+          <p>If the field is <strong>required</strong>, add <code>'required' => true</code> to the array.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-content">
+          <h3>Add write logic to <code>apply_row()</code> in PHP <span class="pill pill-php">PHP</span></h3>
+          <p>Find the <code>apply_row()</code> method. For a flat (non-group) field, add:</p>
+          <div class="code"><span class="g">if ( $has( 'new_field_key' ) ) {</span>
+<span class="g">    update_field( 'new_field_key', sanitize_text_field( $data['new_field_key'] ), $post_id );</span>
+<span class="g">}</span></div>
+          <p>For fields inside an ACF group — use the merge pattern (see Scenario 3 below).</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-content">
+          <h3>Add it to <code>COLUMNS</code> in React <span class="pill pill-react">React</span></h3>
+          <p>Open the relevant <code>Import*.jsx</code> file. Find the <code>COLUMNS</code> array at the top and add one entry:</p>
+          <div class="code"><span class="g">{ key: 'new_field_key', label: 'New Field', notes: 'Short description' },</span></div>
+          <p>The preview table, template download, and column reference list all generate from this array automatically — no other React changes needed.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-content">
+          <h3>Deploy both files <span class="pill pill-both">Deploy</span></h3>
+          <p><strong>PHP:</strong> SCP <code>class-vc-admin-importer.php</code> to the server.<br>
+          <strong>PWA:</strong> <code>git commit</code> → <code>git push</code> → <code>npm run build</code> → copy build → push <code>fc-bkstg-events</code>.</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <hr>
+
+  <!-- Scenario 2 -->
+  <p class="section-label">Scenario 2 — Removing a field from the CSV</p>
+  <div class="card">
+    <h2>Removing a field from the importer</h2>
+    <p>You no longer want a field to be importable — even if it still exists in ACF. Two removals, no ACF change needed.</p>
+
+    <div style="margin-top:20px;">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-content">
+          <h3>Remove from PHP <span class="pill pill-php">PHP</span></h3>
+          <p>Delete the line from <code>get_columns()</code> and remove the matching <code>$has()</code> block in <code>apply_row()</code>.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-content">
+          <h3>Remove from React <span class="pill pill-react">React</span></h3>
+          <p>Delete the entry from the <code>COLUMNS</code> array. If a user uploads a CSV that still has that column, it will be silently ignored.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="callout callout-success">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+      <div><strong>Safe operation</strong>Removing a field from the importer never deletes data from WordPress. It only stops that column from being written during future imports.</div>
+    </div>
+  </div>
+
+  <hr>
+
+  <!-- Scenario 3 -->
+  <p class="section-label">Scenario 3 — The field is inside an ACF group</p>
+  <div class="card">
+    <h2>Group fields — use the merge pattern</h2>
+    <p>ACF groups like <code>vc_ep_social</code>, <code>vc_ep_dates</code>, and <code>vc_ep_details</code> require a read-merge-write pattern. <strong>Never call <code>update_field()</code> directly on a group subfield</strong> — ACF will blank out all other subfields in the group that weren't included.</p>
+
+    <div class="code"><span class="d">// 1. Read the whole existing group</span>
+<span class="p">$existing</span> = get_field( <span class="y">'vc_ep_social'</span>, <span class="p">$post_id</span> );
+<span class="p">$existing</span> = is_array( <span class="p">$existing</span> ) ? <span class="p">$existing</span> : array();
+
+<span class="d">// 2. Build only the values you want to write</span>
+<span class="p">$updates</span> = array();
+if ( <span class="p">$has</span>( <span class="y">'new_subfield'</span> ) ) {
+    <span class="p">$updates</span>[<span class="y">'new_subfield'</span>] = sanitize_text_field( <span class="p">$data</span>[<span class="y">'new_subfield'</span>] );
+}
+
+<span class="d">// 3. Merge and write the whole group back</span>
+if ( ! empty( <span class="p">$updates</span> ) ) {
+    update_field( <span class="y">'vc_ep_social'</span>, array_merge( <span class="p">$existing</span>, <span class="p">$updates</span> ), <span class="p">$post_id</span> );
+}</div>
+
+    <div class="callout callout-warn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      <div><strong>Why this matters</strong>If you write only the new subfield directly with <code>update_field()</code>, ACF blanks out all other subfields in the group. The merge pattern reads first, merges only your changes, then writes the full group — so untouched subfields survive.</div>
+    </div>
+  </div>
+
+  <hr>
+
+  <!-- Field type map -->
+  <p class="section-label">Field type reference</p>
+  <div class="card">
+    <h2>ACF type → CSV format + PHP sanitizer</h2>
+    <table class="ref-table">
+      <thead><tr><th>ACF Type</th><th>CSV Format &amp; PHP Sanitizer</th></tr></thead>
+      <tbody>
+        <tr><td>text</td><td>Plain string — <code>sanitize_text_field()</code></td></tr>
+        <tr><td>url</td><td>Full URL with https:// — <code>esc_url_raw()</code></td></tr>
+        <tr><td>email</td><td>Email address — <code>sanitize_email()</code></td></tr>
+        <tr><td>number</td><td>Plain number, no commas — <code>intval()</code> or <code>floatval()</code></td></tr>
+        <tr><td>select</td><td>One of the allowed option values — <code>sanitize_text_field()</code> + validate against allowed list</td></tr>
+        <tr><td>true_false</td><td><code>0</code> or <code>1</code> — <code>(bool) intval()</code></td></tr>
+        <tr><td>date_picker</td><td>YYYY-MM-DD — <code>sanitize_text_field()</code> (ACF stores as Ymd internally)</td></tr>
+        <tr><td>wysiwyg / textarea</td><td>⚠️ Not recommended — too long, formatting lost in CSV</td></tr>
+        <tr><td>image / file</td><td>&#10006; Not supported — media must be uploaded separately</td></tr>
+        <tr><td>relationship</td><td>&#10006; Not supported — requires post IDs/slugs plus lookup logic</td></tr>
+        <tr><td>taxonomy</td><td>Slug of the term — use <code>wp_set_object_terms()</code> instead of <code>update_field()</code></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <hr>
+
+  <!-- Blank cells -->
+  <p class="section-label">Blank cells vs. missing columns</p>
+  <div class="card">
+    <h2>The most common source of accidental overwrites</h2>
+    <table class="ref-table">
+      <thead><tr><th>Situation</th><th>What happens</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>Column not in CSV at all</td>
+          <td>&#10003; Safe — field is completely ignored, existing value untouched</td>
+        </tr>
+        <tr>
+          <td>Column present, cell is blank</td>
+          <td>&#10003; Safe — the <code>$has()</code> check catches empty strings, existing value untouched</td>
+        </tr>
+        <tr>
+          <td>Column present, cell has a value</td>
+          <td>⚠️ Field is written with the new value, overwriting whatever was there</td>
+        </tr>
+        <tr>
+          <td><code>confidential</code> or <code>private</code> column is <code>0</code></td>
+          <td>⚠️ Explicitly sets the flag to false — this CAN un-confidential an event</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="callout callout-info" style="margin-top:14px;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      <div><strong>Rule of thumb</strong>Only include columns in your CSV that you actually want to update. Leave columns out entirely (not blank) for fields you want to leave alone. Blank cells are safe due to the <code>$has()</code> guard, but omitting the column is cleaner and less error-prone.</div>
+    </div>
+  </div>
+
+  <hr>
+
+  <!-- Checklist -->
+  <p class="section-label">Quick checklists</p>
+
+  <div class="checklist">
+    <div class="checklist-header add">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+      Adding a field to the CSV importer
+    </div>
+    <div class="checklist-body">
+      <div class="checklist-item"><div class="check-box"></div>Add ACF field in WordPress (if it doesn't exist yet)</div>
+      <div class="checklist-item"><div class="check-box"></div>Add key to <code>get_columns()</code> in <code>class-vc-admin-importer.php</code></div>
+      <div class="checklist-item"><div class="check-box"></div>Add write logic to <code>apply_row()</code> — use merge pattern if it's inside a group</div>
+      <div class="checklist-item"><div class="check-box"></div>Add entry to <code>COLUMNS</code> array in the relevant <code>Import*.jsx</code> file</div>
+      <div class="checklist-item"><div class="check-box"></div>SCP updated PHP file to server</div>
+      <div class="checklist-item"><div class="check-box"></div>Build + deploy PWA (<code>npm run build</code> → copy → push <code>fc-bkstg-events</code>)</div>
+    </div>
+  </div>
+
+  <div class="checklist">
+    <div class="checklist-header remove">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+      Removing a field from the CSV importer
+    </div>
+    <div class="checklist-body">
+      <div class="checklist-item"><div class="check-box"></div>Remove key from <code>get_columns()</code></div>
+      <div class="checklist-item"><div class="check-box"></div>Remove matching <code>$has()</code> block from <code>apply_row()</code></div>
+      <div class="checklist-item"><div class="check-box"></div>Remove entry from <code>COLUMNS</code> array in the JSX file</div>
+      <div class="checklist-item"><div class="check-box"></div>SCP + deploy — existing WordPress data is untouched</div>
+    </div>
+  </div>
+
+  <!-- Field change log -->
+  <p class="section-label">Field change log</p>
+
+  <div class="card">
+    <h2 style="color:#1a1a1a; font-size:15px; margin-bottom:4px;">2026-04-27 — Field renames + event_phase added</h2>
+    <p style="font-size:13px; color:#6b7280; margin-bottom:16px;">ACF field structure updated. CSV template and Google Sheets guide updated to match. PHP importer and ImportEvents.jsx still need these changes applied.</p>
+    <table style="width:100%; border-collapse:collapse; font-size:13px;">
+      <thead>
+        <tr style="background:#f5f4f2;">
+          <th style="text-align:left; padding:8px 12px; font-weight:700; color:#374151;">Old column name</th>
+          <th style="text-align:left; padding:8px 12px; font-weight:700; color:#374151;">New column name</th>
+          <th style="text-align:left; padding:8px 12px; font-weight:700; color:#374151;">Notes</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr style="border-top:1px solid #f0eeed;">
+          <td style="padding:8px 12px;"><code>season</code></td>
+          <td style="padding:8px 12px;"><code>sub_title</code></td>
+          <td style="padding:8px 12px; color:#6b7280;">ACF field recreated as <code>vc_ep_sub_title</code>. Old <code>vc_ep_season</code> field deleted.</td>
+        </tr>
+        <tr style="border-top:1px solid #f0eeed;">
+          <td style="padding:8px 12px;"><code>capacity</code></td>
+          <td style="padding:8px 12px;"><code>capacity_amount</code></td>
+          <td style="padding:8px 12px; color:#6b7280;">Moved from nested <code>vc_ep_details</code> group to flat top-level field. Now a display string (e.g. "12,000 attendees"), not a bare number.</td>
+        </tr>
+        <tr style="border-top:1px solid #f0eeed;">
+          <td style="padding:8px 12px;"><em>—</em></td>
+          <td style="padding:8px 12px;"><code>event_phase</code></td>
+          <td style="padding:8px 12px; color:#6b7280;">New field. Valid values: planning · save-the-date · lineup-phase-1 · presale · onsale · lineup-phase-2 · set-times-live · event-day · post-event · archived. Defaults to <code>planning</code>.</td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="note" style="margin-top:16px;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      <div>The <code>capacity_label</code> field (custom label override, e.g. "Attendance") is a separate flat field — not the same as <code>capacity_amount</code>. Add it to the importer separately if needed.</div>
+    </div>
+  </div>
+
+  <p style="text-align:center; font-size:12px; color:#9ca3af; margin-top:40px;">VC Event Manager · Vivo Creative · Internal Reference</p>
+
+</div>
+</body>
+</html>

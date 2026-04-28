@@ -40,7 +40,7 @@ const COLUMNS = [
   { key: 'custom_data_label',   label: 'Custom Data Label',   notes: '→ custom_data_item.custom_data_label' },
   { key: 'custom_data_text',    label: 'Custom Data Text',    notes: '→ custom_data_item.custom_data_text' },
   // Media
-  { key: 'vimeo_url',           label: 'Vimeo URL',           notes: '→ video group → vimeo_url' },
+  { key: 'vimeo_id',            label: 'Vimeo ID',            notes: 'Numeric Vimeo ID only (e.g. 1085752382) — or full https://vimeo.com/... URL' },
   // Links
   { key: 'website_label',       label: 'Website Label',       notes: '→ vc_ep_website.vc_ep_website_label' },
   { key: 'website_url',         label: 'Website URL',         notes: '→ vc_ep_website.vc_ep_website_url' },
@@ -98,7 +98,7 @@ function generateTemplateCSV() {
     // Specs
     'Electronic,House', 'Capacity', '5,000 attendees', 'Genre', 'House,Techno', '0', '', '',
     // Media
-    'https://vimeo.com/1085752382',
+    '1085752382',
     // Links
     'Official Site', 'https://crssdfest.com', 'Instagram', 'https://instagram.com/crssd',
     // Phase

@@ -45,7 +45,7 @@
 
 **No player UI.** No play button. On card hover the video starts automatically and covers the image. On mouseout the video remains loaded but hidden.
 
-**Vimeo field format:** Store a clean standard URL in `video → vimeo_url` — e.g. `https://vimeo.com/1085752382`. Do NOT paste Vimeo's embed generator output (it includes tracking noise and is missing `background=1`). The Code Block constructs the proper embed URL. Access via `get_field('video')['vimeo_url']` — `video` is a top-level group, NOT nested inside `vc_ep_media`.
+**Vimeo field format:** Store only the numeric Vimeo ID in `video → vimeo_id` — e.g. `1085752382`. The ACF field is a Text type with `https://vimeo.com/` as a Prepend (cosmetic UI only — stored value is just the number). The Code Block uses the ID directly to construct the embed URL. Access via `get_field('video')['vimeo_id']` — `video` is a top-level group, NOT nested inside `vc_ep_media`.
 
 **Correct embed URL pattern:**
 ```
@@ -53,7 +53,7 @@ https://player.vimeo.com/video/{ID}?background=1&autoplay=1&muted=1&loop=1&autop
 ```
 `background=1` is the critical parameter — it disables all Vimeo UI and locks the player into silent background-video mode.
 
-**Lazy loading:** The iframe renders with `data-src` (not `src`). `vc-listings.js` sets `src` from `data-src` on the first `mouseenter` of the card. Idle cards never load the Vimeo iframe. The `vc_vimeo_id()` helper in `functions.php` extracts the numeric ID from any Vimeo URL format.
+**Lazy loading:** The iframe renders with `data-src` (not `src`). `vc-listings.js` sets `src` from `data-src` on the first `mouseenter` of the card. Idle cards never load the Vimeo iframe. No `vc_vimeo_id()` call needed — `vimeo_id` is already the numeric ID.
 
 **CSS:** The iframe is `position:absolute; inset:0; width:100%; height:100%; opacity:0; transition:opacity 0.4s; pointer-events:none;` inside a `position:relative; overflow:hidden` container. Parent card `:hover` brings opacity to 1.
 
@@ -143,7 +143,7 @@ MEDIA TAB — get_field('vc_ep_media') → group
   ['event_image']           image array → ['url']   ← card image
 
 VIDEO — get_field('video') → group  ← SEPARATE top-level group, NOT inside vc_ep_media
-  ['vimeo_url']             URL string
+  ['vimeo_id']              text — numeric Vimeo ID only (e.g. "1085752382") — ACF Prepend shows https://vimeo.com/ in UI only
   ['mp4_url']               URL string
 
 MORE IMAGES — get_field('more_images') → repeater  ← top-level, NOT inside vc_ep_media

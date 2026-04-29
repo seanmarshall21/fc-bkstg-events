@@ -267,6 +267,22 @@ export function buildAcfPayload(fields, values) {
       }
     }
 
+    if (field.type === 'image' || field.type === 'file') {
+      // ACF REST update_callback expects an integer attachment ID, not the full object.
+      // When reading, ACF returns the full image array. When writing, send just the ID.
+      if (val && typeof val === 'object') {
+        val = val.id || val.ID || null;
+      }
+      // null clears the field; a number sets it. Pass through as-is otherwise.
+    }
+
+    if (field.type === 'gallery') {
+      // ACF gallery expects an array of integer attachment IDs
+      if (Array.isArray(val)) {
+        val = val.map(v => (v && typeof v === 'object') ? (v.id || v.ID) : v).filter(Boolean);
+      }
+    }
+
     payload[field.name] = val;
   }
   return payload;

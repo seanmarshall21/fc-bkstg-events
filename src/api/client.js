@@ -4,6 +4,7 @@
  * Handles authenticated requests to WordPress REST API.
  * Supports WP Application Passwords (Basic Auth over HTTPS).
  */
+import { uploadToWpMedia } from '../services/mediaUploadService.js';
 
 class VCApiClient {
   constructor(siteUrl, credentials = null) {
@@ -129,32 +130,16 @@ class VCApiClient {
   }
 
   /**
-   * Upload media (image).
-   * Uses FormData instead of JSON.
+   * Upload media (image) via XHR with 120s timeout and 2x auto-retry.
+   * Plain fetch() has no timeout and silently hangs on DreamHost PHP-FPM —
+   * routing through uploadToWpMedia (XHR path) fixes that.
    */
   async uploadMedia(file) {
-    const url = `${this.baseUrl}/wp-json/wp/v2/media`;
-    const formData = new FormData();
-    formData.append('file', file);
-
-    const headers = {};
-    if (this.credentials) {
-      const { username, appPassword } = this.credentials;
-      headers['Authorization'] = `Basic ${btoa(`${username}:${appPassword}`)}`;
-    }
-
-    const response = await fetch(url, {
-      method: 'POST',
-      headers,
-      body: formData,
+    return uploadToWpMedia(file, {
+      siteUrl:     this.baseUrl,
+      username:    this.credentials?.username,
+      appPassword: this.credentials?.appPassword,
     });
-
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({}));
-      throw new VCApiError(error.message || 'Upload failed', response.status);
-    }
-
-    return response.json();
   }
 
   // Cancel all pending requests

@@ -1,11 +1,112 @@
 /**
- * v3.7.0
- * 2026-04-24 PDT
+ * v4.3.0
+ * 2026-04-28 PDT
  *
  * vc-listings.js
  * Zoo Agency · EMH Event Property Listings Controller
  *
  * Changelog:
+ * v4.3.0 — 2026-04-28 — Smoother transitions across the board:
+ *                        setView: opacity-only fade on wrapper (no scale —
+ *                        scaling full-width block causes reflow). Filters:
+ *                        absolute:true on Flip.from so leaving items float
+ *                        out without yanking grid layout; scale tightened
+ *                        0.8→0.94, durations shortened, stagger halved.
+ * v4.2.9 — 2026-04-28 — setView: scale+fade repeater wrapper. Filter Path 2
+ *                        (GSAP-only fallback) updated to match scale 0.85↔1.
+ * v4.2.8 — 2026-04-28 — setView: fade repeater wrapper (1 element, no per-item
+ *                        state, no transforms). Kill/reset on rapid clicks.
+ * v4.2.7 — 2026-04-28 — setView: replaced GSAP Flip with opacity fade.
+ *                        Flip requires shared elements across states; tile/list
+ *                        panels have different markup — Flip was accumulating
+ *                        stuck transforms on rapid clicks. Fade out → swap
+ *                        class → fade in. No transforms, fully interruptible.
+ * v4.2.6 — 2026-04-28 — setView: attempted stored timeline kill + clearProps.
+ *                        Reverted — clearProps:'all' wiped entrance-animation
+ *                        opacity overrides, hiding cards.
+ * v4.2.5 — 2026-04-28 — buildYearSeps() animates injected separators in with
+ *                        GSAP fromTo (autoAlpha + y: -6, stagger 0.07, power3).
+ *                        injectClearBtn() restyled: plain text + inline SVG ×
+ *                        icon (no pill). CSS handles sizing via .zfc_clear__x.
+ * v4.2.4 — 2026-04-27 — Year separators: buildYearSeps() injects .vc_year_sep
+ *                        divs between year groups in list view; rebuilt on every
+ *                        filter change / view toggle. Past Events toggle prunes
+ *                        year chips (past-only years hidden when past = false).
+ *                        Clear filters button (.zfc_clear) injected into
+ *                        .zfc_bar_wrap; shown only when filters active; resets
+ *                        all ZFC state + search + rebuilds chips.
+ * v4.2.3 — 2026-04-27 — Nav entrance: ZFC groups stagger in with scale 0.8→1 +
+ *                        power4.out (same as cards). Bar actions children also
+ *                        stagger. Fixed initListingAnims() guard: removed typeof
+ *                        ScrollTrigger check (ST removed in v4.1.3). Removed
+ *                        staying-card scale dip from applyFilters/applyZFCFilters —
+ *                        conflicts with Flip scale:true transform, corrupts layout.
+ * v4.2.2 — 2026-04-27 — (Adjusted base from Sean)
+ * v4.2.1 — 2026-04-27 — Unified scale language across all animations. Entrance:
+ *                        scale 0.8+y -30 → 1+0 (power4.inOut). Filter onEnter:
+ *                        scale 0.8→1 (power4.inOut). onLeave: scale 1→0.8
+ *                        (power1.inOut). Negative y on entrance kills scrollbar.
+ * v4.2.0 — 2026-04-27 — Sean's scale dip values applied. Filter Flip onEnter/onLeave
+ *                        now animate scale 0.4↔1 + autoAlpha 0↔1 with stagger.
+ * v4.1.9 — 2026-04-27 — Dial back view toggle: scale 0.85→0.93, alpha 0.85→0.92,
+ *                        Flip duration 0.45→0.35, stagger 0.02→0.01, dip
+ *                        durations 0.22/0.23→0.17/0.18. Subtler overall motion.
+ * v4.1.8 — 2026-04-27 — View toggle: Flip + simultaneous scale dip. Flip handles
+ *                        card repositioning, a parallel gsap.timeline dips all
+ *                        cards to scale 0.85/autoAlpha 0.85 then back to 1.
+ *                        GSAP composes scale and Flip's translate independently.
+ * v4.1.7 — 2026-04-27 — View toggle: replace Flip with scale-dip transition.
+ *                        Cards scale to 0.85 + fade to 0.7, layout class swaps
+ *                        at the bottom, then scale/fade back to 1. No Flip on
+ *                        toggle — Flip now only used for filter rearrangements.
+ * v4.1.6 — 2026-04-27 — Flip ease: power1.inOut → sine.inOut (smoothest possible
+ *                        curve, nearly linear, minimal scale amplification).
+ * v4.1.5 — 2026-04-27 — Dial back Flip easing: power2.inOut → power1.inOut,
+ *                        duration 0.5→0.4 (view toggle), 0.4→0.35 (filters).
+ *                        scale:true amplifies easing, power1 keeps the organic
+ *                        motion without the exaggerated overshoot.
+ * v4.1.4 — 2026-04-27 — Replace absolute:true with scale:true in all Flip calls.
+ *                        absolute:true pulls elements out of flow, collapsing the
+ *                        container height and causing a post-animation jump.
+ *                        scale:true keeps elements in flow and uses CSS transforms
+ *                        for size transitions — no container collapse.
+ * v4.1.3 — 2026-04-27 — Remove all ScrollTrigger usage. Controls, cards, and
+ *                        data-vc-anim elements all fire on page load with no
+ *                        viewport detection. applyFilters() Flip onEnter/onLeave
+ *                        changed to plain fade — no scale re-entrance on filter
+ *                        changes. One animation system: load stagger + Flip.
+ * v4.1.2 — 2026-04-27 — Replace ScrollTrigger.batch() with single one-shot stagger.
+ *                        Flip in applyFilters() owns all post-load animations.
+ *                        Eliminates ScrollTrigger/Flip conflict causing jumpiness.
+ * v4.1.1 — 2026-04-27 — Apply Sean's animation values: y:100, duration:0.5,
+ *                        stagger:0.15. Split controls into .zfc_group/.zfc_wrap
+ *                        and .zfc_bar_actions animators. repeater declared before
+ *                        controls so both can reference it.
+ * v4.1.0 — 2026-04-27 — ScrollTrigger.batch() on cards so each card waits for
+ *                        its own viewport entry. Stagger groups: data-vc-anim-group
+ *                        system for inner elements. Flip plugin registration fix
+ *                        in setView() and initListingAnims().
+ * v4.0.1 — 2026-04-27 — Fix: gsap.from() → gsap.fromTo() throughout initListingAnims().
+ *                        from() reads computed opacity:0 (set by CSS pre-hide) as the
+ *                        target end state, so nothing appeared. fromTo() with explicit
+ *                        autoAlpha:1 end state fixes this.
+ * v4.0.0 — 2026-04-27 — GSAP entrance animations: initListingAnims() + data-vc-anim
+ *                        attribute system. Trigger hooked into emhListings_refresh.
+ *                        Removed initFirstVideoAutoplay + preloadVideos calls (caused
+ *                        freeze-on-first-frame bug).
+ * v3.9.1 — 2026-04-25 — Adds .zfc_wrap--drawer to .zfc_bar_wrap to gate CSS,
+ *              wires accordion.
+ * v3.9.0 — 2026-04-25 — ZFC rewritten to match Oxygen-built flat chip DOM.
+ *                        Previous flyout drawer system (v3.7–3.8) targeted
+ *                        .zfc_toggle / .zfc_drawer / .zfc_flyout_panel which
+ *                        never existed. Actual DOM uses .zfc_group[data-zfc-filter]
+ *                        → .zfc_chips → .zfc_chip. buildZFCOptions now populates
+ *                        .zfc_chips, initZFC attaches delegated click handlers
+ *                        per group. Past filter is a boolean toggle on the
+ *                        .zfc_group--past chip. All flyout/drawer/measurement
+ *                        code removed.
+ * v3.8.1 — 2026-04-25 — Fix search input selector: #vc-search → #emh_search.
+ * v3.8.0 — 2026-04-25 — Animation fixes (superseded by v3.9.0).
  * v3.7.0 — 2026-04-24 — ZFC redesign: compact flyout drawer system.
  *                        Replaces horizontal chip bar with a toggle button that
  *                        slides a drawer open (GSAP width animation). Each filter
@@ -30,22 +131,23 @@
  *   data-is-past    → "1" if start_date < today
  *   data-start-date → Ymd integer string (e.g. "20260420")
  *
- * ZFC HTML structure (Oxygen Code Block node 569):
- *   .zfc_wrap
- *     button.zfc_toggle                    ← always visible, slides drawer
- *     .zfc_drawer                          ← GSAP animates width 0 → auto
- *       .zfc_drawer_inner                  ← flex row of filter items
- *         .zfc_flyout[data-zfc-filter]     ← one per filter dimension
- *           button.zfc_flyout_trigger      ← LABEL ↓
- *             .zfc_label
- *             .zfc_count                   ← injected by JS when active: (n)
- *             .zfc_chevron
- *           .zfc_flyout_panel              ← absolute, overlays grid
- *             button.zfc_option            ← one per value (JS-populated)
- *         button.zfc_past                  ← Past Events pill toggle
+* ZFC DOM structure (Oxygen-built native elements):
+ *   .zfc_bar_wrap                          — sticky outer container (node 568)
+ *     .zfc_wrap                            — flex row of filter groups (Code Block node 569)
+ *       .zfc_group[data-zfc-filter]        — one filter dimension
+ *         .zfc_group_label                 — "Brand", "Venue", "Year" — tap target in drawer mode
+ *         .zfc_chips                       — flex row of chips; absolute panel in drawer mode
+ *           button.zfc_chip[data-value]    — individual selectable chip (built by buildZFCOptions)
+ *       .zfc_group.zfc_group--past         — past events boolean toggle; always inline
+ *         button.zfc_chip                  — single chip, no data-value, toggles zfcState.past
+ *     .zfc_bar_actions                     — right cluster: search toggle + grid/list toggle (node 575)
+ *
+ * Drawer mode: initZFCDrawer() adds .zfc_wrap--drawer to .zfc_bar_wrap.
+ *   CSS gates all drawer layout under that class. Labels become accordion triggers.
+ *   Past group is exempt — always renders inline regardless of drawer state.
  *
  * Requires: GSAP + Flip plugin (global, loaded before this script)
- * Deployment: WPCode #3748 → JavaScript → Footer, after GSAP CDN
+ * Deployment: WPCode #3757 → JavaScript → Footer, after GSAP CDN
  */
 
 (function () {
@@ -63,7 +165,7 @@
     filterPast:  '.emh_cntrl_fltr_past input[type="checkbox"]',
     searchWrap:  '.emh_search_wrapper',
     searchToggle:'.emh_search_toggle',
-    searchInput: '#vc-search',
+    searchInput: '#emh_search',
     searchClear: '.emh_search_clear',
     sortDate:    '.emh_cntrl_sort_date',
     zfcWrap:     '.zfc_wrap',
@@ -92,9 +194,7 @@
   };
 
   // ─── ZFC state ───────────────────────────────────────────────────────────────
-  var zfcActive      = false;
-  var zfcDrawerOpen  = false;
-  var zfcNaturalWidth = 0;
+  var zfcActive = false;
   var zfcState = {
     brand: [],
     venue: [],
@@ -103,36 +203,45 @@
   };
 
   // ─── View toggle ─────────────────────────────────────────────────────────────
+  // Opacity-only fade on the repeater wrapper — no scale, no layout shift.
+  // Scaling a full-width block causes visible reflow; pure opacity is smooth.
+  var _viewTween = null;
+
   function setView(v, repeater, animate) {
     state.view = v;
 
-    var Flip = window.Flip ||
-               (window.gsap && window.gsap.plugins && window.gsap.plugins.flip);
-
-    if (animate && Flip && window.gsap) {
-      try {
-        var items = gsap.utils.toArray(SEL.item, repeater);
-        var flipState = Flip.getState(items);
-        repeater.classList.add(CLS.flipping);
-        repeater.classList.remove(CLS.grid, CLS.list);
-        repeater.classList.add(v === 'grid' ? CLS.grid : CLS.list);
-        Flip.from(flipState, {
-          duration:  0.5,
-          ease:      'power2.inOut',
-          stagger:   { each: 0.03, from: 'start' },
-          absolute:  true,
-          onComplete: function () {
-            repeater.classList.remove(CLS.flipping);
-          },
-        });
-        return;
-      } catch (e) {
-        repeater.classList.remove(CLS.flipping);
-      }
+    function doSwap() {
+      clearYearSeps();
+      repeater.classList.remove(CLS.grid, CLS.list);
+      repeater.classList.add(v === 'grid' ? CLS.grid : CLS.list);
+      buildYearSeps();
     }
 
-    repeater.classList.remove(CLS.grid, CLS.list);
-    repeater.classList.add(v === 'grid' ? CLS.grid : CLS.list);
+    if (animate && window.gsap) {
+      if (_viewTween) {
+        _viewTween.kill();
+        _viewTween = null;
+        gsap.set(repeater, { opacity: 1 });
+      }
+
+      _viewTween = gsap.to(repeater, {
+        opacity:  0,
+        duration: 0.18,
+        ease:     'power2.in',
+        onComplete: function () {
+          doSwap();
+          _viewTween = gsap.to(repeater, {
+            opacity:    1,
+            duration:   0.28,
+            ease:       'power2.out',
+            onComplete: function () { _viewTween = null; },
+          });
+        },
+      });
+      return;
+    }
+
+    doSwap();
   }
 
   function initViewToggle() {
@@ -182,12 +291,16 @@
   }
 
   function applyFilters(animate) {
+    clearYearSeps(); // clear before Flip state capture so seps don't shift card positions
     var items = Array.from(document.querySelectorAll(SEL.item));
     var q     = state.query.toLowerCase();
 
     var Flip = window.Flip ||
                (window.gsap && window.gsap.plugins && window.gsap.plugins.flip);
 
+    // Path 1: GSAP Flip — positional animation for remaining cards
+    // absolute:true — leaving items become position:absolute so they float
+    // out without yanking the grid layout of remaining visible cards.
     if (animate !== false && Flip && window.gsap) {
       try {
         var flipState = Flip.getState(items);
@@ -195,29 +308,54 @@
           el.style.display = matchesFilters(el, q) ? '' : 'none';
         });
         Flip.from(flipState, {
-          duration: 0.4,
+          duration: 0.35,
           ease:     'power2.inOut',
-          scale:    true,
           absolute: true,
           onEnter: function (elements) {
             gsap.fromTo(elements,
-              { opacity: 0, scale: 0.8 },
-              { opacity: 1, scale: 1, duration: 0.4, ease: 'power2.out' }
+              { autoAlpha: 0, scale: 0.94 },
+              { autoAlpha: 1, scale: 1, duration: 0.3, ease: 'power2.out',
+                stagger: 0.025, clearProps: 'scale' }
             );
           },
           onLeave: function (elements) {
             gsap.to(elements,
-              { opacity: 0, scale: 0.8, duration: 0.3, ease: 'power2.in' }
+              { autoAlpha: 0, scale: 0.94, duration: 0.2, ease: 'power2.in',
+                stagger: 0.015, clearProps: 'scale' }
             );
           },
+          onComplete: buildYearSeps,
         });
+        syncClearBtn();
         return;
       } catch (e) {}
     }
 
+    // Path 2: GSAP only (no Flip) — scale + fade
+    if (animate !== false && window.gsap) {
+      items.forEach(function (el) {
+        var show = matchesFilters(el, q);
+        if (!show) {
+          gsap.to(el, { autoAlpha: 0, scale: 0.94, duration: 0.2, ease: 'power2.in',
+            onComplete: function () { el.style.display = 'none'; gsap.set(el, { clearProps: 'scale' }); } });
+        } else {
+          el.style.display = '';
+          gsap.fromTo(el,
+            { autoAlpha: 0, scale: 0.94 },
+            { autoAlpha: 1, scale: 1, duration: 0.28, ease: 'power2.out', clearProps: 'scale' });
+        }
+      });
+      buildYearSeps();
+      syncClearBtn();
+      return;
+    }
+
+    // Path 3: No GSAP — instant
     items.forEach(function (el) {
       el.style.display = matchesFilters(el, q) ? '' : 'none';
     });
+    buildYearSeps();
+    syncClearBtn();
   }
 
   function populateFilters(items) {
@@ -265,64 +403,38 @@
     if (chkPast)  chkPast.addEventListener('change',  function () { state.past  = chkPast.checked; applyFilters(true); });
   }
 
-  // ─── ZFC (Zoo Filter Controls) — flyout drawer ───────────────────────────────
-  // Toggle button slides drawer open via GSAP width animation.
-  // Each filter dimension has a flyout panel (absolute, overlays card grid).
-  // Multi-select within group = OR logic. Multiple groups = AND logic.
-  // state.query (search) shared with legacy filter path.
+  // ─── ZFC (Zoo Filter Controls) — flat chip groups ────────────────────────────
+  // DOM structure (Oxygen-built, native elements):
+  //   .zfc_wrap
+  //     .zfc_group[data-zfc-filter="brand"] → .zfc_chips → button.zfc_chip[data-value]
+  //     .zfc_group[data-zfc-filter="venue"]  → .zfc_chips → button.zfc_chip[data-value]
+  //     .zfc_group[data-zfc-filter="year"]   → .zfc_chips → button.zfc_chip[data-value]
+  //     .zfc_group[data-zfc-filter="past"]   → button.zfc_chip (boolean toggle, no data-value)
+  //
+  // Multi-select within group = OR logic. Multiple active groups = AND logic.
+  // Past filter is a boolean toggle: off = hide past events, on = include them.
 
-  // Returns true if any ZFC filter is active
-  function zfcHasActive() {
-    return zfcState.brand.length > 0 ||
-           zfcState.venue.length > 0 ||
-           zfcState.year.length  > 0 ||
-           zfcState.past;
-  }
-
-  // Sync toggle button .has-active class
-  function syncToggleState(toggleBtn) {
-    if (!toggleBtn) return;
-    toggleBtn.classList.toggle(CLS.hasActive, zfcHasActive());
-  }
-
-  // Update trigger label and filled-state for one flyout group
-  function updateTriggerState(flyout, filterKey) {
-    var trigger = flyout.querySelector('.zfc_flyout_trigger');
-    if (!trigger) return;
-
-    var arr = zfcState[filterKey] || [];
-    var hasActive = arr.length > 0;
-
-    trigger.classList.toggle(CLS.isActive, hasActive);
-
-    // Count badge: (n) appended after label when selections exist
-    var count = trigger.querySelector('.zfc_count');
-    if (hasActive) {
-      if (!count) {
-        count = document.createElement('span');
-        count.className = 'zfc_count';
-        var chevron = trigger.querySelector('.zfc_chevron');
-        trigger.insertBefore(count, chevron || null);
-      }
-      count.textContent = '(' + arr.length + ')';
-    } else if (count) {
-      count.parentNode.removeChild(count);
-    }
-  }
-
-  // Build / rebuild option buttons inside each flyout panel from card data attrs
+  // Rebuild chip buttons inside .zfc_chips for each non-past group
   function buildZFCOptions(items) {
     var wrap = document.querySelector(SEL.zfcWrap);
     if (!wrap) return;
 
-    wrap.querySelectorAll('.zfc_flyout[data-zfc-filter]').forEach(function (flyout) {
-      var filterKey = flyout.getAttribute('data-zfc-filter');
-      var panel     = flyout.querySelector('.zfc_flyout_panel');
-      if (!panel) return;
+    wrap.querySelectorAll('.zfc_group[data-zfc-filter]').forEach(function (group) {
+      var filterKey = group.getAttribute('data-zfc-filter');
+      if (filterKey === 'past') return; // static single-chip toggle, skip rebuild
 
-      // Collect unique non-empty values from card data attrs
+      var chipsContainer = group.querySelector('.zfc_chips');
+      if (!chipsContainer) return;
+
+      // Collect unique non-empty values from card data attrs.
+      // For the year group: exclude past-only years when past events are hidden,
+      // so years that only belong to past events don't appear as chip options.
+      var pool = (filterKey === 'year' && !zfcState.past)
+        ? items.filter(function (el) { return el.dataset.isPast !== '1'; })
+        : items;
+
       var values = [];
-      items.forEach(function (el) {
+      pool.forEach(function (el) {
         var val = (el.dataset[filterKey] || '').trim();
         if (val && values.indexOf(val) < 0) values.push(val);
       });
@@ -330,70 +442,19 @@
 
       var selected = zfcState[filterKey] || [];
 
-      // Rebuild option buttons
-      panel.innerHTML = '';
+      // Rebuild chip buttons
+      chipsContainer.innerHTML = '';
       values.forEach(function (val) {
         var btn = document.createElement('button');
         btn.type = 'button';
-        btn.className = 'zfc_option';
+        btn.className = 'zfc_chip';
         btn.setAttribute('data-value', val);
-        var isSelected = selected.indexOf(val) >= 0;
-        btn.setAttribute('aria-pressed', isSelected ? 'true' : 'false');
+        btn.setAttribute('aria-pressed', selected.indexOf(val) >= 0 ? 'true' : 'false');
         btn.textContent = val;
-        if (isSelected) btn.classList.add(CLS.isActive);
-        panel.appendChild(btn);
+        if (selected.indexOf(val) >= 0) btn.classList.add(CLS.isActive);
+        chipsContainer.appendChild(btn);
       });
-
-      updateTriggerState(flyout, filterKey);
     });
-
-    // Re-measure drawer natural width after options rebuild (values may have changed)
-    var drawer = wrap.querySelector('.zfc_drawer');
-    if (drawer && zfcDrawerOpen) {
-      // Drawer is open — re-measure isn't critical, leave current width
-    } else if (drawer && !zfcDrawerOpen) {
-      // Re-measure for next open
-      zfcNaturalWidth = measureDrawer(drawer);
-    }
-  }
-
-  // Measure drawer's natural width without disrupting layout
-  function measureDrawer(drawer) {
-    var prev = { width: drawer.style.width, overflow: drawer.style.overflow, visibility: drawer.style.visibility };
-    drawer.style.width      = 'auto';
-    drawer.style.overflow   = 'visible';
-    drawer.style.visibility = 'hidden';
-    var w = drawer.scrollWidth;
-    drawer.style.width      = prev.width;
-    drawer.style.overflow   = prev.overflow;
-    drawer.style.visibility = prev.visibility;
-    return w;
-  }
-
-  // Close all open flyout panels
-  function closeAllPanels() {
-    document.querySelectorAll('.zfc_flyout_panel.' + CLS.isOpen).forEach(function (panel) {
-      var flyout = panel.closest('.zfc_flyout');
-      panel.classList.remove(CLS.isOpen);
-      if (flyout) {
-        var trigger = flyout.querySelector('.zfc_flyout_trigger');
-        if (trigger) trigger.classList.remove(CLS.isOpen);
-      }
-    });
-  }
-
-  // Open one flyout panel (closes others first)
-  function openFlyoutPanel(panel, flyout) {
-    closeAllPanels();
-    panel.classList.add(CLS.isOpen);
-    var trigger = flyout.querySelector('.zfc_flyout_trigger');
-    if (trigger) trigger.classList.add(CLS.isOpen);
-    if (window.gsap) {
-      gsap.fromTo(panel,
-        { opacity: 0, y: -6 },
-        { opacity: 1, y: 0, duration: 0.2, ease: 'power2.out' }
-      );
-    }
   }
 
   function matchesZFCFilters(el, q) {
@@ -418,12 +479,14 @@
   }
 
   function applyZFCFilters(animate) {
+    clearYearSeps(); // clear before Flip state capture so seps don't shift card positions
     var items = Array.from(document.querySelectorAll(SEL.item));
     var q     = state.query.toLowerCase();
 
     var Flip = window.Flip ||
                (window.gsap && window.gsap.plugins && window.gsap.plugins.flip);
 
+    // Path 1: GSAP Flip — positional animation for remaining cards
     if (animate !== false && Flip && window.gsap) {
       try {
         var flipState = Flip.getState(items);
@@ -431,29 +494,54 @@
           el.style.display = matchesZFCFilters(el, q) ? '' : 'none';
         });
         Flip.from(flipState, {
-          duration: 0.4,
+          duration: 0.35,
           ease:     'power2.inOut',
-          scale:    true,
           absolute: true,
           onEnter: function (elements) {
             gsap.fromTo(elements,
-              { opacity: 0, scale: 0.8 },
-              { opacity: 1, scale: 1, duration: 0.4, ease: 'power2.out' }
+              { autoAlpha: 0, scale: 0.94 },
+              { autoAlpha: 1, scale: 1, duration: 0.3, ease: 'power2.out',
+                stagger: 0.025, clearProps: 'scale' }
             );
           },
           onLeave: function (elements) {
             gsap.to(elements,
-              { opacity: 0, scale: 0.8, duration: 0.3, ease: 'power2.in' }
+              { autoAlpha: 0, scale: 0.94, duration: 0.2, ease: 'power2.in',
+                stagger: 0.015, clearProps: 'scale' }
             );
           },
+          onComplete: buildYearSeps,
         });
+        syncClearBtn();
         return;
       } catch (e) {}
     }
 
+    // Path 2: GSAP only (no Flip) — scale + fade
+    if (animate !== false && window.gsap) {
+      items.forEach(function (el) {
+        var show = matchesZFCFilters(el, q);
+        if (!show) {
+          gsap.to(el, { autoAlpha: 0, scale: 0.94, duration: 0.2, ease: 'power2.in',
+            onComplete: function () { el.style.display = 'none'; gsap.set(el, { clearProps: 'scale' }); } });
+        } else {
+          el.style.display = '';
+          gsap.fromTo(el,
+            { autoAlpha: 0, scale: 0.94 },
+            { autoAlpha: 1, scale: 1, duration: 0.28, ease: 'power2.out', clearProps: 'scale' });
+        }
+      });
+      buildYearSeps();
+      syncClearBtn();
+      return;
+    }
+
+    // Path 3: No GSAP — instant
     items.forEach(function (el) {
       el.style.display = matchesZFCFilters(el, q) ? '' : 'none';
     });
+    buildYearSeps();
+    syncClearBtn();
   }
 
   function applyActiveFilters(animate) {
@@ -466,105 +554,46 @@
 
   function initZFC() {
     var wrap = document.querySelector(SEL.zfcWrap);
-    if (!wrap) return;
+    if (!wrap || zfcActive) return;
 
     zfcActive = true;
 
-    var toggleBtn = wrap.querySelector('.zfc_toggle');
-    var drawer    = wrap.querySelector('.zfc_drawer');
+    // Delegated click handler per group
+    wrap.querySelectorAll('.zfc_group[data-zfc-filter]').forEach(function (group) {
+      var filterKey = group.getAttribute('data-zfc-filter');
 
-    // ── Drawer toggle (GSAP width slide) ──────────────────────────────────
-    if (toggleBtn && drawer && window.gsap) {
-      // Measure natural width before collapsing
-      zfcNaturalWidth = measureDrawer(drawer);
+      group.addEventListener('click', function (e) {
+        var chip = e.target.closest('.zfc_chip');
+        if (!chip) return;
 
-      // Start collapsed
-      gsap.set(drawer, { width: 0, overflow: 'hidden' });
-
-      toggleBtn.addEventListener('click', function () {
-        zfcDrawerOpen = !zfcDrawerOpen;
-        toggleBtn.classList.toggle(CLS.isOpen, zfcDrawerOpen);
-        toggleBtn.setAttribute('aria-expanded', zfcDrawerOpen ? 'true' : 'false');
-
-        if (zfcDrawerOpen) {
-          // Re-measure in case options changed since last close
-          var w = measureDrawer(drawer) || zfcNaturalWidth;
-          gsap.to(drawer, {
-            width: w,
-            duration: 0.35,
-            ease: 'power2.out',
-            onComplete: function () {
-              // Must be visible so flyout panels can escape drawer bounds
-              gsap.set(drawer, { overflow: 'visible' });
-            },
-          });
+        if (filterKey === 'past') {
+          // Boolean toggle — no data-value needed
+          zfcState.past = !zfcState.past;
+          chip.classList.toggle(CLS.isActive, zfcState.past);
+          chip.setAttribute('aria-pressed', zfcState.past ? 'true' : 'false');
+          // Rebuild year chips: past state change may add/remove past-only years
+          var allItems = Array.from(document.querySelectorAll(SEL.item));
+          buildZFCOptions(allItems);
         } else {
-          closeAllPanels();
-          gsap.set(drawer, { overflow: 'hidden' }); // clip before animating closed
-          gsap.to(drawer, { width: 0, duration: 0.28, ease: 'power2.in' });
-        }
-      });
-    }
-
-    // ── Flyout trigger clicks ──────────────────────────────────────────────
-    wrap.querySelectorAll('.zfc_flyout[data-zfc-filter]').forEach(function (flyout) {
-      var trigger = flyout.querySelector('.zfc_flyout_trigger');
-      var panel   = flyout.querySelector('.zfc_flyout_panel');
-      if (!trigger || !panel) return;
-
-      trigger.addEventListener('click', function (e) {
-        e.stopPropagation();
-        if (panel.classList.contains(CLS.isOpen)) {
-          closeAllPanels();
-        } else {
-          openFlyoutPanel(panel, flyout);
-        }
-      });
-
-      // Delegated option click on panel
-      panel.addEventListener('click', function (e) {
-        var opt = e.target.closest('.zfc_option');
-        if (!opt) return;
-
-        var filterKey = flyout.getAttribute('data-zfc-filter');
-        var val       = opt.getAttribute('data-value');
-        var arr       = zfcState[filterKey];
-        if (!arr) return;
-
-        var idx = arr.indexOf(val);
-        if (idx >= 0) {
-          arr.splice(idx, 1);
-          opt.classList.remove(CLS.isActive);
-          opt.setAttribute('aria-pressed', 'false');
-        } else {
-          arr.push(val);
-          opt.classList.add(CLS.isActive);
-          opt.setAttribute('aria-pressed', 'true');
+          // Multi-select array toggle
+          var arr = zfcState[filterKey];
+          if (!arr) return;
+          var val = chip.getAttribute('data-value');
+          if (!val) return;
+          var idx = arr.indexOf(val);
+          if (idx >= 0) {
+            arr.splice(idx, 1);
+            chip.classList.remove(CLS.isActive);
+            chip.setAttribute('aria-pressed', 'false');
+          } else {
+            arr.push(val);
+            chip.classList.add(CLS.isActive);
+            chip.setAttribute('aria-pressed', 'true');
+          }
         }
 
-        updateTriggerState(flyout, filterKey);
-        syncToggleState(toggleBtn);
         applyZFCFilters(true);
       });
-    });
-
-    // ── Past Events pill ───────────────────────────────────────────────────
-    var pastBtn = wrap.querySelector('.zfc_past');
-    if (pastBtn) {
-      pastBtn.addEventListener('click', function () {
-        zfcState.past = !zfcState.past;
-        pastBtn.classList.toggle(CLS.isActive, zfcState.past);
-        pastBtn.setAttribute('aria-pressed', zfcState.past ? 'true' : 'false');
-        syncToggleState(toggleBtn);
-        applyZFCFilters(true);
-      });
-    }
-
-    // ── Click outside closes open panels ──────────────────────────────────
-    document.addEventListener('click', function (e) {
-      if (!e.target.closest('.zfc_flyout')) {
-        closeAllPanels();
-      }
     });
   }
 
@@ -697,22 +726,469 @@
     updateBtn();
   }
 
-  // ─── Hover video (lazy Vimeo) ─────────────────────────────────────────────────
-  function initHoverVideo() {
-    var items = document.querySelectorAll(SEL.item);
-    items.forEach(function (card) {
-      var iframe = card.querySelector('iframe[data-src]');
-      if (!iframe) return;
-      var loaded = false;
-      card.addEventListener('mouseenter', function () {
-        if (loaded) return;
-        loaded = true;
+  
+// ─── Hover video (lazy Vimeo) ─────────────────────────────────────────────────
+function initHoverVideo() {
+  var items = document.querySelectorAll(SEL.item);
+  items.forEach(function (card) {
+    var iframe = card.querySelector('iframe[data-src]');
+    if (!iframe) return;
+    var player = null;
+
+    card.addEventListener('mouseenter', function () {
+      if (!iframe.src) {
         iframe.src = iframe.getAttribute('data-src');
+      }
+      if (window.Vimeo) {
+        if (!player) player = new Vimeo.Player(iframe);
+        player.play().catch(function () {});
+      }
+    });
+
+    card.addEventListener('mouseleave', function () {
+      if (player) {
+        player.pause().catch(function () {});
+      }
+    });
+  });
+}
+
+// ─── Viewport video (mobile / touch) ─────────────────────────────────────────
+// Below 992px: hover is unavailable. Load + play video for the card with the
+// most screen real estate. Pause outgoing card when a new one takes over.
+// On resize above 992px, initHoverVideo takes over; this observer is passive.
+function initViewportVideo() {
+  if (!window.matchMedia('(max-width: 992px)').matches) return;
+  if (!('IntersectionObserver' in window)) return;
+
+  var cards = Array.from(document.querySelectorAll(SEL.item))
+                   .filter(function (c) { return c.querySelector('iframe[data-src]'); });
+  if (!cards.length) return;
+
+  var ratioMap   = new Map();
+  var currentTop = null;
+
+  function loadIframe(card) {
+    var iframe = card.querySelector('iframe[data-src]');
+    if (!iframe || iframe.src) return;
+    iframe.src = iframe.getAttribute('data-src');
+  }
+
+  function updateTopCard() {
+    var best      = null;
+    var bestRatio = 0;
+
+    ratioMap.forEach(function (ratio, card) {
+      if (ratio > bestRatio) { bestRatio = ratio; best = card; }
+    });
+
+    // Require at least 15% visible — avoids flicker at edges
+    if (!best || bestRatio < 0.15) best = null;
+    if (best === currentTop) return;
+
+    // Pause outgoing card
+    if (currentTop) {
+      var outIframe = currentTop.querySelector('iframe');
+      if (outIframe) {
+        outIframe.style.opacity = '0';
+        if (outIframe.src && window.Vimeo) {
+          new Vimeo.Player(outIframe).pause().catch(function () {});
+        }
+      }
+    }
+
+    currentTop = best;
+    if (!best) return;
+
+    // Play incoming card
+    loadIframe(best);
+    var inIframe = best.querySelector('iframe');
+    if (inIframe) {
+      inIframe.style.opacity = '1';
+      if (window.Vimeo) {
+        new Vimeo.Player(inIframe).play().catch(function () {});
+      }
+    }
+  }
+
+  var thresholds = [];
+  for (var t = 0; t <= 20; t++) thresholds.push(t / 20); // 0, 0.05 … 1.0
+
+  var observer = new IntersectionObserver(function (entries) {
+    entries.forEach(function (entry) {
+      ratioMap.set(entry.target, entry.intersectionRatio);
+    });
+    updateTopCard();
+  }, { threshold: thresholds });
+
+  cards.forEach(function (card) {
+    ratioMap.set(card, 0);
+    observer.observe(card);
+  });
+}
+// ─── END Viewport video ───────────────────────────────────────────────────────
+  // ─── END Staggered video ───────────────────────────────────────────────────────
+  
+  // ─── ZFC DRAWER ──────────────────────────────────────────────────────────────
+  // Additive on top of v3.9.0. Call initZFCDrawer() after initZFC() in init().
+  // Adds .zfc_wrap--drawer to .zfc_bar_wrap to gate CSS, wires accordion.
+  
+  function syncGroupHasActive(group) {
+    group.classList.toggle('has-active', !!group.querySelector('.zfc_chip.' + CLS.isActive));
+  }
+  
+  function openDrawerPanel(group) {
+    var chips = group.querySelector('.zfc_chips');
+    if (!chips) return;
+    group.classList.add('is-open');
+    if (window.gsap) {
+      gsap.fromTo(chips, { opacity: 0, y: -5 }, { opacity: 1, y: 0, duration: 0.2, ease: 'power2.out' });
+    }
+  }
+  
+  function closeDrawerPanels(wrap) {
+    wrap.querySelectorAll('.zfc_group.is-open').forEach(function(group) {
+      var chips = group.querySelector('.zfc_chips');
+      if (window.gsap && chips) {
+        gsap.to(chips, {
+          opacity: 0, y: -5, duration: 0.15, ease: 'power2.in',
+          onComplete: function() {
+            group.classList.remove('is-open');
+            gsap.set(chips, { clearProps: 'opacity,y' });
+          }
+        });
+      } else {
+        group.classList.remove('is-open');
+      }
+    });
+  }
+  
+  function initZFCDrawer() {
+    var barWrap = document.querySelector('.zfc_bar_wrap');
+    var wrap    = document.querySelector(SEL.zfcWrap);
+    if (!barWrap || !wrap) return;
+  
+    // Activate CSS-gated drawer styles
+    barWrap.classList.add('zfc_wrap--drawer');
+  
+    // Initial has-active sync
+    wrap.querySelectorAll('.zfc_group[data-zfc-filter]').forEach(function(group) {
+      syncGroupHasActive(group);
+    });
+  
+    // Label click → accordion open/close
+    wrap.querySelectorAll('.zfc_group[data-zfc-filter]:not(.zfc_group--past)').forEach(function(group) {
+      var label = group.querySelector('.zfc_group_label');
+      if (!label) return;
+      label.addEventListener('click', function(e) {
+        e.stopPropagation();
+        var isOpen = group.classList.contains('is-open');
+        closeDrawerPanels(wrap);
+        if (!isOpen) openDrawerPanel(group);
       });
     });
+  
+    // Click outside → close all
+    document.addEventListener('click', function(e) {
+      if (!wrap.contains(e.target)) closeDrawerPanels(wrap);
+    });
+  
+    // Sync has-active after chip toggles (defer so initZFC handler fires first)
+    wrap.addEventListener('click', function(e) {
+      var chip = e.target.closest('.zfc_chip');
+      if (!chip) return;
+      var group = chip.closest('.zfc_group[data-zfc-filter]');
+      if (group) setTimeout(function() { syncGroupHasActive(group); }, 0);
+    });
+  
+    // Keep has-active in sync after emhListings_refresh rebuilds chips
+    var _origRefresh = window.emhListings_refresh;
+    window.emhListings_refresh = function() {
+      if (_origRefresh) _origRefresh.apply(this, arguments);
+      wrap.querySelectorAll('.zfc_group[data-zfc-filter]').forEach(function(group) {
+        syncGroupHasActive(group);
+      });
+    };
+  }
+  // ─── END ZFC DRAWER ──────────────────────────────────────────────────────────
+
+  // ─── Entrance animations ───────────────────────────────────────────────────────
+  // Requires GSAP + ScrollTrigger loaded before this script.
+  // Skipped entirely inside Oxygen builder so elements stay editable.
+  //
+  // Cards + controls animate automatically on first load.
+  // Individual elements use data attributes for per-element control:
+  //
+  //   data-vc-anim                         marks element for animation
+  //   data-vc-anim-type   fade-up* | fade-down | fade-left | fade-right | fade | scale-up
+  //   data-vc-anim-duration  seconds        default 0.8
+  //   data-vc-anim-delay     seconds        default 0
+  //   data-vc-anim-ease      GSAP string    default power2.out
+  //   data-vc-anim-dist      px or %        default 40
+  //   data-vc-anim-start     ST string      default "top 90%"
+  //   data-vc-anim-stagger   seconds        default 0 (staggers direct children when > 0)
+  //
+  function initListingAnims() {
+    if (typeof gsap === 'undefined') return;
+    if (document.body.classList.contains('oxygen-builder-body')) return;
+
+    if (window.Flip) { try { gsap.registerPlugin(window.Flip); } catch (e) {} }
+
+    // ── Repeater ref (needed by controls and cards) ───────────────────────────
+    var repeater = document.querySelector(SEL.repeater);
+
+    // ── ZFC filter groups — stagger in ────────────────────────────────────────
+    var zfcGroups = Array.from(document.querySelectorAll('.zfc_group'));
+    if (zfcGroups.length) {
+      gsap.fromTo(zfcGroups,
+        { autoAlpha: 0, scale: 0.8 },
+        { autoAlpha: 1, scale: 1, duration: 0.4, stagger: 0.07, ease: 'power4.out', delay: 0.1 }
+      );
+    }
+
+    // ── Bar actions children (search + view toggle) — stagger in ─────────────
+    var actionsWrap = document.querySelector('.zfc_bar_actions');
+    if (actionsWrap) {
+      var actionItems = Array.from(actionsWrap.children);
+      if (actionItems.length) {
+        gsap.fromTo(actionItems,
+          { autoAlpha: 0, scale: 0.8 },
+          { autoAlpha: 1, scale: 1, duration: 0.4, stagger: 0.07, ease: 'power4.out', delay: 0.1 }
+        );
+      }
+    }
+
+    // ── Card entrance — one-shot stagger on load ──────────────────────────────
+    // Runs once. After this, Flip in applyFilters() owns all enter/leave/reorder
+    // animations. ScrollTrigger.batch is intentionally avoided here to prevent
+    // conflicts with Flip state captures on filter/sort/view changes.
+    if (repeater) {
+      var cards = Array.from(repeater.querySelectorAll(SEL.item));
+      if (cards.length) {
+        gsap.fromTo(cards,
+          { autoAlpha: 0, scale: 0.8, y: 0 },
+          {
+            autoAlpha: 1,
+            scale: 1,
+            y: 0,
+            duration: 0.4,
+            stagger: 0.08,
+            ease: 'power4.out',
+            delay: 0.1,
+          }
+        );
+      }
+    }
+
+    // ── Per-element animations via [data-vc-anim] ─────────────────────────────
+    document.querySelectorAll('[data-vc-anim]').forEach(function (el) {
+      if (el._vcAnimDone) return;
+      el._vcAnimDone = true;
+
+      var type     = el.getAttribute('data-vc-anim-type')                || 'fade-up';
+      var duration = parseFloat(el.getAttribute('data-vc-anim-duration')) || 0.8;
+      var delay    = parseFloat(el.getAttribute('data-vc-anim-delay'))    || 0;
+      var ease     = el.getAttribute('data-vc-anim-ease')                || 'power2.out';
+      var start    = el.getAttribute('data-vc-anim-start')               || 'top 90%';
+      var distRaw  = el.getAttribute('data-vc-anim-dist')                || '40';
+      var stagger  = parseFloat(el.getAttribute('data-vc-anim-stagger')) || 0;
+
+      var distNum    = parseFloat(distRaw);
+      var usePercent = distRaw.indexOf('%') > -1;
+      var yKey = usePercent ? 'yPercent' : 'y';
+      var xKey = usePercent ? 'xPercent' : 'x';
+
+      var fromVars = { autoAlpha: 0 };
+      var toVars   = { autoAlpha: 1, duration: duration, delay: delay, ease: ease };
+
+      if (type === 'fade-up')    { fromVars[yKey] =  distNum; toVars[yKey] = 0; }
+      if (type === 'fade-down')  { fromVars[yKey] = -distNum; toVars[yKey] = 0; }
+      if (type === 'fade-left')  { fromVars[xKey] =  distNum; toVars[xKey] = 0; }
+      if (type === 'fade-right') { fromVars[xKey] = -distNum; toVars[xKey] = 0; }
+      if (type === 'scale-up')   { fromVars.scale  =  0.92;   toVars.scale  = 1; }
+      // 'fade' — autoAlpha only, no translation
+
+      var targets = (stagger > 0) ? Array.from(el.children) : el;
+      if (stagger > 0) toVars.stagger = stagger;
+
+      gsap.fromTo(targets, fromVars, toVars);
+    });
+
+    // ── Stagger groups via data-vc-anim-group ─────────────────────────────────
+    // Elements sharing the same group number animate simultaneously.
+    // Groups fire in ascending numeric order, each waiting for the previous
+    // group's animation to complete before starting.
+    //
+    // Attributes on each element:
+    //   data-vc-anim-group      required  group number (e.g. "1", "2", "3")
+    //   data-vc-anim-type       optional  fade-up | fade-down | fade-left | fade-right | scale-up | fade
+    //   data-vc-anim-duration   optional  seconds, default 0.6
+    //   data-vc-anim-ease       optional  GSAP ease string, default power2.out
+    //   data-vc-anim-dist       optional  px distance, default 24
+    //   data-vc-anim-gap        optional  seconds between this group and the next, default 0.08
+    //
+    var groupEls = Array.from(document.querySelectorAll('[data-vc-anim-group]'));
+    if (groupEls.length) {
+      var groups = {};
+      groupEls.forEach(function (el) {
+        var g = el.getAttribute('data-vc-anim-group');
+        if (!groups[g]) groups[g] = [];
+        groups[g].push(el);
+      });
+
+      var sortedKeys = Object.keys(groups).sort(function (a, b) {
+        return parseFloat(a) - parseFloat(b);
+      });
+
+      var cumDelay = 0;
+      sortedKeys.forEach(function (key) {
+        var batch    = groups[key];
+        var first    = batch[0];
+        var duration = parseFloat(first.getAttribute('data-vc-anim-duration')) || 0.6;
+        var ease     = first.getAttribute('data-vc-anim-ease')                || 'power2.out';
+        var type     = first.getAttribute('data-vc-anim-type')                || 'fade-up';
+        var distRaw  = first.getAttribute('data-vc-anim-dist')                || '24';
+        var gap      = parseFloat(first.getAttribute('data-vc-anim-gap'))     || 0.08;
+        var distNum  = parseFloat(distRaw);
+
+        var fromVars = { autoAlpha: 0 };
+        var toVars   = { autoAlpha: 1, duration: duration, delay: cumDelay, ease: ease };
+
+        if (type === 'fade-up')    { fromVars.y =  distNum; toVars.y = 0; }
+        if (type === 'fade-down')  { fromVars.y = -distNum; toVars.y = 0; }
+        if (type === 'fade-left')  { fromVars.x =  distNum; toVars.x = 0; }
+        if (type === 'fade-right') { fromVars.x = -distNum; toVars.x = 0; }
+        if (type === 'scale-up')   { fromVars.scale = 0.92; toVars.scale = 1; }
+
+        gsap.fromTo(batch, fromVars, toVars);
+        cumDelay += duration + gap;
+      });
+    }
+
   }
 
   // ─── Init ─────────────────────────────────────────────────────────────────────
+  // ─── Year separators ─────────────────────────────────────────────────────────
+  // Injected as siblings inside the repeater between year-group transitions.
+  // List view only. Cleared before Flip.getState, rebuilt in onComplete.
+
+  function clearYearSeps() {
+    var repeater = document.querySelector(SEL.repeater);
+    if (!repeater) return;
+    Array.from(repeater.querySelectorAll('.vc_year_sep')).forEach(function (el) {
+      el.parentNode.removeChild(el);
+    });
+  }
+
+  function buildYearSeps() {
+    var repeater = document.querySelector(SEL.repeater);
+    if (!repeater) return;
+
+    var cards = Array.from(repeater.querySelectorAll(SEL.item)).filter(function (el) {
+      return el.style.display !== 'none';
+    });
+
+    var lastYear = null;
+    cards.forEach(function (card) {
+      var year = (card.dataset.year || '').trim();
+      if (!year || year === lastYear) return;
+      var sep = document.createElement('div');
+      sep.className = 'vc_year_sep';
+      sep.setAttribute('data-sep-year', year);
+      sep.innerHTML =
+        '<span class="vc_year_sep__label">' + year + '</span>' +
+        '<span class="vc_year_sep__rule"></span>' +
+        '<span class="vc_year_sep__tag">Event Properties</span>';
+      repeater.insertBefore(sep, card);
+      lastYear = year;
+    });
+
+    // Animate seps in — same sequential fade as nav bar stagger
+    var newSeps = Array.from(repeater.querySelectorAll('.vc_year_sep'));
+    if (newSeps.length && typeof gsap !== 'undefined') {
+      gsap.fromTo(newSeps,
+        { autoAlpha: 0, y: -6 },
+        { autoAlpha: 1, y: 0, duration: 0.35, stagger: 0.07, ease: 'power3.out' }
+      );
+    }
+  }
+
+  // ─── Clear filters button ─────────────────────────────────────────────────────
+
+  function hasActiveFilters() {
+    return (zfcState.brand.length > 0) ||
+           (zfcState.venue.length > 0) ||
+           (zfcState.year.length  > 0) ||
+           (!!state.query);
+  }
+
+  function syncClearBtn() {
+    var btn = document.querySelector('.zfc_clear');
+    if (!btn) return;
+    btn.style.display = hasActiveFilters() ? 'flex' : 'none';
+  }
+
+  function injectClearBtn() {
+    var barWrap = document.querySelector('.zfc_bar_wrap');
+    if (!barWrap || barWrap.querySelector('.zfc_clear')) return;
+
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'zfc_clear';
+    btn.style.display = 'none';
+    btn.innerHTML =
+      'Clear Filters' +
+      '<svg class="zfc_clear__x" viewBox="0 0 12 12" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' +
+        '<line x1="1" y1="1" x2="11" y2="11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>' +
+        '<line x1="11" y1="1" x2="1" y2="11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>' +
+      '</svg>';
+
+    // Insert inside .zfc_bar_fltr_wrap (after .zfc_wrap)
+    var fltrWrap = barWrap.querySelector('.zfc_bar_fltr_wrap');
+    if (fltrWrap) {
+      fltrWrap.appendChild(btn);
+    } else {
+      // Fallback: insert before .zfc_bar_actions
+      var actions = barWrap.querySelector('.zfc_bar_actions');
+      barWrap.insertBefore(btn, actions || null);
+    }
+
+    btn.addEventListener('click', function () {
+      // Reset all filter state
+      zfcState.brand = [];
+      zfcState.venue = [];
+      zfcState.year  = [];
+      zfcState.past  = false;
+      state.brand = '';
+      state.venue = '';
+      state.year  = '';
+      state.past  = false;
+      state.query = '';
+
+      // Reset chip visual states + group has-active
+      document.querySelectorAll('.zfc_chip.is-active').forEach(function (chip) {
+        chip.classList.remove(CLS.isActive);
+        chip.setAttribute('aria-pressed', 'false');
+      });
+      document.querySelectorAll('.zfc_group[data-zfc-filter]').forEach(function (group) {
+        group.classList.remove(CLS.hasActive);
+      });
+
+      // Clear search input
+      var searchInput = document.querySelector(SEL.searchInput);
+      if (searchInput) searchInput.value = '';
+
+      // Rebuild ZFC options (year chips may change after past reset)
+      var items = Array.from(document.querySelectorAll(SEL.item));
+      if (zfcActive) buildZFCOptions(items);
+
+      applyActiveFilters(true);
+      syncClearBtn();
+    });
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────────
+
   function init() {
     var items = Array.from(document.querySelectorAll(SEL.item));
 
@@ -720,22 +1196,33 @@
 
     populateFilters(items);
     if (zfcActive) buildZFCOptions(items);
+    initZFCDrawer();
 
     initFilters();
     initViewToggle();
     initSearch();
     initSortToggle();
     initHoverVideo();
+    initViewportVideo();
+    injectClearBtn();
     applyActiveFilters(false);
   }
 
   // Exposed for WPCode #3589 — called after data-attrs and chips are injected.
+  var _animsInited = false;
   window.emhListings_refresh = function () {
     var items = Array.from(document.querySelectorAll(SEL.item));
     populateFilters(items);
     if (zfcActive) buildZFCOptions(items);
     applyActiveFilters(false);
     sortCards(true);
+    syncClearBtn();
+    if (!_animsInited) {
+      _animsInited = true;
+      requestAnimationFrame(function () {
+        requestAnimationFrame(initListingAnims);
+      });
+    }
   };
 
   if (document.readyState === 'loading') {

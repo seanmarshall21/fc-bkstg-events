@@ -18,6 +18,7 @@ export default function SponsorDetail() {
   const [sponsor, setSponsor] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [wpStatus, setWpStatus] = useState(null);
 
   const isCreate = id === 'new';
 
@@ -48,6 +49,7 @@ export default function SponsorDetail() {
         title: wpPost.title?.raw || wpPost.title?.rendered || '',
         ...acfValues,
       });
+      setWpStatus(wpPost.status || 'publish');
     } catch (err) {
       console.error('Failed to fetch sponsor:', err);
       setSponsor({ title: `Sponsor #${id}`, _fetchError: true });
@@ -160,6 +162,10 @@ export default function SponsorDetail() {
         titleFieldName="title"
         photoFieldName="vc_sponsor_logo"
         renderPhotoInEditor={false}
+        postEndpoint={!isCreate ? WP_ENDPOINTS.sponsors.single(id) : undefined}
+        postStatus={wpStatus}
+        onPostStatusChange={setWpStatus}
+        onPostDelete={() => navigate('/sponsors')}
       />
     </div>
   );

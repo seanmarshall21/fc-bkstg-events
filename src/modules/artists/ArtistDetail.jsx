@@ -22,6 +22,7 @@ export default function ArtistDetail() {
   const [artist, setArtist] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [wpStatus, setWpStatus] = useState(null);
 
   const isCreate = id === 'new';
 
@@ -73,6 +74,7 @@ export default function ArtistDetail() {
         title: wpPost.title?.raw || wpPost.title?.rendered || '',
         ...acfValues,
       });
+      setWpStatus(wpPost.status || 'publish');
     } catch (err) {
       console.error('Failed to fetch artist:', err);
       setArtist({ title: `Artist #${id}`, _fetchError: true });
@@ -222,6 +224,10 @@ export default function ArtistDetail() {
         renderPhotoInEditor={false}
         titleFieldName="title"
         badgeFieldName="vc_artist_booking_status"
+        postEndpoint={!isCreate ? WP_ENDPOINTS.artists.single(id) : undefined}
+        postStatus={wpStatus}
+        onPostStatusChange={setWpStatus}
+        onPostDelete={() => navigate('/artists')}
       />
     </div>
   );

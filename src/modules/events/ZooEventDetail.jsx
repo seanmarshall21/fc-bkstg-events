@@ -6,6 +6,7 @@ import useSchema, { buildDefaultValues, buildAcfPayload, extractValues } from '.
 import SchemaField, { AvatarUpload } from '../../components/ui/SchemaFields';
 import { decodeHtml } from '../../utils/helpers';
 import { ChevronLeft, Loader2, Link as LinkIcon, CheckCircle, AlertCircle, ShieldCheck, ShieldOff } from 'lucide-react';
+import PostControls from '../../components/ui/PostControls';
 
 /**
  * ZooEventDetail — Zoo Agency-specific event detail/create form.
@@ -70,6 +71,7 @@ export default function ZooEventDetail() {
   const [saveStatus,     setSaveStatus]     = useState(null);
   const [saveMsg,        setSaveMsg]        = useState('');
   const [confToggling,   setConfToggling]   = useState(false);
+  const [wpStatus,       setWpStatus]       = useState(null);
 
   // ── Schema ──────────────────────────────────────────────────
   const {
@@ -108,6 +110,7 @@ export default function ZooEventDetail() {
       const acf = data.acf || {};
       const acfValues = schemaFields.length > 0 ? extractValues(schemaFields, acf) : acf;
       setEvent(data);
+      setWpStatus(data.status || 'publish');
       setValues({
         title: decodeHtml(data.title?.raw || ''),
         ...acfValues,
@@ -350,6 +353,21 @@ export default function ZooEventDetail() {
           />
         ))}
       </div>
+
+      {/* ── Post status + trash ──────────────────────────── */}
+      {!isCreate && event && (
+        <div className="px-4">
+          <PostControls
+            endpoint={WP_ENDPOINTS.events.single(id)}
+            currentStatus={wpStatus}
+            onStatusChanged={setWpStatus}
+            onDeleted={() => navigate('/events')}
+            getClient={getClient}
+            isCreate={isCreate}
+            disabled={saving}
+          />
+        </div>
+      )}
 
     </div>
   );

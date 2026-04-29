@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { ChevronLeft, AlertCircle, CheckCircle } from 'lucide-react';
 import SchemaField, { AvatarUpload, StatusBadge } from './SchemaFields';
+import PostControls from './PostControls';
 
 /**
  * Schema-driven field editor.
@@ -42,6 +43,11 @@ export default function FieldEditor({
   renderPhotoInEditor = true,
   titleFieldName = 'title',
   badgeFieldName,
+  // Post controls (status + trash) — omit to hide section
+  postEndpoint,
+  postStatus,
+  onPostStatusChange,
+  onPostDelete,
 }) {
   // Flatten fields from schema groups or use direct fields prop
   const allFields = useMemo(() => {
@@ -205,6 +211,19 @@ export default function FieldEditor({
             })}
           </div>
         </form>
+
+        {/* Post status + trash — only shown when endpoint is wired */}
+        {postEndpoint && (
+          <PostControls
+            endpoint={postEndpoint}
+            currentStatus={postStatus}
+            onStatusChanged={onPostStatusChange}
+            onDeleted={onPostDelete}
+            getClient={getClient}
+            isCreate={mode === 'create'}
+            disabled={saving}
+          />
+        )}
       </div>
     );
   }

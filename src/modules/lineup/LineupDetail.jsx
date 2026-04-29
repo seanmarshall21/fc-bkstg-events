@@ -19,6 +19,7 @@ export default function LineupDetail() {
   const [slot, setSlot] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [wpStatus, setWpStatus] = useState(null);
 
   const isCreate = id === 'new';
 
@@ -54,6 +55,7 @@ export default function LineupDetail() {
         title: wpPost.title?.raw || wpPost.title?.rendered || '',
         ...acfValues,
       });
+      setWpStatus(wpPost.status || 'publish');
     } catch (err) {
       console.error('Failed to fetch lineup slot:', err);
       setSlot({ title: `Slot #${id}`, _fetchError: true });
@@ -123,6 +125,10 @@ export default function LineupDetail() {
       titleFieldName="title"
       badgeFieldName="vc_ls_billing"
       renderPhotoInEditor={false}
+      postEndpoint={!isCreate ? WP_ENDPOINTS.lineupSlots.single(id) : undefined}
+      postStatus={wpStatus}
+      onPostStatusChange={setWpStatus}
+      onPostDelete={() => navigate('/lineup')}
     />
   );
 }

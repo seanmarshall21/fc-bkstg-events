@@ -8,6 +8,11 @@
 // ── Custom Read Endpoints (vc/v1) ──────────────────────────────
 
 export const VC_ENDPOINTS = {
+  // CSV Import + Google Sheet sync
+  importer: {
+    sheetUrl: '/vc/v1/import-sheet-url',   // GET + POST — stores URL in WP option
+    import:   '/vc/v1/import-events',       // POST — accepts { rows: [] }
+  },
   // Artists
   artists: {
     list: '/vc/v1/artists',

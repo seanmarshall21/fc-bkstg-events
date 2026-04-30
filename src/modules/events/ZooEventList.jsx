@@ -267,6 +267,7 @@ export default function ZooEventList() {
   const [sortBy,     setSortBy]     = useState('date');
   const [toggling,   setToggling]   = useState({});
   const [bulkSaving, setBulkSaving] = useState(false);
+  const [showPast,   setShowPast]   = useState(true); // admins see all by default
 
   // ── Fetch ──────────────────────────────────────────────────
   const fetchEvents = useCallback(async () => {
@@ -346,8 +347,16 @@ export default function ZooEventList() {
   }, [getClient, events, fetchEvents]);
 
   // ── Filter + group ─────────────────────────────────────────
+  const now = Date.now();
+  const visibleEvents = showPast
+    ? events
+    : events.filter(ev => {
+        const ms = getStartDateMs(ev);
+        return ms === Infinity || ms >= now; // keep TBD + future
+      });
+
   const filtered = search.trim()
-    ? events.filter(ev => {
+    ? visibleEvents.filter(ev => {
         const q = search.toLowerCase();
         return (
           getEventTitle(ev).toLowerCase().includes(q) ||
@@ -355,7 +364,7 @@ export default function ZooEventList() {
           getEventVenue(ev).toLowerCase().includes(q)
         );
       })
-    : events;
+    : visibleEvents;
 
   const grouped = groupByYear(filtered, sortBy);
 
@@ -398,9 +407,22 @@ export default function ZooEventList() {
           <span className="text-[16px] font-bold text-[#282828]">Events</span>
           <span className="text-[13px] text-[#979797]">({filtered.length})</span>
         </div>
-        <button type="button" className="p-1 text-gray-400 hover:text-gray-600">
-          <MoreVertical className="w-5 h-5" />
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setShowPast(p => !p)}
+            className={`text-[11px] font-medium px-2.5 py-1 rounded-full transition-colors ${
+              showPast
+                ? 'bg-[#282828] text-white'
+                : 'bg-[#f0f0f0] text-[#555] hover:bg-[#e4e4e4]'
+            }`}
+          >
+            {showPast ? 'All Events' : 'Upcoming Only'}
+          </button>
+          <button type="button" className="p-1 text-gray-400 hover:text-gray-600">
+            <MoreVertical className="w-5 h-5" />
+          </button>
+        </div>
       </div>
 
       {/* Content */}

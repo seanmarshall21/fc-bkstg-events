@@ -1,11 +1,154 @@
 /**
- * v4.3.0
- * 2026-04-28 PDT
+ * v4.6.2
+ * 2026-04-29 PDT
  *
  * vc-listings.js
  * Zoo Agency · EMH Event Property Listings Controller
  *
  * Changelog:
+ * v4.6.2 — 2026-04-29 — Fix double-animation jump on view switch and filter.
+ *                        Root cause: clearYearSeps() called _iso.remove() which
+ *                        triggered an internal layout() with animation, then
+ *                        buildYearSeps() called _iso.arrange() for another —
+ *                        two overlapping animations produced the visible jump.
+ *                        Fix: (1) clearYearSeps() wraps _iso.remove() with
+ *                        transitionDuration:'0s' — sep removal is mechanical.
+ *                        (2) buildYearSeps(instant) — new flag; when true,
+ *                        wraps _iso.arrange() with 0s (sep insertion instant).
+ *                        (3) doSwap() restructured: clearYearSeps() (instant),
+ *                        CSS swap, resetHeights, then single _iso.arrange() for
+ *                        animated card repositioning, followed by
+ *                        _iso.once('layoutComplete') → buildYearSeps(true).
+ *                        (4) applyFilters/applyZFCFilters Isotope paths: replace
+ *                        setTimeout(buildYearSeps,380) with the same
+ *                        once('layoutComplete') → buildYearSeps(true) pattern.
+ * v4.6.1 — 2026-04-29 — Fix year separators landing at bottom of layout.
+ *                        Root cause: Isotope.addItems() appends to the END
+ *                        of its internal items array regardless of DOM
+ *                        position. Added getSortData.domOrder (DOM index
+ *                        via Array.prototype.indexOf) + sortBy:'domOrder'
+ *                        at init, and _iso.updateSortData() in buildYearSeps
+ *                        before arrange(). Isotope now recalculates DOM
+ *                        position for all items (including freshly inserted
+ *                        seps) and sorts by that before layout — seps appear
+ *                        between the correct year groups.
+ * v4.6.0 — 2026-04-29 — Remove GSAP from filter path; let Isotope handle all
+ *                        filter transitions natively. Changes:
+ *                        (1) initIsotope: add hiddenStyle:{opacity:0} /
+ *                        visibleStyle:{opacity:1} — eliminates scale(0.001)
+ *                        zoom artifact on filtered items entering/leaving.
+ *                        (2) applyZFCFilters: remove Paths 2 (GSAP Flip) and
+ *                        3 (GSAP-only scale). Non-Isotope fallback is now a
+ *                        plain display toggle (no animation). GSAP kept for
+ *                        entrance stagger, search, chip, and view-fade only.
+ *                        (3) equalizeRowHeights: remove section (c) vc-iso-
+ *                        revealed class management — no longer needed now that
+ *                        §20 CSS will be scoped to :not(.isotope-active) and
+ *                        hiddenStyle/visibleStyle own opacity fully.
+ * v4.5.4 — 2026-04-29 — Fix: _switchingView reset line dropped from doSwap in prior
+ *                        patch; was stuck true, blocking equalizeRowHeights on every
+ *                        layoutComplete.
+ * v4.5.3 — 2026-04-29 — Fix vc-iso-revealed not applied: replace _iso.items.forEach
+ *                        (not exposed in pkgd build) with DOM querySelectorAll fallback.
+ * v4.5.2 — 2026-04-29 — Comprehensive opacity + height fix:
+ *                        (1) Opacity: replace racy 500ms timer with CSS-class
+ *                        approach. Add 'vc-iso-revealed' class to filteredItems
+ *                        in layoutComplete; CSS gives opacity:1 without
+ *                        !important so Isotope inline opacity:0 on hidden items
+ *                        still wins. When Outlayer removes inline opacity after
+ *                        transition cleanup, the class holds revealed items
+ *                        visible. Remove previous 500ms setTimeout hack.
+ *                        (2) Heights: change equalizeRowHeights to global max
+ *                        for both grid and list (was per-row for grid). Sean
+ *                        wants ALL items the same height as the tallest item,
+ *                        not per-row. Remove isListView branching.
+ *                        (3) _switchingView flag: prevent equalizeRowHeights
+ *                        from running during setView's clearYearSeps →
+ *                        layoutComplete cycle (wrong view class active at that
+ *                        point). Flag is true during doSwap's clear/class-swap
+ *                        phase, cleared before buildYearSeps so final
+ *                        layoutComplete equalizes correctly.
+ * v4.5.1 — 2026-04-29 — Fix revealed-item opacity after filter transition.
+ *                        Outlayer (Isotope's base) removes inline opacity from
+ *                        revealed items after their CSS transition completes
+ *                        (~350ms). Once removed, CSS §20's opacity:0/visibility:
+ *                        hidden rule takes over, making the card invisible.
+ *                        Fix: second layoutComplete listener schedules a 500ms
+ *                        timeout (after stagger+transition ends) to re-apply
+ *                        opacity:1/visibility:visible inline on all filteredItems.
+ *                        500ms covers stagger delay (30ms × N items) + 350ms
+ *                        transition for all items in any realistic filter result.
+ * v4.5.0 — 2026-04-29 — Comprehensive Isotope correctness pass:
+ *                        (1) clearYearSeps: use _iso.remove(seps) instead of
+ *                        manual DOM removal + reloadItems(). _iso.remove()
+ *                        removes from DOM AND items array; card Item objects
+ *                        (with correct cached sizes) are untouched.
+ *                        (2) buildYearSeps: use _iso.addItems(newSeps) instead
+ *                        of reloadItems(). addItems registers the new sep
+ *                        elements without recreating existing card Items.
+ *                        Prevents cards from re-measuring at size=0 (which
+ *                        caused the y:0→correct-pos transition glitch and
+ *                        width=0 on revealed hidden items).
+ *                        (3) initIsotope: run initial applyActiveFilters with
+ *                        transitionDuration:'0s' so past events are hidden
+ *                        instantly on load (no flash), then restore 0.35s.
+ *                        (4) equalizeRowHeights: new function, fired on every
+ *                        Isotope layoutComplete. Groups filteredItems by y-pos,
+ *                        equalizes height to row max (grid) or global max
+ *                        (list). Updates container height. Guarded by
+ *                        _equalizingHeights flag to prevent re-entry.
+ *                        (5) resetItemHeights: called before every _iso.arrange
+ *                        so natural heights are re-measured before equalization.
+ * v4.4.4 — 2026-04-29 — buildYearSeps: replace style.display!=='none' visibility
+ *                        check with _iso.filteredItems lookup when Isotope active.
+ *                        Isotope applies display:none asynchronously via
+ *                        transitionend (~350ms after arrange()), so style.display
+ *                        was unreliable at the 380ms setTimeout — past-event cards
+ *                        still had display:'' and were incorrectly counted as
+ *                        visible, causing SEP to inject before a hidden card and
+ *                        both to land at y:0. filteredItems is set synchronously
+ *                        by arrange(), so it correctly excludes past events.
+ * v4.4.3 — 2026-04-29 — Fix Isotope jQuery bridge in filter functions.
+ *                        Isotope pkgd uses jQuery(el).is(fn) when jQuery is
+ *                        present; jQuery's .is(fn) calls fn.call(elem, index,
+ *                        elem) so the first positional arg is the numeric index,
+ *                        not the DOM element. Added guard: var elem = (el &&
+ *                        el.nodeType===1) ? el : this; in both applyFilters and
+ *                        applyZFCFilters Isotope paths. 'this' is reliably the
+ *                        DOM element in jQuery's calling convention.
+ * v4.4.2 — 2026-04-29 — Year seps: stamp approach broken in fitRows (stamps
+ *                        only set maxY for future rows, items still start at
+ *                        y=0 and overlap the stamp). Fix: make seps regular
+ *                        Isotope items (itemSelector includes .vc_year_sep).
+ *                        width:100% forces them to own a full row. Filter fn
+ *                        always returns true for seps. clearYearSeps uses
+ *                        reloadItems() instead of unstamp(); buildYearSeps
+ *                        uses reloadItems()+arrange() instead of stamp()+
+ *                        layout(). doSwap() drops standalone layout() —
+ *                        buildYearSeps' arrange() handles full re-measure.
+ * v4.4.1 — 2026-04-29 — setView: always use fitRows layout mode; vertical
+ *                        mode conflicted with percentPosition:true causing
+ *                        wrong left% on list items. fitRows stacks items
+ *                        naturally when CSS width is 100% (list) and tiles
+ *                        them in rows when width is 33% (grid). Removed
+ *                        void-reflow hack — no longer needed. doSwap() now
+ *                        calls _iso.layout() instead of _iso.arrange() —
+ *                        layout() re-measures item widths after CSS class
+ *                        change; arrange() uses cached sizes and leaves items
+ *                        at stale positions. GSAP opacity wrap bypassed when
+ *                        Isotope active to prevent repeater stuck at opacity:0.
+ * v4.4.0 — 2026-04-29 — Isotope.js integration. initIsotope() initializes
+ *                        Isotope on the repeater (desktop ≥769px only) in
+ *                        onComplete of the entrance animation. Filtering uses
+ *                        _iso.arrange({filter:fn}) — CSS opacity transition
+ *                        on .emh_listings_parent drives the fade; Isotope
+ *                        handles animated repositioning of remaining items.
+ *                        View toggle uses same opacity fade + _iso.arrange
+ *                        ({layoutMode}) to switch fitRows↔vertical. Year seps
+ *                        use _iso.stamp()/unstamp() so they anchor correctly
+ *                        in the absolute-positioned layout. Flip/GSAP paths
+ *                        remain as fallback when Isotope unavailable/mobile.
+ *                        CSS: §22 added (v2.0.4) — .isotope-active overrides.
  * v4.3.0 — 2026-04-28 — Smoother transitions across the board:
  *                        setView: opacity-only fade on wrapper (no scale —
  *                        scaling full-width block causes reflow). Filters:
@@ -204,17 +347,124 @@
 
   // ─── View toggle ─────────────────────────────────────────────────────────────
   // Opacity-only fade on the repeater wrapper — no scale, no layout shift.
-  // Scaling a full-width block causes visible reflow; pure opacity is smooth.
+  // When Isotope is active, doSwap() calls _iso.arrange({layoutMode}) to
+  // switch fitRows↔vertical; the opacity fade hides the re-layout from view.
   var _viewTween = null;
+
+  // Isotope instance — null until initIsotope() runs (desktop ≥769px only).
+  var _iso = null;
+
+  // Guard flag — prevents equalizeRowHeights from re-entering via layoutComplete.
+  var _equalizingHeights = false;
+
+  // Guard flag — set during setView's doSwap phase (clearYearSeps → class switch)
+  // to prevent equalizeRowHeights from firing with the wrong view class active.
+  // Cleared before buildYearSeps so the final layoutComplete equalizes correctly.
+  var _switchingView = false;
+
+  // Reset explicit heights on all card items before a new arrange() call so
+  // Isotope re-measures natural content heights for the equalization pass.
+  function resetItemHeights() {
+    var repeater = document.querySelector(SEL.repeater);
+    if (!repeater) return;
+    Array.from(repeater.querySelectorAll(SEL.item)).forEach(function (el) {
+      el.style.height = '';
+    });
+    // Also clear any manually-set container height so Isotope can recalculate.
+    if (_iso) repeater.style.height = '';
+  }
+
+  // After each Isotope layout pass:
+  //   (a) Equalize all visible card heights to the global maximum — same max
+  //       for both grid and list modes, since each mode has its own natural
+  //       heights (list: 100% width, shorter; grid: 33% width, taller). Heights
+  //       are reset on every mode switch via resetItemHeights() before arrange,
+  //       so modes don't bleed into each other.
+  //   (b) Update container height so content below the grid isn't overlapped.
+  //   (c) Add 'vc-iso-revealed' to filteredItems, remove from hidden items.
+  //       CSS rule `.isotope-active .emh_listings_parent.vc-iso-revealed`
+  //       gives opacity:1 without !important — Isotope's inline opacity:0 on
+  //       filtered-out items still overrides it. When Outlayer removes inline
+  //       opacity from revealed items after CSS transition cleanup (~350ms),
+  //       the class keeps them visible without needing a timer.
+  //
+  // Guarded by _equalizingHeights (re-entry) and _switchingView (view switch
+  // intermediate layoutComplete events with wrong view class active).
+  function equalizeRowHeights() {
+    if (!_iso || _equalizingHeights || _switchingView) return;
+    var filteredItems = _iso.filteredItems;
+    if (!filteredItems || !filteredItems.length) return;
+
+    var repeater = document.querySelector(SEL.repeater);
+    if (!repeater) return;
+
+    // ── (a) Global-max height equalization for card items (skip year seps) ───
+    var cardEls = [];
+    filteredItems.forEach(function (item) {
+      if (!item.element.classList.contains('vc_year_sep')) {
+        cardEls.push(item.element);
+      }
+    });
+
+    if (cardEls.length > 1) {
+      _equalizingHeights = true;
+      var maxH = Math.max.apply(null, cardEls.map(function (el) { return el.offsetHeight; }));
+      cardEls.forEach(function (el) { el.style.height = maxH + 'px'; });
+      _equalizingHeights = false;
+    }
+
+    // ── (b) Update container height ──────────────────────────────────────────
+    var containerH = 0;
+    filteredItems.forEach(function (item) {
+      if (!item.position) return;
+      var bottom = item.position.y + item.element.offsetHeight;
+      if (bottom > containerH) containerH = bottom;
+    });
+    if (containerH) {
+      var gapPx = parseInt(getComputedStyle(repeater).getPropertyValue('--emh-card-gap')) || 20;
+      repeater.style.height = (containerH + gapPx) + 'px';
+    }
+
+  }
 
   function setView(v, repeater, animate) {
     state.view = v;
 
     function doSwap() {
+      // Prevent equalizeRowHeights from running during the clearYearSeps and
+      // class-swap phase — layoutComplete fires here with the old view class
+      // still active, which would equalize at wrong widths/heights.
+      _switchingView = true;
       clearYearSeps();
       repeater.classList.remove(CLS.grid, CLS.list);
       repeater.classList.add(v === 'grid' ? CLS.grid : CLS.list);
-      buildYearSeps();
+      if (_iso) {
+        // Reset heights so items re-measure at natural content height for
+        // the new view mode before equalization runs on layoutComplete.
+        resetItemHeights();
+        // Flush CSS before Isotope re-measures widths in buildYearSeps.
+        void repeater.offsetWidth;
+      }
+      // Clear flag BEFORE the final arrange so layoutComplete correctly
+      // equalizes at the new view's widths and heights.
+      _switchingView = false;
+      if (_iso) {
+        // Single animated arrange for card repositioning. After cards settle,
+        // snap seps in instantly to avoid a second visible animation (the jump).
+        _iso.once('layoutComplete', function () { buildYearSeps(true); });
+        _iso.arrange();
+      } else {
+        buildYearSeps();
+      }
+    }
+
+    // When Isotope is active: skip GSAP opacity wrap — GSAP fades out but
+    // its onComplete/fade-in conflicts with Isotope's async RAF layout,
+    // leaving the repeater stuck at opacity:0. Isotope's transitionDuration
+    // animates item repositioning on its own; no wrapper needed.
+    if (_iso) {
+      doSwap();
+      return;
     }
 
     if (animate && window.gsap) {
@@ -258,7 +508,11 @@
     }
 
     var saved = 'grid';
-    try { saved = localStorage.getItem('emh_listings_view') || 'grid'; } catch (e) {}
+    try {
+      var _lsView  = localStorage.getItem('emh_listings_view');
+      var _defView = (window.emhListingsDefaults && window.emhListingsDefaults.view) || 'grid';
+      saved = _lsView || _defView; // localStorage (user pref) > options-page default > 'grid'
+    } catch (e) {}
     if (repeater) setView(saved, repeater, false);
     if (btnGrid) btnGrid.classList.toggle(CLS.active, saved === 'grid');
     if (btnList) btnList.classList.toggle(CLS.active, saved === 'list');
@@ -291,16 +545,36 @@
   }
 
   function applyFilters(animate) {
+    var q = state.query.toLowerCase();
+
+    // Path 1: Isotope — CSS-transition-based filter + animated repositioning.
+    // Isotope manages show/hide via opacity (CSS transition) and handles
+    // reordering of visible items. Year seps rebuilt after layout settles.
+    if (_iso) {
+      clearYearSeps();
+      resetItemHeights(); // reset before arrange so natural heights re-measured
+      _iso.once('layoutComplete', function () { buildYearSeps(true); });
+      _iso.arrange({
+        filter: function (el) {
+          // Isotope pkgd (jQuery present) calls filter via jQuery.is(fn), which
+          // passes the numeric index as the first positional arg. Use 'this' as
+          // the reliable DOM element reference; guard for non-jQuery path too.
+          var elem = (el && el.nodeType === 1) ? el : this;
+          if (elem.classList.contains('vc_year_sep')) return true; // seps always visible
+          return matchesFilters(elem, q);
+        },
+      });
+      syncClearBtn();
+      return;
+    }
+
     clearYearSeps(); // clear before Flip state capture so seps don't shift card positions
     var items = Array.from(document.querySelectorAll(SEL.item));
-    var q     = state.query.toLowerCase();
 
     var Flip = window.Flip ||
                (window.gsap && window.gsap.plugins && window.gsap.plugins.flip);
 
-    // Path 1: GSAP Flip — positional animation for remaining cards
-    // absolute:true — leaving items become position:absolute so they float
-    // out without yanking the grid layout of remaining visible cards.
+    // Path 2: GSAP Flip — positional animation for remaining cards
     if (animate !== false && Flip && window.gsap) {
       try {
         var flipState = Flip.getState(items);
@@ -331,7 +605,7 @@
       } catch (e) {}
     }
 
-    // Path 2: GSAP only (no Flip) — scale + fade
+    // Path 3: GSAP only (no Flip) — scale + fade
     if (animate !== false && window.gsap) {
       items.forEach(function (el) {
         var show = matchesFilters(el, q);
@@ -350,7 +624,7 @@
       return;
     }
 
-    // Path 3: No GSAP — instant
+    // Path 4: No GSAP — instant
     items.forEach(function (el) {
       el.style.display = matchesFilters(el, q) ? '' : 'none';
     });
@@ -479,64 +753,32 @@
   }
 
   function applyZFCFilters(animate) {
-    clearYearSeps(); // clear before Flip state capture so seps don't shift card positions
-    var items = Array.from(document.querySelectorAll(SEL.item));
-    var q     = state.query.toLowerCase();
+    var q = state.query.toLowerCase();
 
-    var Flip = window.Flip ||
-               (window.gsap && window.gsap.plugins && window.gsap.plugins.flip);
-
-    // Path 1: GSAP Flip — positional animation for remaining cards
-    if (animate !== false && Flip && window.gsap) {
-      try {
-        var flipState = Flip.getState(items);
-        items.forEach(function (el) {
-          el.style.display = matchesZFCFilters(el, q) ? '' : 'none';
-        });
-        Flip.from(flipState, {
-          duration: 0.35,
-          ease:     'power2.inOut',
-          absolute: true,
-          onEnter: function (elements) {
-            gsap.fromTo(elements,
-              { autoAlpha: 0, scale: 0.94 },
-              { autoAlpha: 1, scale: 1, duration: 0.3, ease: 'power2.out',
-                stagger: 0.025, clearProps: 'scale' }
-            );
-          },
-          onLeave: function (elements) {
-            gsap.to(elements,
-              { autoAlpha: 0, scale: 0.94, duration: 0.2, ease: 'power2.in',
-                stagger: 0.015, clearProps: 'scale' }
-            );
-          },
-          onComplete: buildYearSeps,
-        });
-        syncClearBtn();
-        return;
-      } catch (e) {}
-    }
-
-    // Path 2: GSAP only (no Flip) — scale + fade
-    if (animate !== false && window.gsap) {
-      items.forEach(function (el) {
-        var show = matchesZFCFilters(el, q);
-        if (!show) {
-          gsap.to(el, { autoAlpha: 0, scale: 0.94, duration: 0.2, ease: 'power2.in',
-            onComplete: function () { el.style.display = 'none'; gsap.set(el, { clearProps: 'scale' }); } });
-        } else {
-          el.style.display = '';
-          gsap.fromTo(el,
-            { autoAlpha: 0, scale: 0.94 },
-            { autoAlpha: 1, scale: 1, duration: 0.28, ease: 'power2.out', clearProps: 'scale' });
-        }
+    // Path 1: Isotope — CSS-transition filter + animated repositioning.
+    if (_iso) {
+      clearYearSeps();
+      resetItemHeights(); // reset before arrange so natural heights re-measured
+      _iso.once('layoutComplete', function () { buildYearSeps(true); });
+      _iso.arrange({
+        filter: function (el) {
+          // Isotope pkgd (jQuery present) calls filter via jQuery.is(fn), which
+          // passes the numeric index as the first positional arg. Use 'this' as
+          // the reliable DOM element reference; guard for non-jQuery path too.
+          var elem = (el && el.nodeType === 1) ? el : this;
+          if (elem.classList.contains('vc_year_sep')) return true; // seps always visible
+          return matchesZFCFilters(elem, q);
+        },
       });
-      buildYearSeps();
       syncClearBtn();
       return;
     }
 
-    // Path 3: No GSAP — instant
+    // Path 2: No Isotope — instant display toggle (no GSAP animation in filter path).
+    // GSAP Flip/scale caused zoom artifacts and conflicted with Isotope's own
+    // hiddenStyle/visibleStyle transitions. Keep GSAP for entrance + UI chrome only.
+    clearYearSeps();
+    var items = Array.from(document.querySelectorAll(SEL.item));
     items.forEach(function (el) {
       el.style.display = matchesZFCFilters(el, q) ? '' : 'none';
     });
@@ -912,6 +1154,65 @@ function initViewportVideo() {
   }
   // ─── END ZFC DRAWER ──────────────────────────────────────────────────────────
 
+  // ─── Isotope layout engine ────────────────────────────────────────────────────
+  // Called from initListingAnims onComplete (after entrance anim, so all cards
+  // already have opacity:1 inline). Desktop only — below 769px falls back to
+  // the existing flex/Flip/GSAP paths.
+  //
+  // Requires Isotope.js loaded before this script, e.g.:
+  //   <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.isotope/3.0.6/isotope.pkgd.min.js"><\/script>
+  // or the standalone (non-jQuery) build from isotope.metafizzy.co.
+
+  function initIsotope() {
+    if (typeof Isotope === 'undefined') return;
+    if (!window.matchMedia('(min-width: 769px)').matches) return;
+
+    var repeater = document.querySelector(SEL.repeater);
+    if (!repeater || _iso) return; // guard against double-init
+
+    // .isotope-active switches repeater from flex to position:relative
+    // and overrides item widths (see §22 of vc-listings.css).
+    repeater.classList.add('isotope-active');
+
+    // Always fitRows — CSS width drives list (100%) vs grid (33%) layout.
+    _iso = new Isotope(repeater, {
+      itemSelector:       SEL.item + ', .vc_year_sep',
+      layoutMode:         'fitRows',
+      fitRows:            { gutter: 20 },  // px between items; item CSS uses calc(33.333% - 20px)
+      transitionDuration: '0.35s',
+      percentPosition:    false,  // pixel positions; percentPosition:true + px gutter breaks fitRows row calc
+      stagger:            30,               // ms between item transitions on reorder
+      // Pure opacity fade — no scale transform on filter show/hide.
+      // Default Isotope hiddenStyle includes scale(0.001) which causes a zoom
+      // effect on items entering/leaving filter results.
+      hiddenStyle:        { opacity: 0 },
+      visibleStyle:       { opacity: 1 },
+      // DOM order sort: Isotope.addItems() appends new items to the END of its
+      // internal items array regardless of DOM position. Without sortBy, year
+      // separators (inserted via insertBefore into the correct DOM position)
+      // always land at the bottom of the layout. getSortData.domOrder captures
+      // each item's index in the repeater's children list; updateSortData() in
+      // buildYearSeps() refreshes this after sep insertion so arrange() uses
+      // correct DOM order for layout.
+      getSortData: {
+        domOrder: function (el) {
+          return Array.prototype.indexOf.call(el.parentNode.children, el);
+        },
+      },
+      sortBy: 'domOrder',
+    });
+
+    // Equalize heights on every layout pass.
+    _iso.on('layoutComplete', equalizeRowHeights);
+
+    // Apply the current filter state instantly (no transition) so past events
+    // are hidden immediately on load without a visible flash.
+    _iso.option({ transitionDuration: '0s' });
+    applyActiveFilters(false);
+    // Restore smooth transitions for subsequent filter/view interactions.
+    setTimeout(function () { if (_iso) _iso.option({ transitionDuration: '0.35s' }); }, 50);
+  }
+
   // ─── Entrance animations ───────────────────────────────────────────────────────
   // Requires GSAP + ScrollTrigger loaded before this script.
   // Skipped entirely inside Oxygen builder so elements stay editable.
@@ -975,6 +1276,10 @@ function initViewportVideo() {
             stagger: 0.08,
             ease: 'power4.out',
             delay: 0.1,
+            // Initialize Isotope after all cards are visible so it reads
+            // correct positions. GSAP's inline opacity:1 is already set on
+            // each card at this point — Isotope takes over from here.
+            onComplete: initIsotope,
           }
         );
       }
@@ -1075,20 +1380,46 @@ function initViewportVideo() {
   function clearYearSeps() {
     var repeater = document.querySelector(SEL.repeater);
     if (!repeater) return;
-    Array.from(repeater.querySelectorAll('.vc_year_sep')).forEach(function (el) {
-      el.parentNode.removeChild(el);
-    });
+    var seps = Array.from(repeater.querySelectorAll('.vc_year_sep'));
+    if (!seps.length) return;
+    if (_iso) {
+      // _iso.remove() removes from both DOM and Isotope's items array.
+      // Card Item objects (with their cached sizes) are untouched.
+      // Wrap with 0s transition — sep removal is mechanical (not UX-visible).
+      // Prevents _iso.remove()'s internal layout() from firing a visible
+      // animation that would overlap the subsequent _iso.arrange() call.
+      var prevDur = _iso.options.transitionDuration;
+      _iso.options.transitionDuration = '0s';
+      _iso.remove(seps);
+      _iso.options.transitionDuration = prevDur;
+    } else {
+      seps.forEach(function (el) { el.parentNode.removeChild(el); });
+    }
   }
 
-  function buildYearSeps() {
+  function buildYearSeps(instant) {
     var repeater = document.querySelector(SEL.repeater);
     if (!repeater) return;
 
-    var cards = Array.from(repeater.querySelectorAll(SEL.item)).filter(function (el) {
-      return el.style.display !== 'none';
-    });
+    // Determine which cards are currently visible.
+    // When Isotope is active we use _iso.filteredItems (set synchronously
+    // by arrange()) rather than style.display — Isotope applies display:none
+    // asynchronously via transitionend (~350ms after arrange), so
+    // style.display is unreliable immediately after a filter call.
+    var cards;
+    if (_iso && _iso.filteredItems) {
+      var filteredElems = _iso.filteredItems.map(function (item) { return item.element; });
+      cards = Array.from(repeater.querySelectorAll(SEL.item)).filter(function (el) {
+        return filteredElems.indexOf(el) !== -1;
+      });
+    } else {
+      cards = Array.from(repeater.querySelectorAll(SEL.item)).filter(function (el) {
+        return el.style.display !== 'none';
+      });
+    }
 
     var lastYear = null;
+    var newSeps  = [];
     cards.forEach(function (card) {
       var year = (card.dataset.year || '').trim();
       if (!year || year === lastYear) return;
@@ -1100,12 +1431,36 @@ function initViewportVideo() {
         '<span class="vc_year_sep__rule"></span>' +
         '<span class="vc_year_sep__tag">Event Properties</span>';
       repeater.insertBefore(sep, card);
+      newSeps.push(sep);
       lastYear = year;
     });
 
-    // Animate seps in — same sequential fade as nav bar stagger
-    var newSeps = Array.from(repeater.querySelectorAll('.vc_year_sep'));
-    if (newSeps.length && typeof gsap !== 'undefined') {
+    if (!newSeps.length) return;
+
+    if (_iso) {
+      // Seps are already inserted in the DOM at the correct positions via
+      // insertBefore(). addItems() registers them with Isotope WITHOUT
+      // recreating existing card Item objects (preserving cached sizes).
+      // CRITICAL: addItems() appends new items to the END of Isotope's
+      // internal array — DOM position is ignored. updateSortData() recalculates
+      // the 'domOrder' sort key for every item (including newly added seps)
+      // based on current DOM index. arrange() then sorts by domOrder so seps
+      // land between the correct year groups in the layout.
+      _iso.addItems(newSeps);
+      _iso.updateSortData();
+      // instant=true: called from layoutComplete after card animation already
+      // completed — use 0s to snap seps into place without a third overlapping
+      // animation. Normal (instant=false) path uses the configured duration.
+      if (instant) {
+        var prevDur = _iso.options.transitionDuration;
+        _iso.options.transitionDuration = '0s';
+        _iso.arrange();
+        _iso.options.transitionDuration = prevDur;
+      } else {
+        _iso.arrange();
+      }
+    } else if (typeof gsap !== 'undefined') {
+      // Non-Isotope path: animate seps in with GSAP
       gsap.fromTo(newSeps,
         { autoAlpha: 0, y: -6 },
         { autoAlpha: 1, y: 0, duration: 0.35, stagger: 0.07, ease: 'power3.out' }
@@ -1192,7 +1547,34 @@ function initViewportVideo() {
   function init() {
     var items = Array.from(document.querySelectorAll(SEL.item));
 
+    // ── Apply options-page defaults before any UI init ────────────────────────
+    // window.emhListingsDefaults is output by zoo-defaults-output.php (wp_footer
+    // priority 1), so it is always set before this IIFE runs on DOMContentLoaded.
+    if (window.emhListingsDefaults) {
+      var _d = window.emhListingsDefaults;
+      if (_d.past !== undefined) {
+        state.past    = !!_d.past;
+        zfcState.past = !!_d.past;
+      }
+      if (Array.isArray(_d.brand) && _d.brand.length) zfcState.brand = _d.brand.slice();
+      if (Array.isArray(_d.venue) && _d.venue.length) zfcState.venue = _d.venue.slice();
+      if (Array.isArray(_d.year)  && _d.year.length)  zfcState.year  = _d.year.slice();
+    }
+
     initZFC(); // must run before initFilters so zfcActive is set
+
+    // Sync ZFC chip active states from defaults (initZFC attaches handlers but
+    // doesn't read zfcState to set initial active classes — do it here).
+    if (zfcState.past) {
+      var _pastChip = document.querySelector('.zfc_group--past .zfc_chip');
+      if (_pastChip) {
+        _pastChip.classList.add(CLS.isActive);
+        _pastChip.setAttribute('aria-pressed', 'true');
+      }
+    }
+    // Sync old filter checkbox (non-ZFC layout)
+    var _chkPast = document.querySelector(SEL.filterPast);
+    if (_chkPast) _chkPast.checked = !!state.past;
 
     populateFilters(items);
     if (zfcActive) buildZFCOptions(items);

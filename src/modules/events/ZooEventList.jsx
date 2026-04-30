@@ -3,39 +3,43 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthContext';
 import { WP_ENDPOINTS } from '../../api/endpoints';
 import { decodeHtml } from '../../utils/helpers';
-import { Plus, Search, SlidersHorizontal, Loader2, ChevronRight, MoreVertical } from 'lucide-react';
+import { Plus, Search, Loader2, ChevronRight, MoreVertical } from 'lucide-react';
 
 /**
  * ZooEventList — Zoo Agency-specific event list.
  *
  * Differences from the generic EventList:
- *  - Reads ACF fields: vc_ep_event_icon, vc_ep_title, vc_ep_sub_title, vc_ep_confidential
- *  - Groups events by year (derived from vc_ep_dates.start_date, return_format m/d/Y)
+ *  - Reads ACF fields: vc_ep_event_icon, vc_ep_title, vc_ep_sub_title,
+ *    vc_ep_confidential, vc_ep_private_visibility, vc_ep_event_venue
+ *  - Groups events by year (derived from vc_ep_dates.start_date)
+ *  - Sort within each year group: Start Date, Venue, Confidential, Private
+ *  - Title shows WP post title (includes year/season designation)
  *  - Per-row Confidential toggle with live WP PATCH
  *  - Year-group header with bulk Confidential toggle
- *
- * ACF sub-field names (short, no vc_ep_ prefix):
- *  vc_ep_dates   → start_date, end_date, tbd.enabled, tbd.text
- *  vc_ep_details → city, state, venue, established, capacity, tags, contacts[].email
- *  vc_ep_media   → logo_horizontal, logo_vertical, images[].image, videos.vimeo_url, videos.mp4_url
- *  vc_ep_social  → website, instagram, facebook, spotify, twitter, tiktok, soundcloud, other
- *  Flat fields   → year (number), brand (select), event_image (image)
  */
+
+// ── Sort options ───────────────────────────────────────────────
+
+const SORT_OPTIONS = [
+  { key: 'date',         label: 'Start Date' },
+  { key: 'venue',        label: 'Venue'      },
+  { key: 'confidential', label: 'Confidential' },
+  { key: 'private',      label: 'Private'    },
+];
 
 // ── Helpers ────────────────────────────────────────────────────
 
 function getEventYear(ev) {
   const dateStr = ev.acf?.vc_ep_dates?.start_date;
   if (!dateStr) return 'TBD';
-  // ACF return_format is m/d/Y (e.g. "04/20/2026") — year is last 4 chars
-  if (dateStr.includes('/')) return dateStr.slice(-4);
-  // Ymd fallback (e.g. "20260420")
-  if (dateStr.length >= 4) return dateStr.slice(0, 4);
+  if (dateStr.includes('/')) return dateStr.slice(-4);    // m/d/Y → last 4
+  if (dateStr.length >= 4)   return dateStr.slice(0, 4);  // Ymd → first 4
   return 'TBD';
 }
 
+// Use WP post title (includes year/season) — vc_ep_title as fallback
 function getEventTitle(ev) {
-  return ev.acf?.vc_ep_title || decodeHtml(ev.title?.rendered || ev.title?.raw || 'Untitled');
+  return decodeHtml(ev.title?.rendered || ev.title?.raw || ev.acf?.vc_ep_title || 'Untitled');
 }
 
 function getEventSeason(ev) {
@@ -49,27 +53,65 @@ function getEventIcon(ev) {
   return icon?.sizes?.thumbnail || icon?.url || icon?.source_url || null;
 }
 
-function groupByYear(events) {
+function getEventVenue(ev) {
+  return ev.acf?.vc_ep_event_venue || '';
+}
+
+function getStartDateMs(ev) {
+  const raw = ev.acf?.vc_ep_dates?.start_date || '';
+  if (!raw) return Infinity;
+  return new Date(raw).getTime() || Infinity;
+}
+
+// Sorts events within each year group based on the chosen dimension.
+// Year groups themselves always appear newest → oldest.
+function sortEvents(events, sortBy) {
+  const sorted = [...events];
+  switch (sortBy) {
+    case 'date':
+      return sorted.sort((a, b) => getStartDateMs(a) - getStartDateMs(b));
+    case 'venue':
+      return sorted.sort((a, b) => {
+        const va = getEventVenue(a).toLowerCase();
+        const vb = getEventVenue(b).toLowerCase();
+        if (!va && !vb) return getStartDateMs(a) - getStartDateMs(b);
+        if (!va) return 1;
+        if (!vb) return -1;
+        return va.localeCompare(vb);
+      });
+    case 'confidential':
+      return sorted.sort((a, b) => {
+        const ca = Boolean(a.acf?.vc_ep_confidential) ? 0 : 1;
+        const cb = Boolean(b.acf?.vc_ep_confidential) ? 0 : 1;
+        return ca - cb || getStartDateMs(a) - getStartDateMs(b);
+      });
+    case 'private':
+      return sorted.sort((a, b) => {
+        const pa = Boolean(a.acf?.vc_ep_private_visibility) ? 0 : 1;
+        const pb = Boolean(b.acf?.vc_ep_private_visibility) ? 0 : 1;
+        return pa - pb || getStartDateMs(a) - getStartDateMs(b);
+      });
+    default:
+      return sorted;
+  }
+}
+
+function groupByYear(events, sortBy) {
   const groups = {};
   for (const ev of events) {
     const year = getEventYear(ev);
     if (!groups[year]) groups[year] = [];
     groups[year].push(ev);
   }
-  // Sort each group by start_date ascending
-  // m/d/Y format sorts correctly after converting to Date
+  // Sort within each group
   for (const year of Object.keys(groups)) {
-    groups[year].sort((a, b) => {
-      const da = a.acf?.vc_ep_dates?.start_date || '';
-      const db = b.acf?.vc_ep_dates?.start_date || '';
-      return new Date(da) - new Date(db);
-    });
+    groups[year] = sortEvents(groups[year], sortBy);
   }
-  // Return sorted years (numeric ascending, TBD last)
+  // Year groups: newest first (descending), TBD last
   const years = Object.keys(groups).sort((a, b) => {
     if (a === 'TBD') return 1;
     if (b === 'TBD') return -1;
-    return Number(a) - Number(b);
+    return Number(b) - Number(a); // descending
   });
   return years.map(year => ({ year, events: groups[year] }));
 }
@@ -78,13 +120,9 @@ function groupByYear(events) {
 
 function ConfidentialToggle({ value, onChange, disabled, size = 'md' }) {
   const isOn = Boolean(value);
-  const sizeCls = size === 'sm'
-    ? 'w-8 h-[18px]'
-    : 'w-10 h-[22px]';
-  const thumbSm = size === 'sm'
-    ? 'w-[14px] h-[14px] top-[2px]'
-    : 'w-[18px] h-[18px] top-[2px]';
-  const thumbOff = size === 'sm' ? 'left-[2px]' : 'left-[2px]';
+  const sizeCls  = size === 'sm' ? 'w-8 h-[18px]'   : 'w-10 h-[22px]';
+  const thumbSm  = size === 'sm' ? 'w-[14px] h-[14px] top-[2px]' : 'w-[18px] h-[18px] top-[2px]';
+  const thumbOff = size === 'sm' ? 'left-[2px]'  : 'left-[2px]';
   const thumbOn  = size === 'sm' ? 'left-[20px]' : 'left-[20px]';
 
   return (
@@ -104,9 +142,7 @@ function ConfidentialToggle({ value, onChange, disabled, size = 'md' }) {
 // ── Year group header ──────────────────────────────────────────
 
 function YearGroupHeader({ year, events, onBulkToggle, bulkSaving }) {
-  const allOn  = events.every(ev => ev.acf?.vc_ep_confidential);
-  const anyOn  = events.some(ev => ev.acf?.vc_ep_confidential);
-  // Mixed state = not all equal: show as OFF
+  const allOn    = events.every(ev => ev.acf?.vc_ep_confidential);
   const bulkValue = allOn;
 
   return (
@@ -134,11 +170,25 @@ function YearGroupHeader({ year, events, onBulkToggle, bulkSaving }) {
 
 // ── Event row ──────────────────────────────────────────────────
 
-function EventRow({ ev, onNavigate, onToggleConfidential, toggling }) {
-  const title      = getEventTitle(ev);
-  const season     = getEventSeason(ev);
-  const iconUrl    = getEventIcon(ev);
-  const isConfidential = Boolean(ev.acf?.vc_ep_confidential);
+function EventRow({ ev, sortBy, onNavigate, onToggleConfidential, toggling }) {
+  const title           = getEventTitle(ev);
+  const season          = getEventSeason(ev);
+  const iconUrl         = getEventIcon(ev);
+  const isConfidential  = Boolean(ev.acf?.vc_ep_confidential);
+  const isPrivate       = Boolean(ev.acf?.vc_ep_private_visibility);
+  const venue           = getEventVenue(ev);
+
+  // Sub-row: show context relevant to current sort
+  let subLabel = '';
+  if (sortBy === 'venue' && venue) {
+    subLabel = venue;
+  } else if (sortBy === 'confidential') {
+    subLabel = isConfidential ? 'Confidential' : 'Visible';
+  } else if (sortBy === 'private') {
+    subLabel = isPrivate ? 'Private' : 'Public';
+  } else {
+    subLabel = season || ev.status || '';
+  }
 
   return (
     <div
@@ -154,14 +204,12 @@ function EventRow({ ev, onNavigate, onToggleConfidential, toggling }) {
         )}
       </div>
 
-      {/* Title + season */}
+      {/* Title + context sub-label */}
       <div className="flex-1 min-w-0">
         <p className="text-[14px] font-semibold text-[#282828] truncate">{title}</p>
-        {season ? (
-          <p className="text-[12px] text-[#979797] truncate">{season}</p>
-        ) : (
-          <p className="text-[12px] text-[#c0c0c0] truncate">{ev.status}</p>
-        )}
+        <p className={`text-[12px] truncate ${subLabel ? 'text-[#979797]' : 'text-[#c0c0c0]'}`}>
+          {subLabel || '—'}
+        </p>
       </div>
 
       {/* Confidential toggle + chevron */}
@@ -183,17 +231,42 @@ function EventRow({ ev, onNavigate, onToggleConfidential, toggling }) {
   );
 }
 
+// ── Sort bar ───────────────────────────────────────────────────
+
+function SortBar({ sortBy, onChange }) {
+  return (
+    <div className="flex items-center gap-1.5 px-4 py-2 border-b border-gray-100 overflow-x-auto scrollbar-none">
+      <span className="text-[11px] text-[#979797] font-medium shrink-0 mr-0.5">Sort:</span>
+      {SORT_OPTIONS.map(opt => (
+        <button
+          key={opt.key}
+          type="button"
+          onClick={() => onChange(opt.key)}
+          className={`shrink-0 px-2.5 py-1 rounded-full text-[11px] font-medium transition-colors whitespace-nowrap ${
+            sortBy === opt.key
+              ? 'bg-[#282828] text-white'
+              : 'bg-[#f0f0f0] text-[#555] hover:bg-[#e4e4e4]'
+          }`}
+        >
+          {opt.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 // ── Main component ─────────────────────────────────────────────
 
 export default function ZooEventList() {
   const { getClient, activeSite } = useAuth();
   const navigate = useNavigate();
 
-  const [events,      setEvents]      = useState([]);
-  const [loading,     setLoading]     = useState(true);
-  const [search,      setSearch]      = useState('');
-  const [toggling,    setToggling]    = useState({}); // { [eventId]: true }
-  const [bulkSaving,  setBulkSaving]  = useState(false);
+  const [events,     setEvents]     = useState([]);
+  const [loading,    setLoading]    = useState(true);
+  const [search,     setSearch]     = useState('');
+  const [sortBy,     setSortBy]     = useState('date');
+  const [toggling,   setToggling]   = useState({});
+  const [bulkSaving, setBulkSaving] = useState(false);
 
   // ── Fetch ──────────────────────────────────────────────────
   const fetchEvents = useCallback(async () => {
@@ -220,7 +293,6 @@ export default function ZooEventList() {
     const client = getClient();
     if (!client) return;
 
-    // Optimistic update — keep both fields in sync
     setEvents(prev => prev.map(ev =>
       ev.id === eventId
         ? { ...ev, acf: { ...ev.acf, vc_ep_confidential: value, vc_confidential_master: value } }
@@ -234,7 +306,6 @@ export default function ZooEventList() {
       });
     } catch (err) {
       console.error('[ZooEventList] toggle failed:', err);
-      // Revert on error
       setEvents(prev => prev.map(ev =>
         ev.id === eventId
           ? { ...ev, acf: { ...ev.acf, vc_ep_confidential: !value, vc_confidential_master: !value } }
@@ -253,7 +324,6 @@ export default function ZooEventList() {
     const yearEvents = events.filter(ev => getEventYear(ev) === year);
     if (!yearEvents.length) return;
 
-    // Optimistic update — keep both fields in sync
     setEvents(prev => prev.map(ev =>
       getEventYear(ev) === year
         ? { ...ev, acf: { ...ev.acf, vc_ep_confidential: value, vc_confidential_master: value } }
@@ -269,24 +339,25 @@ export default function ZooEventList() {
       ));
     } catch (err) {
       console.error('[ZooEventList] bulk toggle failed:', err);
-      await fetchEvents(); // revert by re-fetching
+      await fetchEvents();
     } finally {
       setBulkSaving(false);
     }
   }, [getClient, events, fetchEvents]);
 
-  // ── Filter by search ───────────────────────────────────────
+  // ── Filter + group ─────────────────────────────────────────
   const filtered = search.trim()
     ? events.filter(ev => {
         const q = search.toLowerCase();
         return (
           getEventTitle(ev).toLowerCase().includes(q) ||
-          getEventSeason(ev).toLowerCase().includes(q)
+          getEventSeason(ev).toLowerCase().includes(q) ||
+          getEventVenue(ev).toLowerCase().includes(q)
         );
       })
     : events;
 
-  const grouped = groupByYear(filtered);
+  const grouped = groupByYear(filtered, sortBy);
 
   // ── Render ─────────────────────────────────────────────────
   return (
@@ -308,19 +379,15 @@ export default function ZooEventList() {
         <button
           type="button"
           className="p-2 rounded-xl text-gray-500 hover:bg-gray-100 transition-colors"
-          title="Filter"
-        >
-          <SlidersHorizontal className="w-5 h-5" />
-        </button>
-        <button
-          type="button"
-          className="p-2 rounded-xl text-gray-500 hover:bg-gray-100 transition-colors"
           title="Add Event"
           onClick={() => navigate('/events/new')}
         >
           <Plus className="w-5 h-5" />
         </button>
       </div>
+
+      {/* Sort bar */}
+      <SortBar sortBy={sortBy} onChange={setSortBy} />
 
       {/* Module header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
@@ -329,6 +396,7 @@ export default function ZooEventList() {
             <img src="/icons/starglobe-dark.svg" alt="" className="w-4 h-4" />
           </div>
           <span className="text-[16px] font-bold text-[#282828]">Events</span>
+          <span className="text-[13px] text-[#979797]">({filtered.length})</span>
         </div>
         <button type="button" className="p-1 text-gray-400 hover:text-gray-600">
           <MoreVertical className="w-5 h-5" />
@@ -361,6 +429,7 @@ export default function ZooEventList() {
                 <EventRow
                   key={ev.id}
                   ev={ev}
+                  sortBy={sortBy}
                   onNavigate={(id) => navigate(`/events/${id}`)}
                   onToggleConfidential={handleToggleConfidential}
                   toggling={Boolean(toggling[ev.id])}

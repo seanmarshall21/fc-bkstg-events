@@ -1,9 +1,15 @@
 /* ==========================================================================
-   v2.0.9
-   2026-04-29 PDT
+   v2.1.0
+   2026-04-30 PDT
    vc-listings.css
    VC Listings — Zoo Agency Event Properties
    Changelog:
+   v2.1.0 — 2026-04-30 — §5: Add width:100%!important on inner view wrapper
+                         (.emh_listings_repeater_view / _view_tile / _view_list)
+                         outside .isotope-active. Oxygen Builder may generate
+                         explicit pixel widths on these nodes; without this
+                         override, inner panels don't fill their card on mobile
+                         (Isotope inactive) causing inconsistent card sizing.
    v2.0.9 — 2026-04-29 — §20: Scope .emh_listings_parent entrance-hidden rule
                          to .emh_listings_repeater:not(.isotope-active) so it
                          stops applying once Isotope activates. Isotope owns
@@ -240,7 +246,17 @@
   outline: 2px solid var(--emh-text-primary);
   outline-offset: 2px;
 }
-/* ── Inner view wrapper — single markup per card ── */
+/* ── Inner view wrapper — force 100% width in ALL modes ──────────────────
+   Oxygen Builder may generate explicit pixel widths on these nodes.
+   !important ensures the panel always fills its card, including on mobile
+   where .isotope-active is absent and the §22 Isotope override doesn't apply. */
+.emh_listings_repeater_view,
+.vc_listings_repeater_view_tile,
+.vc_listings_repeater_view_list {
+  width: 100% !important;
+}
+
+/* ── Inner view wrapper — layout direction per mode ── */
 .grid-view .emh_listings_repeater_view {
   display: flex;
   flex-direction: column;

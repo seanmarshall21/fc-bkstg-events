@@ -1,11 +1,25 @@
 /**
- * v4.6.2
- * 2026-04-29 PDT
+ * v4.6.3
+ * 2026-04-30 PDT
  *
  * vc-listings.js
  * Zoo Agency · EMH Event Property Listings Controller
  *
  * Changelog:
+ * v4.6.3 — 2026-04-30 — Fix 1: emhListings_refresh call order — sortCards(false)
+ *                        now runs BEFORE applyActiveFilters so buildYearSeps
+ *                        reads an already-sorted DOM. _iso.updateSortData()
+ *                        called when Isotope is active so domOrder values
+ *                        reflect the new DOM order before arrange().
+ *                        Fix 2: equalizeRowHeights — after setting card heights,
+ *                        detect if heights changed and call _iso.layout() to
+ *                        re-position rows at equalized heights. Without this,
+ *                        row 2+ Y positions were stale (based on natural heights)
+ *                        causing cards to visually overlap. _equalizingHeights
+ *                        prevents re-entry on the relayout layoutComplete.
+ *                        Fix 3: CSS v2.1.0 — width:100%!important on inner view
+ *                        wrapper added outside .isotope-active so Oxygen pixel
+ *                        widths can't bleed through on mobile (no Isotope).
  * v4.6.2 — 2026-04-29 — Fix double-animation jump on view switch and filter.
  *                        Root cause: clearYearSeps() called _iso.remove() which
  *                        triggered an internal layout() with animation, then
@@ -407,10 +421,24 @@
     });
 
     if (cardEls.length > 1) {
-      _equalizingHeights = true;
       var maxH = Math.max.apply(null, cardEls.map(function (el) { return el.offsetHeight; }));
-      cardEls.forEach(function (el) { el.style.height = maxH + 'px'; });
-      _equalizingHeights = false;
+      var _heightsChanged = false;
+      cardEls.forEach(function (el) {
+        if (Math.abs(el.offsetHeight - maxH) > 1) { _heightsChanged = true; }
+        el.style.height = maxH + 'px';
+      });
+
+      if (_heightsChanged) {
+        // Heights were unequal — Isotope's cached row positions are now stale.
+        // Trigger a relayout at the new equalized heights so row 2+ cards land
+        // at the correct Y (maxH + gap instead of natural_h + gap).
+        // _equalizingHeights blocks re-entry when this layout's layoutComplete
+        // fires; once handler clears it so subsequent filter/view layouts equalize.
+        _equalizingHeights = true;
+        _iso.once('layoutComplete', function () { _equalizingHeights = false; });
+        _iso.layout();
+        return; // container height will be updated by the relayout's layoutComplete
+      }
     }
 
     // ── (b) Update container height ──────────────────────────────────────────
@@ -1596,8 +1624,13 @@ function initViewportVideo() {
     var items = Array.from(document.querySelectorAll(SEL.item));
     populateFilters(items);
     if (zfcActive) buildZFCOptions(items);
+    // Sort DOM FIRST so buildYearSeps (called inside applyActiveFilters) reads
+    // the correct card order. animate=false skips GSAP Flip on initial inject.
+    sortCards(false);
+    // Tell Isotope about the new DOM order so domOrder sort data is current
+    // before the arrange() inside applyActiveFilters reads it.
+    if (_iso) { _iso.updateSortData(); }
     applyActiveFilters(false);
-    sortCards(true);
     syncClearBtn();
     if (!_animsInited) {
       _animsInited = true;

@@ -1,9 +1,49 @@
 /* ==========================================================================
-   v2.0.3
-   2026-04-28 PDT
+   v2.0.9
+   2026-04-29 PDT
    vc-listings.css
    VC Listings — Zoo Agency Event Properties
    Changelog:
+   v2.0.9 — 2026-04-29 — §20: Scope .emh_listings_parent entrance-hidden rule
+                         to .emh_listings_repeater:not(.isotope-active) so it
+                         stops applying once Isotope activates. Isotope owns
+                         opacity via inline hiddenStyle/visibleStyle; §20
+                         fighting Isotope was causing revealed items to snap
+                         invisible after Outlayer cleaned up inline opacity.
+                         Remove .vc-iso-revealed rule (workaround no longer
+                         needed — root cause fixed).
+   v2.0.8 — 2026-04-29 — §22: Add .vc-iso-revealed rule for Isotope-managed
+                         items. JS adds this class to filteredItems in
+                         layoutComplete. Specificity (0,3,0) beats §20
+                         (0,2,1) so revealed items stay visible after
+                         Outlayer removes their inline opacity post-transition.
+                         Isotope's inline opacity:0 on hidden items beats the
+                         class (inline always wins over class), so filtered
+                         items remain invisible correctly.
+   v2.0.7 — 2026-04-29 — §22: Removed opacity:1!important and visibility:visible!important
+                         from .isotope-active .emh_listings_parent. These were
+                         overriding Isotope's own opacity:0 on filtered items,
+                         causing hidden cards to bleed through visually.
+                         Isotope's inline styles win over class selector without !important.
+   v2.0.6 — 2026-04-29 — §22: Corrected Isotope width rule to target actual
+                         DOM class .emh_listings_repeater_view (the old selectors
+                         .vc_listings_repeater_view_tile/_list don't exist yet).
+                         Retained old selectors as forward-compat for future
+                         two-panel card build.
+   v2.0.5 — 2026-04-29 — §22: Force inner tile/list panels to width:100%
+                          inside .isotope-active so Oxygen-generated pixel
+                          widths don't prevent them from filling their
+                          absolutely-positioned parent. height:100% lets
+                          the panel expand when JS equalizes row heights.
+   v2.0.4 — 2026-04-29 — §22: Isotope layout overrides. .isotope-active on
+                          repeater switches from flex to position:relative
+                          (required by Isotope). Item widths use
+                          calc(33.333% - 20px) for 3-col grid with gutter:20,
+                          100% for list. Responsive overrides: 2-col at ≤1120,
+                          1-col at ≤768. Added opacity 0.35s to item
+                          transition so Isotope filter fade animates via CSS.
+                          .isotope-active overrides the pre-hide opacity rule
+                          so Isotope owns visibility after entrance anim.
    v2.0.3 — 2026-04-28 — §21: two-panel view show/hide. Tile and list panels
                           both render in DOM (Oxygen template has both inside
                           each .emh_listings_parent). CSS hides whichever panel
@@ -175,7 +215,8 @@
   overflow: hidden;
   cursor: pointer;
   position: relative;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  /* opacity included so Isotope filter fade animates via CSS transition */
+  transition: transform 0.3s ease, opacity 0.35s ease, box-shadow 0.2s ease;
 }
 /* Grid: card flows as a column */
 .grid-view .emh_listings_parent {
@@ -1019,7 +1060,7 @@
    .emh_cntrl_parent) live in the separate controls CSS sheet — add the
    same rule there if not already present.
    ─────────────────────────────────────────────────────────────────── */
-body:not(.oxygen-builder-body) .emh_listings_parent,
+body:not(.oxygen-builder-body) .emh_listings_repeater:not(.isotope-active) .emh_listings_parent,
 body:not(.oxygen-builder-body) [data-vc-anim],
 body:not(.oxygen-builder-body) .zfc_group,
 body:not(.oxygen-builder-body) .zfc_bar_actions > * {
@@ -1043,3 +1084,74 @@ body:not(.oxygen-builder-body) .zfc_bar_actions > * {
    -------------------------------------------------------------------------- */
 .grid-view .vc_listings_repeater_view_list { display: none !important; }
 .list-view .vc_listings_repeater_view_tile { display: none !important; }
+
+/* --------------------------------------------------------------------------
+   §22 · ISOTOPE LAYOUT ENGINE
+   JS adds .isotope-active to .emh_listings_repeater when Isotope initializes.
+   Isotope uses position:absolute on items — repeater must be position:relative.
+   Flex gap replaced by margin-bottom; horizontal gutter handled via Isotope
+   gutter:20 option (each item reserves 20px to its right).
+   Item widths: calc(100%/N - gutter) for N columns.
+   3-col:  calc(33.333% - 20px)  →  (W - 3×20) / 3
+   2-col:  calc(50% - 20px)      →  (W - 2×20) / 2
+   1-col:  100%
+   -------------------------------------------------------------------------- */
+
+/* Repeater: switch from flex to Isotope-managed absolute positioning */
+.isotope-active {
+  display: block !important; /* override flex from .grid-view / .list-view */
+  position: relative !important;
+}
+
+/* Items: desktop 3-column grid default */
+.isotope-active .emh_listings_parent {
+  width: calc(33.333% - 20px);
+  margin-bottom: var(--emh-card-gap);
+  /* Isotope manages opacity+visibility via inline styles — no !important override needed.
+     Isotope's inline opacity:0/1 and visibility:inherit correctly beat this class selector. */
+}
+
+/* List-view items go full-width in Isotope vertical mode */
+.isotope-active.list-view .emh_listings_parent {
+  width: 100%;
+}
+
+/* Items hidden by Isotope filter */
+.isotope-active .emh_listings_parent.is-hidden {
+  pointer-events: none;
+}
+
+/* Year seps are full-width Isotope items — width:100% forces their own row in fitRows */
+.isotope-active .vc_year_sep {
+  width: 100%;
+  /* Isotope manages position:absolute + top/left — do not override here */
+}
+
+/* 2-column at ≤1120 */
+@media (max-width: 1120px) {
+  .isotope-active .emh_listings_parent,
+  .isotope-active.list-view .emh_listings_parent {
+    width: calc(50% - 20px);
+  }
+}
+
+/* 1-column at ≤768 */
+@media (max-width: 768px) {
+  .isotope-active .emh_listings_parent,
+  .isotope-active.list-view .emh_listings_parent {
+    width: 100%;
+  }
+}
+
+/* Inner view panel must fill the Isotope item container.
+   Oxygen Builder may generate explicit pixel widths on .emh_listings_repeater_view;
+   override so the panel always fills the absolutely-positioned parent.
+   height:100% is needed for JS row-height equalization to work.
+   Also covers future two-panel builds (.vc_listings_repeater_view_tile / _list). */
+.isotope-active .emh_listings_repeater_view,
+.isotope-active .vc_listings_repeater_view_tile,
+.isotope-active .vc_listings_repeater_view_list {
+  width: 100% !important;
+  height: 100%;
+  box-sizing: border-box;
+}

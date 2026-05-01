@@ -169,7 +169,7 @@ SOCIAL — get_field('vc_ep_social') → group  ← replaces all individual soci
 - `event_tag_labels` and `genre_selection` are **top-level taxonomy fields** (NOT inside a group).
 - Both have `save_terms: 0` and `load_terms: 0` — bypasses `wp_set_object_terms()`. Data stored as serialized post meta only. **Do not change this.**
 - `event_tag_labels` and `genre_selection` return `WP_Term[]` objects — NOT readable via Oxygen dynamic data picker. Must use Code Blocks with `vc_render_chips()`.
-- `event_tag_labels` was recreated from scratch (2026-04-27) — old `tags` field had stale ACF Local JSON definition in `acf-json/` folder that prevented saves. Do NOT rename — recreate if issues arise.
+- `event_tag_labels` was recreated from scratch (2026-04-27) — old `tags` field had stale ACF Local JSON definition in `acf-json/` folder that prevented saves. Do NOT rename this field — recreate instead if issues arise.
 - `video` is a **top-level group** (`get_field('video')`), NOT nested inside `vc_ep_media`. Any code reading `$media['video']` is wrong.
 - `tbd` is a **top-level group** (`get_field('tbd')`), NOT nested inside `vc_ep_dates`.
 - `capacity_label` and `capacity_amount` are **flat top-level fields** — old path `$details['capacity']['capacity']` no longer exists.
@@ -278,7 +278,7 @@ These are set by WPCode #3589 (emh-listings-data-attrs.php), not Oxygen custom a
 | ID | Name | Type | Hook | Status |
 |---|---|---|---|---|
 | #3607 | VC Event Property Listings Controller — v3.2.0 (vc-listings.js) | JavaScript | Footer | Active |
-| #3750 | VC Event Property Listing Style — Version 1.5.1 (vc-listings.css) | CSS Snippet | Site Wide Header | Active — **v1.7.0 content** (title lags) |
+| #3867 | **MAIN CSS / vc-listings.css — v2.0.4 (vc-listings.css) | CSS Snippet | Site Wide Header | Active — **v2.0.5 content** (title lags) |
 | #3608 | VC Event Property Listing Style — v1.2.0 (vc-listings.css, EMH classes) | CSS Snippet | Site Wide Header | **DEACTIVATE** — superseded by #3750 |
 | #3589 | emh-listings-data-attrs.php | PHP | Run Everywhere (guarded) | Active |
 | #3597 | EMH — Remove Duplicate Taxonomy Metaboxes | PHP | Admin Only | Active |
@@ -361,11 +361,19 @@ CSS is **complete and deployed** via WPCode #3750 (CSS Snippet, Site Wide Header
 
 ### Active
 - **WPCode #3589 capacity reads** — Still reads `$details['capacity']['capacity']` and `$details['capacity']['label']`. Must update to `get_field('capacity_label')` and `get_field('capacity_amount')` (flat top-level fields).
-- **WPCode #3589 video reads** — Any code reading `$media['video']['vimeo_url']` must change to `get_field('video')['vimeo_url']` (video is top-level, not inside vc_ep_media).
+- **WPCode #3589 video reads** — Any code reading `$media['video']` must change to `get_field('video')['vimeo_id']` (video is top-level, not inside vc_ep_media; field is now `vimeo_id` not `vimeo_url`).
 - **WPCode #3589 tbd reads** — If reading `$dates['tbd']`, change to `get_field('tbd')` (top-level group, not inside vc_ep_dates).
+- **WPCode #3589 details reads** — Must update any `get_field('vc_ep_details')` reads to flat `get_field('city')`, `get_field('state')`, `get_field('established')`, `get_field('vc_ep_event_venue')`.
+- **WPCode #3589 social reads** — Must update any `$social['website']` / `$social['instagram']` etc. to `get_field('vc_ep_website')['vc_ep_website_url']` and `get_field('vc_ep_social')['vc_ep_social_url']`.
+- **class-vc-admin-importer.php** — Rewritten for 2026-04-28 ACF structure. Needs to be uploaded to server at `wp-content/plugins/vc-event-properties/includes/admin/` via WP File Manager PRO.
 - **Card build** — Tile + list panels not yet built in Oxygen. Two-panel tab approach confirmed (see View Toggle Architecture section). PHP Code Block outputs both loops.
 - **WPCode #3608 + #3602** — Both old CSS snippets still active. Deactivate both once #3750 confirmed stable on frontend.
 - **Template 3753 — not yet assigned to a page** — ZFC controls UI built and saved (nodes 568/569/575, `zfc_bar_wrap` class confirmed). Needs a test page with Oxygen location rule pointing to post 3753 for frontend render verification.
+- **ACF Local JSON (`acf-json/`)** — Old JSON files in child theme for `vc_ep_season` and `tags` fields still exist. These stale definitions override the database. Do not rename those old fields — create new ones instead (as done with `vc_ep_sub_title` and `event_tag_labels`). Investigate cleaning out `acf-json/` in a future session.
+
+### Resolved (session 7 — 2026-04-28)
+- **ACF field restructure** — `vc_ep_details` group removed; city/state/established now flat. Venue now `vc_ep_event_venue` (select). Social links consolidated into `vc_ep_website` and `vc_ep_social` groups. All sync files updated: `class-vc-admin-importer.php`, `ImportEvents.jsx`, `vc-events-sheet-guide.html`, `VC-CSV-Field-Guide.html`, both CLAUDE.md files.
+- **CSV column set** — Reduced from 21 to 17 columns: removed instagram/facebook/spotify/twitter/tiktok/soundcloud, renamed `website`→`website_url`, added `social_label`+`social_url`.
 
 ### Resolved (session 6 — 2026-04-24)
 - **WPCode #3750 CSS at v1.7.0** — Sections 21 (ZFC chips) and 22 (ZFC bar outer wrapper) added. Deployed, 39597 chars confirmed in CodeMirror.

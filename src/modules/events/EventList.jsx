@@ -43,6 +43,21 @@ function groupByYear(events) {
   return sorted.map(year => ({ year, events: buckets[year] }));
 }
 
+// ── Phase helpers ──────────────────────────────────────────────────────────────
+
+const PHASE_MAP = {
+  'planning':        { label: 'Planning',        color: 'bg-gray-100 text-gray-500' },
+  'save-the-date':   { label: 'Save the Date',   color: 'bg-gray-100 text-gray-500' },
+  'lineup-phase-1':  { label: 'Lineup Ph.1',     color: 'bg-purple-100 text-purple-700' },
+  'presale':         { label: 'Presale',          color: 'bg-purple-100 text-purple-700' },
+  'onsale':          { label: 'On Sale',          color: 'bg-purple-100 text-purple-700' },
+  'lineup-phase-2':  { label: 'Lineup Ph.2',     color: 'bg-blue-100 text-blue-700' },
+  'set-times-live':  { label: 'Set Times Live',  color: 'bg-blue-100 text-blue-700' },
+  'event-day':       { label: 'Event Day',        color: 'bg-green-100 text-green-700' },
+  'post-event':      { label: 'Post Event',       color: 'bg-amber-100 text-amber-700' },
+  'archived':        { label: 'Archived',         color: 'bg-gray-200 text-gray-500' },
+};
+
 // ── Icon helper ────────────────────────────────────────────────────────────────
 
 function EventIcon({ icon, size = 44 }) {
@@ -64,10 +79,11 @@ function EventIcon({ icon, size = 44 }) {
 
 function EventRow({ ev, onSelect, onToggleVisibility, toggling }) {
   const displayTitle = ev.acf?.vc_ep_title || ev.title || 'Untitled';
-  const season       = ev.acf?.vc_ep_season || '';
+  const subTitle     = ev.acf?.vc_ep_sub_title || ev.acf?.vc_ep_season || '';
   const icon         = ev.acf?.vc_ep_event_icon || null;
   const confidential = !!ev.acf?.vc_ep_confidential;
-  const privateVis   = !!ev.acf?.vc_ep_private_visibility;
+  const phaseKey     = ev.acf?.event_phase || 'planning';
+  const phase        = PHASE_MAP[phaseKey] || { label: phaseKey, color: 'bg-gray-100 text-gray-500' };
 
   return (
     <div
@@ -80,7 +96,7 @@ function EventRow({ ev, onSelect, onToggleVisibility, toggling }) {
       {/* Event icon */}
       <EventIcon icon={icon} size={44} />
 
-      {/* Title + season */}
+      {/* Title + sub-title + phase chip */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5 min-w-0">
           <span className="text-sm font-semibold text-gray-900 truncate">{displayTitle}</span>
@@ -88,14 +104,14 @@ function EventRow({ ev, onSelect, onToggleVisibility, toggling }) {
             <Lock className="w-3 h-3 text-amber-500 shrink-0" title="Confidential" />
           )}
         </div>
-        {season && (
-          <span className="text-xs text-gray-400 truncate block mt-0.5">{season}</span>
-        )}
-        {!season && (
-          <span className={`text-xs truncate block mt-0.5 ${ev.status === 'publish' ? 'text-emerald-600' : 'text-gray-400'}`}>
-            {ev.status === 'publish' ? 'Published' : ev.status || 'Draft'}
+        <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+          {subTitle && (
+            <span className="text-xs text-gray-400 truncate">{subTitle}</span>
+          )}
+          <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full shrink-0 ${phase.color}`}>
+            {phase.label}
           </span>
-        )}
+        </div>
       </div>
 
       {/* Visibility toggle */}

@@ -1,5 +1,5 @@
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { ChevronLeft, MoreVertical, Flag, HelpCircle } from 'lucide-react';
+import { ChevronLeft, MoreVertical, HelpCircle } from 'lucide-react';
 import { useAuth } from '../auth/AuthContext';
 import { useFavorites } from '../hooks/useFavorites';
 import { useTutorial } from '../context/TutorialContext';
@@ -14,7 +14,7 @@ const NAV_ITEMS = [
   { key: '/search',    icon: '/icons/search-lt.svg',              label: 'Search' },
   { key: '/add-site',  icon: '/icons/add-outline-lt.svg',         label: 'Add Site' },
   { key: '/favorites', icon: '/icons/favorite-lt.svg',            label: 'Favorites' },
-  { key: '/settings',  icon: '/icons/settings-lt.svg',            label: 'Settings' },
+  { key: '/settings',  icon: '/icons/status-lg-lt.svg',            label: 'Status' },
 ];
 
 // Module routes that live "inside" a site context
@@ -158,7 +158,11 @@ export default function Layout() {
                       }}
                       className="w-full flex items-center gap-2.5 px-4 py-3 text-sm text-gray-700 hover:bg-surface-1 transition-colors text-left"
                     >
-                      <Flag className={`w-4 h-4 ${isFavorite(currentModule, parseInt(currentItemId)) ? 'text-vc-600 fill-vc-600' : 'text-gray-400'}`} />
+                      <img
+                        src={isFavorite(currentModule, parseInt(currentItemId)) ? '/icons/favorite-on.svg' : '/icons/favorite-off.svg'}
+                        alt=""
+                        className="w-4 h-4"
+                      />
                       {isFavorite(currentModule, parseInt(currentItemId)) ? 'Remove from Favorites' : 'Add to Favorites'}
                     </button>
                   )}

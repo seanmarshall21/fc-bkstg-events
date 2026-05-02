@@ -1,0 +1,250 @@
+var e=`<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"/>
+<title>Tutorial: CSV Import — VC Event Manager</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#1a1a2e;min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:24px 16px 40px}
+h1.page-head{color:#fff;font-size:15px;font-weight:600;margin-bottom:20px;opacity:.7;letter-spacing:.5px;text-transform:uppercase}
+.phone{width:340px;background:#0f0e14;border-radius:44px;overflow:hidden;box-shadow:0 40px 100px rgba(0,0,0,.6),0 0 0 1px rgba(255,255,255,.08);position:relative;display:flex;flex-direction:column}
+.notch{background:#0f0e14;height:36px;display:flex;align-items:flex-end;justify-content:center;padding-bottom:6px}
+.notch-pill{width:100px;height:8px;background:#1a1a1a;border-radius:4px}
+.screen{flex:1;overflow:hidden;position:relative;background:#0f0e14;min-height:580px}
+.slide{position:absolute;inset:0;transition:opacity .35s,transform .35s;opacity:0;transform:translateX(30px);pointer-events:none;display:flex;flex-direction:column}
+.slide.active{opacity:1;transform:none;pointer-events:all}
+.slide.out{opacity:0;transform:translateX(-30px)}
+.home-bar{height:20px;display:flex;align-items:center;justify-content:center}
+.home-pill{width:100px;height:4px;background:rgba(255,255,255,.2);border-radius:2px}
+.page-bg{flex:1;padding:20px;background:#0f0e14;display:flex;flex-direction:column;gap:10px;overflow-y:auto}
+.back-row{display:flex;align-items:center;gap:10px}
+.back-btn{width:36px;height:36px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:10px;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.5);flex-shrink:0}
+.back-btn svg{width:16px;height:16px}
+.page-title{font-size:20px;font-weight:700;color:#fff}
+.section-head{font-size:11px;font-weight:700;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:.8px;margin-top:4px}
+/* Upload drop zone */
+.drop-zone{border:2px dashed rgba(255,255,255,.15);border-radius:16px;padding:28px 20px;display:flex;flex-direction:column;align-items:center;gap:10px;background:rgba(255,255,255,.02)}
+.drop-icon{font-size:32px}
+.drop-label{font-size:14px;font-weight:600;color:rgba(255,255,255,.6)}
+.drop-sub{font-size:12px;color:rgba(255,255,255,.3)}
+.drop-btn{background:rgba(124,92,191,.2);border:1px solid rgba(124,92,191,.4);color:#c4b5fd;border-radius:10px;padding:9px 18px;font-size:13px;font-weight:600;cursor:pointer}
+/* Column map */
+.col-map{display:flex;flex-direction:column;gap:6px}
+.col-row{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:9px 12px}
+.col-csv{font-size:12px;font-weight:600;color:#c4b5fd;flex:1;background:rgba(124,92,191,.1);border-radius:6px;padding:3px 7px}
+.col-arrow{color:rgba(255,255,255,.25);font-size:12px;flex-shrink:0}
+.col-field{font-size:12px;color:rgba(255,255,255,.5);flex:1.2}
+.col-req{font-size:10px;font-weight:700;color:#f87171;background:rgba(239,68,68,.1);border-radius:5px;padding:1px 5px}
+.col-opt{font-size:10px;font-weight:700;color:rgba(255,255,255,.3);background:rgba(255,255,255,.06);border-radius:5px;padding:1px 5px}
+/* Preview rows */
+.preview-table{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:12px;overflow:hidden}
+.preview-head{display:grid;grid-template-columns:2fr 1fr 1fr;gap:0;border-bottom:1px solid rgba(255,255,255,.08);padding:8px 12px}
+.preview-head span{font-size:10px;font-weight:700;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:.5px}
+.preview-row{display:grid;grid-template-columns:2fr 1fr 1fr;gap:0;padding:9px 12px;border-bottom:1px solid rgba(255,255,255,.05)}
+.preview-row:last-child{border-bottom:none}
+.preview-cell{font-size:12px;color:rgba(255,255,255,.7)}
+/* Progress */
+.import-progress{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:10px}
+.progress-row{display:flex;align-items:center;justify-content:space-between}
+.progress-track{height:6px;background:rgba(255,255,255,.1);border-radius:3px;overflow:hidden}
+.progress-fill{height:100%;border-radius:3px}
+.result-row{display:flex;align-items:center;gap:8px;font-size:12px}
+.r-icon{font-size:14px}
+/* Step panel */
+.step-panel{width:340px;background:#fff;border-radius:20px;padding:20px;margin-top:16px}
+.step-number{font-size:11px;font-weight:700;color:#7c5cbf;text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px}
+.step-title{font-size:17px;font-weight:700;color:#111;margin-bottom:8px}
+.step-body{font-size:13px;color:#6b7280;line-height:1.6;margin-bottom:16px}
+.step-tip{background:#f5f0ff;border-radius:10px;padding:10px 12px;font-size:12px;color:#7c5cbf;line-height:1.5;margin-bottom:16px}
+.step-tip::before{content:'💡 '}
+.step-nav{display:flex;gap:10px}
+.btn-prev{flex:1;background:#f3f4f6;color:#374151;border:none;border-radius:12px;padding:13px;font-size:14px;font-weight:600;cursor:pointer}
+.btn-next{flex:2;background:#7c5cbf;color:#fff;border:none;border-radius:12px;padding:13px;font-size:14px;font-weight:600;cursor:pointer}
+.progress-dots{display:flex;justify-content:center;gap:5px;margin-top:14px}
+.dot{width:6px;height:6px;border-radius:50%;background:#e5e7eb;transition:all .2s}
+.dot.active{background:#7c5cbf;width:18px;border-radius:3px}
+</style>
+</head>
+<body>
+<h1 class="page-head">Tutorial · CSV Import</h1>
+
+<div class="phone">
+  <div class="notch"><div class="notch-pill"></div></div>
+  <div class="screen">
+
+    <!-- Slide 0: Upload screen -->
+    <div class="slide active" id="slide-0">
+      <div class="page-bg">
+        <div class="back-row">
+          <div class="back-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 5l-7 7 7 7"/></svg></div>
+          <div class="page-title">Import Artists</div>
+        </div>
+        <div class="drop-zone">
+          <div class="drop-icon">📄</div>
+          <div class="drop-label">Select a CSV file</div>
+          <div class="drop-sub">Use the VC Artist template for best results</div>
+          <div class="drop-btn">📥 Download Template</div>
+        </div>
+        <div style="text-align:center;font-size:12px;color:rgba(255,255,255,.3)">— or —</div>
+        <div class="drop-zone" style="border-color:rgba(124,92,191,.3);background:rgba(124,92,191,.04)">
+          <div class="drop-icon">📁</div>
+          <div class="drop-label" style="color:rgba(255,255,255,.5)">Choose CSV from Files</div>
+          <div class="drop-sub">Export from your booking spreadsheet</div>
+        </div>
+      </div>
+      <div class="home-bar"><div class="home-pill"></div></div>
+    </div>
+
+    <!-- Slide 1: Column mapping preview -->
+    <div class="slide" id="slide-1">
+      <div class="page-bg">
+        <div class="back-row">
+          <div class="back-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 5l-7 7 7 7"/></svg></div>
+          <div class="page-title">Column Map</div>
+        </div>
+        <div style="font-size:12px;color:rgba(255,255,255,.4);line-height:1.5">CSV columns detected. Required fields are highlighted.</div>
+        <div class="col-map">
+          <div class="col-row">
+            <div class="col-csv">name</div>
+            <div class="col-arrow">→</div>
+            <div class="col-field">Artist Name</div>
+            <div class="col-req">REQ</div>
+          </div>
+          <div class="col-row">
+            <div class="col-csv">origin</div>
+            <div class="col-arrow">→</div>
+            <div class="col-field">Origin City</div>
+            <div class="col-opt">OPT</div>
+          </div>
+          <div class="col-row">
+            <div class="col-csv">genre</div>
+            <div class="col-arrow">→</div>
+            <div class="col-field">Genres (slug)</div>
+            <div class="col-opt">OPT</div>
+          </div>
+          <div class="col-row">
+            <div class="col-csv">booking_status</div>
+            <div class="col-arrow">→</div>
+            <div class="col-field">Booking Status</div>
+            <div class="col-opt">OPT</div>
+          </div>
+          <div class="col-row">
+            <div class="col-csv">instagram</div>
+            <div class="col-arrow">→</div>
+            <div class="col-field">Instagram Handle</div>
+            <div class="col-opt">OPT</div>
+          </div>
+          <div class="col-row">
+            <div class="col-csv">fee</div>
+            <div class="col-arrow">→</div>
+            <div class="col-field">Booking Fee</div>
+            <div class="col-opt">OPT</div>
+          </div>
+        </div>
+      </div>
+      <div class="home-bar"><div class="home-pill"></div></div>
+    </div>
+
+    <!-- Slide 2: Preview rows -->
+    <div class="slide" id="slide-2">
+      <div class="page-bg">
+        <div class="back-row">
+          <div class="back-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 5l-7 7 7 7"/></svg></div>
+          <div class="page-title">Preview (3 of 24)</div>
+        </div>
+        <div class="preview-table">
+          <div class="preview-head">
+            <span>Name</span><span>Status</span><span>Genres</span>
+          </div>
+          <div class="preview-row">
+            <div class="preview-cell">Rampa</div>
+            <div class="preview-cell" style="color:#34d399">Confirmed</div>
+            <div class="preview-cell">Techno</div>
+          </div>
+          <div class="preview-row">
+            <div class="preview-cell">DJ Tennis</div>
+            <div class="preview-cell" style="color:#fbbf24">Pending</div>
+            <div class="preview-cell">House</div>
+          </div>
+          <div class="preview-row">
+            <div class="preview-cell">Monolink</div>
+            <div class="preview-cell" style="color:#34d399">Confirmed</div>
+            <div class="preview-cell">Melodic</div>
+          </div>
+        </div>
+        <div style="background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.2);border-radius:10px;padding:10px 12px;font-size:12px;color:#fbbf24;line-height:1.5">
+          ⚠ 2 rows have unknown genre slugs — they'll be skipped. All other fields will import.
+        </div>
+        <button style="width:100%;background:#7c5cbf;color:#fff;border:none;border-radius:14px;padding:14px;font-size:15px;font-weight:600;cursor:pointer">Import 24 Artists</button>
+      </div>
+      <div class="home-bar"><div class="home-pill"></div></div>
+    </div>
+
+    <!-- Slide 3: Import results -->
+    <div class="slide" id="slide-3">
+      <div class="page-bg">
+        <div class="back-row">
+          <div class="back-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 5l-7 7 7 7"/></svg></div>
+          <div class="page-title">Import Complete</div>
+        </div>
+        <div class="import-progress">
+          <div class="progress-row">
+            <span style="font-size:13px;font-weight:600;color:#34d399">✓ Done</span>
+            <span style="font-size:12px;color:rgba(255,255,255,.4)">24 rows processed</span>
+          </div>
+          <div class="progress-track"><div class="progress-fill" style="width:100%;background:#10b981"></div></div>
+        </div>
+        <div class="result-row"><span class="r-icon">✅</span><span style="color:rgba(255,255,255,.7)">22 artists created as Draft</span></div>
+        <div class="result-row"><span class="r-icon">⚠️</span><span style="color:#fbbf24">2 rows skipped — genre slug not found</span></div>
+        <div style="background:rgba(124,92,191,.08);border:1px solid rgba(124,92,191,.2);border-radius:12px;padding:12px 14px;font-size:12px;color:#c4b5fd;line-height:1.5">
+          All imported artists are set to <strong>Draft</strong> by default. Review them in the Artists list and publish when ready.
+        </div>
+        <button style="width:100%;background:#7c5cbf;color:#fff;border:none;border-radius:14px;padding:14px;font-size:15px;font-weight:600;cursor:pointer">View Artists →</button>
+      </div>
+      <div class="home-bar"><div class="home-pill"></div></div>
+    </div>
+
+  </div>
+</div>
+
+<div class="step-panel">
+  <div class="step-number" id="stepNum">Step 1 of 4</div>
+  <div class="step-title" id="stepTitle">When to Use CSV Import</div>
+  <div class="step-body" id="stepBody">CSV import is for bulk-loading artists from an existing booking spreadsheet. Download the <strong>VC Artist Template</strong> CSV to see the exact column names, or map your own columns — the importer shows you which ones it recognizes.</div>
+  <div class="step-tip" id="stepTip">Import is one-way and non-destructive — it only creates new posts. It won't update or overwrite existing artists with the same name.</div>
+  <div class="step-nav">
+    <button class="btn-prev" id="btnPrev" onclick="prev()" disabled>← Back</button>
+    <button class="btn-next" id="btnNext" onclick="next()">Next →</button>
+  </div>
+  <div class="progress-dots" id="dots"></div>
+</div>
+
+<script>
+const steps=[
+  {title:"When to Use CSV Import",body:"CSV import is for bulk-loading artists from an existing booking spreadsheet. Download the <strong>VC Artist Template</strong> CSV to see the exact column names, or map your own columns — the importer shows you which ones it recognizes.",tip:"Import is one-way and non-destructive — it only creates new posts. It won't update or overwrite existing artists with the same name."},
+  {title:"Column Mapping",body:"The importer automatically maps recognized column headers to their WordPress fields. <strong>name</strong> is the only required column. Optional columns include origin, genre, booking_status, instagram, spotify, soundcloud, fee, and agent.",tip:"Genre values should be slugs, not display names — 'deep-house' not 'Deep House'. Run a Genres import first so the slugs exist, or add them manually after."},
+  {title:"Preview Before Importing",body:"Before committing the import, the app shows a preview of the first few rows and flags any data issues — like unrecognized genre slugs or missing required fields. You can proceed even with warnings — those rows are skipped.",tip:"The warning about unknown genres is common. Either fix the genre slugs in your CSV, or import without them and assign genres manually post-import."},
+  {title:"Import Results",body:"All imported artists are created as <strong>Draft</strong> posts — they won't go live until you publish them. The results screen shows how many were created and how many rows were skipped. Tap <strong>View Artists</strong> to review the imported records.",tip:"After import, go through the artist list and add photos before publishing. Artists without photos will show a placeholder initial on the website."}
+];
+let current=0;
+const dots=document.getElementById('dots');
+steps.forEach((_,i)=>{const d=document.createElement('div');d.className='dot'+(i===0?' active':'');dots.appendChild(d)});
+function render(){
+  const s=steps[current];
+  document.getElementById('stepNum').textContent=\`Step \${current+1} of \${steps.length}\`;
+  document.getElementById('stepTitle').textContent=s.title;
+  document.getElementById('stepBody').innerHTML=s.body;
+  document.getElementById('stepTip').textContent=s.tip;
+  document.getElementById('btnPrev').disabled=current===0;
+  document.getElementById('btnNext').textContent=current===steps.length-1?'Done ✓':'Next →';
+  document.querySelectorAll('.dot').forEach((d,i)=>{d.className='dot'+(i===current?' active':'')});
+  document.querySelectorAll('.slide').forEach((s,i)=>{s.className='slide'+(i===current?' active':i<current?' out':'')});
+}
+function next(){if(current<steps.length-1){current++;render();}}
+function prev(){if(current>0){current--;render();}}
+render();
+<\/script>
+</body>
+</html>
+`;export{e as default};

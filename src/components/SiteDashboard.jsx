@@ -5,9 +5,22 @@ import { useAuth } from '../auth/AuthContext';
 import EventSelector from './EventSelector';
 import { useEffect } from 'react';
 import { resolveSiteLogo, siteName } from '../utils/helpers';
-// TODO: useUptimeStatus + StatusBadge not yet implemented — stubbed until built
-const useUptimeStatus = () => ({ statusBySiteId: {} });
-const StatusBadge = () => null;
+// StatusBadge — inline until useUptimeStatus is built
+function StatusBadge({ status, size }) {
+  const colors = {
+    up:      'bg-green-100 text-green-700',
+    down:    'bg-red-100 text-red-700',
+    degraded:'bg-amber-100 text-amber-700',
+  };
+  const labels = { up: 'Live', down: 'Down', degraded: 'Degraded' };
+  const cls = colors[status] || 'bg-gray-100 text-gray-500';
+  return (
+    <span className={`inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full ${cls}`}>
+      <img src="/icons/fc-icn-status.svg" alt="" className="w-3 h-3" />
+      {labels[status] || status}
+    </span>
+  );
+}
 
 export default function SiteDashboard() {
   const { siteId } = useParams();

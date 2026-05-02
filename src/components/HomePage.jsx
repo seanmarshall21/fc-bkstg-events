@@ -71,7 +71,7 @@ export default function HomePage() {
               onClick={() => navigate(`/site/${site.id}`)}
               className="vc-card flex items-center gap-3 hover:border-vc-300 transition-colors text-left group w-full"
             >
-              <div className="w-12 h-12 rounded-full bg-surface-2 overflow-hidden flex items-center justify-center shrink-0">
+              <div className="w-14 h-14 rounded-full bg-surface-2 overflow-hidden flex items-center justify-center shrink-0">
                 {logo ? (
                   <img
                     src={logo}

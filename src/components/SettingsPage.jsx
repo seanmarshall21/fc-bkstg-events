@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { MODULES } from '../api/endpoints';
-import { Check, Globe, Trash2, LogOut, LogIn, GripVertical, BookOpen, PlayCircle } from 'lucide-react';
+import { Check, Globe, Trash2, LogOut, LogIn, GripVertical, BookOpen, PlayCircle, Pencil, X } from 'lucide-react';
 import * as Icons from 'lucide-react';
 import { resolveSiteLogo, siteName } from '../utils/helpers';
 import DraggableList from './DraggableList';
@@ -14,11 +14,30 @@ export default function SettingsPage() {
     activeSiteId,
     hasSites,
     updateSiteModules,
+    renameSite,
     removeSite,
     user,
     isAuthenticated,
     signOut,
   } = useAuth();
+
+  const [editingName, setEditingName] = useState(false);
+  const [nameInput, setNameInput] = useState('');
+  const [savingName, setSavingName] = useState(false);
+
+  const handleEditName = () => {
+    setNameInput(siteName(activeSite));
+    setEditingName(true);
+  };
+
+  const handleSaveName = async () => {
+    const trimmed = nameInput.trim();
+    if (!trimmed) return;
+    setSavingName(true);
+    await renameSite(activeSiteId, trimmed);
+    setSavingName(false);
+    setEditingName(false);
+  };
 
   if (!hasSites || !activeSite) {
     return (
@@ -75,15 +94,43 @@ export default function SettingsPage() {
       {/* Current Site Info */}
       <div className="vc-card mb-6">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-vc-100 overflow-hidden flex items-center justify-center">
+          <div className="w-10 h-10 rounded-xl bg-vc-100 overflow-hidden flex items-center justify-center shrink-0">
             {resolveSiteLogo(activeSite) ? (
               <img src={resolveSiteLogo(activeSite)} alt="" className="w-full h-full object-cover" />
             ) : (
               <Globe className="w-5 h-5 text-vc-600" />
             )}
           </div>
-          <div className="flex-1">
-            <div className="text-sm font-medium text-gray-800">{siteName(activeSite)}</div>
+          <div className="flex-1 min-w-0">
+            {editingName ? (
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={nameInput}
+                  onChange={e => setNameInput(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') handleSaveName(); if (e.key === 'Escape') setEditingName(false); }}
+                  className="flex-1 min-w-0 text-sm font-medium border border-vc-400 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-vc-500/30"
+                  autoFocus
+                />
+                <button
+                  onClick={handleSaveName}
+                  disabled={savingName}
+                  className="text-xs font-medium text-white bg-vc-600 hover:bg-vc-500 px-2.5 py-1 rounded-lg transition-colors disabled:opacity-50 shrink-0"
+                >
+                  {savingName ? '…' : 'Save'}
+                </button>
+                <button onClick={() => setEditingName(false)} className="p-1 text-gray-400 hover:text-gray-600">
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-1.5">
+                <div className="text-sm font-medium text-gray-800 truncate">{siteName(activeSite)}</div>
+                <button onClick={handleEditName} className="p-0.5 text-gray-300 hover:text-gray-500 shrink-0">
+                  <Pencil className="w-3 h-3" />
+                </button>
+              </div>
+            )}
             <div className="text-xs text-gray-400">{new URL(activeSite.url).hostname}</div>
           </div>
         </div>

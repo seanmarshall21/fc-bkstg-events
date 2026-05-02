@@ -1,12 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthContext';
-import ZooEventDetail from './ZooEventDetail';
 import { WP_ENDPOINTS } from '../../api/endpoints';
 import useSchema, { buildDefaultValues, buildAcfPayload, extractValues } from '../../hooks/useSchema';
 import FieldEditor from '../../components/ui/FieldEditor';
 import ArchiveEventDialog from '../../components/ArchiveEventDialog';
-import { Loader2, ChevronRight, ChevronLeft, Archive, CheckCircle2, Circle } from 'lucide-react';
+import ZooEventDetail from './ZooEventDetail';
+import { Loader2, ChevronRight, ChevronLeft, Archive, CheckCircle2, Circle, ExternalLink } from 'lucide-react';
 import { decodeHtml } from '../../utils/helpers';
 
 const PHASES = [
@@ -105,12 +105,15 @@ function PhaseStrip({ currentPhase, onAdvance, advancing }) {
 }
 
 export default function EventDetail() {
+  const { activeSite } = useAuth();
+  if (activeSite?.registrySlug === 'zoo-agency') return <ZooEventDetail />;
+  return <EventDetailInner />;
+}
+
+function EventDetailInner() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { getClient, activeSite } = useAuth();
-
-  // Zoo Agency gets its own purpose-built detail component
-  if (activeSite?.slug === 'zoo-agency') return <ZooEventDetail />;
   const [event, setEvent]             = useState(null);
   const [loading, setLoading]         = useState(true);
   const [saving, setSaving]           = useState(false);
@@ -225,6 +228,8 @@ export default function EventDetail() {
   const currentPhase = event.event_phase || 'planning';
   const isArchived   = currentPhase === 'archived';
 
+  const permalink = event._wp?.link || null;
+
   return (
     <>
       {!isCreate && (
@@ -233,6 +238,20 @@ export default function EventDetail() {
           onAdvance={handleAdvancePhase}
           advancing={advancing}
         />
+      )}
+
+      {/* Permalink bar */}
+      {!isCreate && permalink && (
+        <a
+          href={permalink}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-2 px-4 py-2 bg-surface-1 border-b border-surface-3 text-xs text-gray-400 hover:text-vc-600 transition-colors"
+          onClick={e => e.stopPropagation()}
+        >
+          <ExternalLink className="w-3 h-3 shrink-0" />
+          <span className="truncate">{permalink}</span>
+        </a>
       )}
 
       <FieldEditor
@@ -258,7 +277,7 @@ export default function EventDetail() {
 
       {showArchive && (
         <ArchiveEventDialog
-          getClient={getClient}
+          apiBase={activeSite ? `${activeSite.url}/wp-json` : ''}
           eventId={id}
           eventTitle={event.title}
           onClose={() => setShowArchive(false)}

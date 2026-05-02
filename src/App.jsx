@@ -1,33 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider, useAuth } from './auth/AuthContext';
-import Layout from './components/Layout';
-import WelcomePage from './auth/WelcomePage';
-import LoginPage from './auth/LoginPage';
-import HomePage from './components/HomePage';
-import SiteDashboard from './components/SiteDashboard';
-import SettingsPage from './components/SettingsPage';
-import SearchPage from './components/SearchPage';
-import FavoritesPage from './components/FavoritesPage';
-import AddSitePage from './sites/AddSitePage';
-import UpdateToast from './components/UpdateToast';
-
-// Modules
-import ArtistList from './modules/artists/ArtistList';
-import ArtistDetail from './modules/artists/ArtistDetail';
-import LineupList from './modules/lineup/LineupList';
-import LineupDetail from './modules/lineup/LineupDetail';
-import SponsorList from './modules/sponsors/SponsorList';
-import SponsorDetail from './modules/sponsors/SponsorDetail';
-import EventList from './modules/events/EventList';
-import EventDetail from './modules/events/EventDetail';
-import StylesView from './modules/styles/StylesView';
-import ConfidentialView from './modules/confidential/ConfidentialView';
-import GenreList from './modules/genres/GenreList';
-import StageList from './modules/stages/StageList';
-import ContestantList from './modules/contestants/ContestantList';
-import ContestantDetail from './modules/contestants/ContestantDetail';
-
 import { Component } from 'react';
+import { AuthProvider, useAuth } from './auth/AuthContext';
+import { TutorialProvider } from './context/TutorialContext';
 
 /**
  * Error boundary — catches render errors anywhere in the tree and shows
@@ -47,11 +21,13 @@ class ErrorBoundary extends Component {
   render() {
     if (this.state.error) {
       return (
-        <div style={{ padding: 32, textAlign: 'center' }}>
-          <p style={{ color: 'red', fontWeight: 600, marginBottom: 8 }}>Something went wrong</p>
-          <p style={{ color: '#666', fontSize: 14, marginBottom: 16 }}>{this.state.error.message}</p>
-          <button onClick={() => { this.setState({ error: null }); window.history.back(); }}
-            style={{ padding: '8px 16px', borderRadius: 8, background: '#6d28d9', color: '#fff', border: 'none', cursor: 'pointer' }}>
+        <div className="flex flex-col items-center justify-center min-h-screen p-8 text-center bg-surface-0">
+          <p className="text-red-500 font-semibold mb-2">Something went wrong</p>
+          <p className="text-gray-500 text-sm mb-4">{this.state.error.message}</p>
+          <button
+            onClick={() => { this.setState({ error: null }); window.history.back(); }}
+            className="px-4 py-2 rounded-lg bg-vc-600 text-white text-sm"
+          >
             Go back
           </button>
         </div>
@@ -60,6 +36,37 @@ class ErrorBoundary extends Component {
     return this.props.children;
   }
 }
+import Layout from './components/Layout';
+import WelcomePage from './auth/WelcomePage';
+import LoginPage from './auth/LoginPage';
+import HomePage from './components/HomePage';
+import SiteDashboard from './components/SiteDashboard';
+import SettingsPage from './components/SettingsPage';
+import SearchPage from './components/SearchPage';
+import FavoritesPage from './components/FavoritesPage';
+import AddSitePage from './sites/AddSitePage';
+import TutorialsPage from './components/TutorialsPage';
+import UpdateToast from './components/UpdateToast';
+
+// Modules
+import ArtistList from './modules/artists/ArtistList';
+import ArtistDetail from './modules/artists/ArtistDetail';
+import ImportArtists from './modules/artists/ImportArtists';
+import LineupList from './modules/lineup/LineupList';
+import LineupDetail from './modules/lineup/LineupDetail';
+import SponsorList from './modules/sponsors/SponsorList';
+import SponsorDetail from './modules/sponsors/SponsorDetail';
+import EventList from './modules/events/EventList';
+import EventDetail from './modules/events/EventDetail';
+import ImportEvents from './modules/events/ImportEvents';
+import StylesView from './modules/styles/StylesView';
+import ConfidentialView from './modules/confidential/ConfidentialView';
+import GenreList from './modules/genres/GenreList';
+import StageList from './modules/stages/StageList';
+import ContestantList from './modules/contestants/ContestantList';
+import ContestantDetail from './modules/contestants/ContestantDetail';
+import AfterDarkList from './modules/afterdarks/AfterDarkList';
+import AfterDarkDetail from './modules/afterdarks/AfterDarkDetail';
 
 function AppRoutes() {
   const { loading, hasSeenWelcome, dismissWelcome, sites, isAuthenticated } = useAuth();
@@ -73,7 +80,6 @@ function AppRoutes() {
   }
 
   // Tier 1 auth gate — must be logged into main hub account
-  // If not authenticated, only allow welcome, login, and sign-up routes
   if (!isAuthenticated) {
     return (
       <Routes>
@@ -85,52 +91,61 @@ function AppRoutes() {
 
   // Authenticated — show full app
   return (
-    <Routes>
-      <Route element={<Layout />}>
-        <Route path="/" element={<HomePage />} />
-        <Route path="/site/:siteId" element={<SiteDashboard />} />
+    <TutorialProvider>
+      <Routes>
+        <Route element={<Layout />}>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/site/:siteId" element={<SiteDashboard />} />
 
-        {/* Artists */}
-        <Route path="/artists" element={<ArtistList />} />
-        <Route path="/artists/:id" element={<ArtistDetail />} />
+          {/* Artists */}
+          <Route path="/artists" element={<ArtistList />} />
+          <Route path="/artists/import" element={<ImportArtists />} />
+          <Route path="/artists/:id" element={<ArtistDetail />} />
 
-        {/* Lineup */}
-        <Route path="/lineup" element={<LineupList />} />
-        <Route path="/lineup/:id" element={<LineupDetail />} />
+          {/* Lineup */}
+          <Route path="/lineup" element={<LineupList />} />
+          <Route path="/lineup/:id" element={<LineupDetail />} />
 
-        {/* Sponsors */}
-        <Route path="/sponsors" element={<SponsorList />} />
-        <Route path="/sponsors/:id" element={<SponsorDetail />} />
+          {/* Sponsors */}
+          <Route path="/sponsors" element={<SponsorList />} />
+          <Route path="/sponsors/:id" element={<SponsorDetail />} />
 
-        {/* Events */}
-        <Route path="/events" element={<EventList />} />
-        <Route path="/events/:id" element={<EventDetail />} />
+          {/* Events */}
+          <Route path="/events" element={<EventList />} />
+          <Route path="/events/import" element={<ImportEvents />} />
+          <Route path="/events/:id" element={<EventDetail />} />
 
-        {/* Styles */}
-        <Route path="/styles" element={<StylesView />} />
+          {/* Styles */}
+          <Route path="/styles" element={<StylesView />} />
 
-        {/* Confidentiality */}
-        <Route path="/confidential" element={<ConfidentialView />} />
+          {/* Confidentiality */}
+          <Route path="/confidential" element={<ConfidentialView />} />
 
-        {/* Contestants (rodeo) */}
-        <Route path="/contestants" element={<ContestantList />} />
-        <Route path="/contestants/:id" element={<ContestantDetail />} />
+          {/* Contestants (rodeo) */}
+          <Route path="/contestants" element={<ContestantList />} />
+          <Route path="/contestants/:id" element={<ContestantDetail />} />
 
-        {/* Taxonomies */}
-        <Route path="/genres" element={<GenreList />} />
-        <Route path="/stages" element={<StageList />} />
+          {/* After Darks (CRSSD) */}
+          <Route path="/afterdarks" element={<AfterDarkList />} />
+          <Route path="/afterdarks/:id" element={<AfterDarkDetail />} />
 
-        {/* Nav routes */}
-        <Route path="/search" element={<SearchPage />} />
-        <Route path="/favorites" element={<FavoritesPage />} />
-        <Route path="/settings" element={<SettingsPage />} />
-        <Route path="/add-site" element={<AddSitePage />} />
-        <Route path="/login" element={<LoginPage />} />
+          {/* Taxonomies */}
+          <Route path="/genres" element={<GenreList />} />
+          <Route path="/stages" element={<StageList />} />
 
-        {/* Catch-all */}
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Route>
-    </Routes>
+          {/* Nav routes */}
+          <Route path="/search" element={<SearchPage />} />
+          <Route path="/favorites" element={<FavoritesPage />} />
+          <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/tutorials" element={<TutorialsPage />} />
+          <Route path="/add-site" element={<AddSitePage />} />
+          <Route path="/login" element={<LoginPage />} />
+
+          {/* Catch-all */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Route>
+      </Routes>
+    </TutorialProvider>
   );
 }
 
@@ -138,11 +153,13 @@ export default function App() {
   return (
     <ErrorBoundary>
       <BrowserRouter>
-      <AuthProvider>
-        <AppRoutes />
-        <UpdateToast />
-      </AuthProvider>
-    </BrowserRouter>
+        <AuthProvider>
+          <ErrorBoundary>
+            <AppRoutes />
+            <UpdateToast />
+          </ErrorBoundary>
+        </AuthProvider>
+      </BrowserRouter>
     </ErrorBoundary>
   );
 }

@@ -1,52 +1,34 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthContext';
-import { VC_ENDPOINTS } from '../../api/endpoints';
-import { Upload, Download, ArrowLeft, CheckCircle, AlertCircle, Loader, Link, RefreshCw, X, FileSpreadsheet } from 'lucide-react';
+import { WP_ENDPOINTS } from '../../api/endpoints';
+import { Upload, Download, ArrowLeft, CheckCircle, AlertCircle, Loader, Link, RefreshCw, X } from 'lucide-react';
 
 const SHEET_URL_CACHE_KEY = 'vc_import_sheet_url';
 
 // ── CSV column definitions (mirrors PHP get_columns()) ────────────────────────
 
 const COLUMNS = [
-  // Main
-  { key: 'slug',                label: 'Slug',                notes: 'Match key — finds existing post (required)',                                                                      required: true },
-  { key: 'title',               label: 'Title',               notes: 'WP post title; also writes vc_ep_title' },
-  { key: 'post_status',         label: 'Status',              notes: 'publish / draft' },
-  { key: 'sub_title',           label: 'Sub-title',           notes: "Season / subtitle — e.g. Fall '26" },
-  { key: 'year',                label: 'Year',                notes: 'Event year (number)' },
-  { key: 'brand',               label: 'Brand',               notes: 'FNGRS CRSSD · Outriders Present · LED · Majestic Valley Arena' },
-  { key: 'confidential',        label: 'Confidential',        notes: '0 or 1 — writes vc_ep_confidential + vc_confidential_master' },
-  { key: 'private',             label: 'Private',             notes: '0 or 1 — writes vc_ep_private_visibility' },
-  // Dates
-  { key: 'start_date',          label: 'Start Date',          notes: 'YYYY-MM-DD' },
-  { key: 'end_date',            label: 'End Date',            notes: 'YYYY-MM-DD' },
-  { key: 'tbd_enabled',         label: 'TBD Enabled',         notes: '0 or 1 — hides dates, shows tbd_text' },
-  { key: 'tbd_text',            label: 'TBD Text',            notes: 'Custom TBD label (default: TBD)' },
-  // Details
-  { key: 'vc_em_estd',          label: 'Estd. Year',          notes: 'Year established — nth-year calculation' },
-  { key: 'city',                label: 'City',                notes: 'Flat ACF field' },
-  { key: 'state',               label: 'State',               notes: 'Flat ACF field, e.g. CA' },
-  { key: 'venue',               label: 'Venue',               notes: 'Waterfront Park · Petco Park · Gallagher Square · Big Mtn Ranch · Majestic Valley Arena · Bozeman MT' },
-  { key: 'custom_venue_option', label: 'Custom Venue Option', notes: '0 or 1' },
-  { key: 'custom_venue_text',   label: 'Custom Venue Text',   notes: 'Shown when custom_venue_option = 1' },
-  // Specs
-  { key: 'tags',                label: 'Tags',                notes: 'Comma-separated event-tag term names (must exist in taxonomy)' },
-  { key: 'capacity_label',      label: 'Capacity Label',      notes: 'Default: Capacity' },
-  { key: 'capacity_amount',     label: 'Capacity Amount',     notes: 'Display text, e.g. 5,000 attendees' },
-  { key: 'genre_label',         label: 'Genre Label',         notes: 'Default: Genre' },
-  { key: 'genres',              label: 'Genres',              notes: 'Comma-separated event-genre term names (must exist in taxonomy)' },
-  { key: 'custom_data_item_tf', label: 'Custom Data Toggle',  notes: '0 or 1 — replaces genre block with custom data' },
-  { key: 'custom_data_label',   label: 'Custom Data Label',   notes: '→ custom_data_item.custom_data_label' },
-  { key: 'custom_data_text',    label: 'Custom Data Text',    notes: '→ custom_data_item.custom_data_text' },
-  // Media
-  { key: 'vimeo_id',            label: 'Vimeo ID',            notes: 'Numeric Vimeo ID only (e.g. 1085752382) — or full https://vimeo.com/... URL' },
-  // Links
-  { key: 'website_label',       label: 'Website Label',       notes: '→ vc_ep_website.vc_ep_website_label' },
-  { key: 'website_url',         label: 'Website URL',         notes: '→ vc_ep_website.vc_ep_website_url' },
-  { key: 'social_label',        label: 'Social Label',        notes: '→ vc_ep_social.vc_ep_social_label' },
-  { key: 'social_url',          label: 'Social URL',          notes: '→ vc_ep_social.vc_ep_social_url' },
-  { key: 'event_phase',         label: 'Phase',               notes: 'planning · save-the-date · lineup-phase-1 · presale · onsale · lineup-phase-2 · set-times-live · event-day · post-event · archived' },
+  { key: 'slug',         label: 'Slug',         notes: 'Match key — required',       required: true },
+  { key: 'title',        label: 'Title',         notes: 'Event name' },
+  { key: 'post_status',  label: 'Status',        notes: 'publish or draft' },
+  { key: 'season',       label: 'Season',        notes: "e.g. Spring '26" },
+  { key: 'start_date',   label: 'Start Date',    notes: 'YYYY-MM-DD' },
+  { key: 'end_date',     label: 'End Date',      notes: 'YYYY-MM-DD' },
+  { key: 'city',         label: 'City',          notes: '' },
+  { key: 'state',        label: 'State',         notes: '' },
+  { key: 'venue',        label: 'Venue',         notes: '' },
+  { key: 'capacity',     label: 'Capacity',      notes: 'Number' },
+  { key: 'established',  label: 'Established',   notes: 'Year (number)' },
+  { key: 'website',      label: 'Website',       notes: 'URL' },
+  { key: 'instagram',    label: 'Instagram',     notes: 'URL' },
+  { key: 'facebook',     label: 'Facebook',      notes: 'URL' },
+  { key: 'spotify',      label: 'Spotify',       notes: 'URL' },
+  { key: 'twitter',      label: 'Twitter / X',   notes: 'URL' },
+  { key: 'tiktok',       label: 'TikTok',        notes: 'URL' },
+  { key: 'soundcloud',   label: 'SoundCloud',    notes: 'URL' },
+  { key: 'confidential', label: 'Confidential',  notes: '0 or 1' },
+  { key: 'private',      label: 'Private',       notes: '0 or 1' },
 ];
 
 // ── CSV helpers ───────────────────────────────────────────────────────────────
@@ -89,52 +71,13 @@ function parseCSV(text) {
 function generateTemplateCSV() {
   const headers = COLUMNS.map(c => c.key);
   const example = [
-    // Main
-    'crssd-fall-2026', 'CRSSD Fall 2026', 'publish', "Fall '26", '2026', 'FNGRS CRSSD', '0', '0',
-    // Dates
-    '2026-10-03', '2026-10-04', '0', '',
-    // Details
-    '2013', 'San Diego', 'CA', 'Waterfront Park', '0', '',
-    // Specs
-    'Electronic,House', 'Capacity', '5,000 attendees', 'Genre', 'House,Techno', '0', '', '',
-    // Media
-    '1085752382',
-    // Links
-    'Official Site', 'https://crssdfest.com', 'Instagram', 'https://instagram.com/crssd',
-    // Phase
-    'onsale',
+    'crssd-fall-2026', 'CRSSD Fall 2026', 'publish', "Fall '26",
+    '2026-10-03', '2026-10-04', 'San Diego', 'CA', 'Waterfront Park',
+    '5000', '2013', 'https://crssdfest.com', 'https://instagram.com/crssd',
+    '', '', '', '', '', '0', '0',
   ];
   const escape = v => /[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v;
   return [headers, example].map(row => row.map(escape).join(',')).join('\n');
-}
-
-// ── Google Sheet URL normalization ────────────────────────────────────────────
-// Converts a Google Sheets edit/share URL into a published CSV export URL so
-// the browser can fetch it directly without auth. If the URL is already a CSV
-// export URL (contains output=csv or format=csv), it's returned unchanged.
-
-function normalizeSheetUrl(raw) {
-  const url = raw.trim();
-  // Already a CSV output URL — leave it alone
-  if (url.includes('output=csv') || url.includes('format=csv')) return url;
-
-  // Detect Google Sheets domain
-  if (!url.includes('docs.google.com/spreadsheets')) return url;
-
-  try {
-    // Extract the sheet ID from the path segment after /d/
-    const idMatch = url.match(/\/spreadsheets\/d\/([^/?#]+)/);
-    if (!idMatch) return url;
-    const id = idMatch[1];
-
-    // Prefer ?gid= from the URL hash (#gid=...) or query (?gid=...)
-    const gidMatch = url.match(/[#&?]gid=(\d+)/);
-    const gid = gidMatch ? gidMatch[1] : '0';
-
-    return `https://docs.google.com/spreadsheets/d/${id}/pub?gid=${gid}&single=true&output=csv`;
-  } catch {
-    return url;
-  }
 }
 
 // ── Main component ────────────────────────────────────────────────────────────
@@ -186,19 +129,12 @@ export default function ImportEvents() {
     URL.revokeObjectURL(url);
   };
 
-  const downloadXlsxTemplate = () => {
-    const a = document.createElement('a');
-    a.href = '/vc-events-import-template.xlsx';
-    a.download = 'vc-events-import-template.xlsx';
-    a.click();
-  };
-
   // ── Sheet URL — load from WP on mount ─────────────────────────────────────
 
   useEffect(() => {
     const client = getClient();
     if (!client) return;
-    client.get(VC_ENDPOINTS.importer.sheetUrl)
+    client.get(WP_ENDPOINTS.events.sheetUrl)
       .then(({ data }) => {
         if (data?.url) {
           setSheetUrl(data.url);
@@ -222,7 +158,7 @@ export default function ImportEvents() {
     if (!client) return;
     setSheetSaving(true);
     try {
-      await client.post(VC_ENDPOINTS.importer.sheetUrl, { url: sheetUrl.trim() });
+      await client.post(WP_ENDPOINTS.events.sheetUrl, { url: sheetUrl.trim() });
     } catch (err) {
       console.warn('Sheet URL save failed:', err);
     } finally {
@@ -233,8 +169,8 @@ export default function ImportEvents() {
   // ── Fetch from Google Sheet ────────────────────────────────────────────────
 
   const fetchSheet = async () => {
-    const raw = sheetUrl.trim();
-    if (!raw) return;
+    const url = sheetUrl.trim();
+    if (!url) return;
     setSheetFetching(true);
     setSheetError('');
     setPreview(null);
@@ -242,19 +178,14 @@ export default function ImportEvents() {
     setResults(null);
     setStatus('idle');
     try {
-      const csvUrl = normalizeSheetUrl(raw);
-      const res = await fetch(csvUrl);
-      if (!res.ok) throw new Error(`HTTP ${res.status} — make sure the sheet is published (File → Share → Publish to web → CSV).`);
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const text = await res.text();
-      // Detect HTML response — means the sheet isn't published or URL is wrong
-      if (text.trim().startsWith('<!') || text.trim().startsWith('<html')) {
-        throw new Error('Got an HTML page instead of CSV. Publish the sheet first: File → Share → Publish to web → CSV format.');
-      }
       const parsed = parseCSV(text);
-      if (!parsed.rows.length) throw new Error('Sheet returned no rows — check that columns match the template headers.');
+      if (!parsed.rows.length) throw new Error('Sheet returned no rows — check the URL and column headers.');
       setPreview(parsed);
     } catch (err) {
-      setSheetError(err.message || 'Could not fetch sheet. Make sure it is published as CSV (File → Share → Publish to web).');
+      setSheetError(err.message || 'Could not fetch sheet. Make sure it is published as CSV.');
     } finally {
       setSheetFetching(false);
     }
@@ -271,7 +202,7 @@ export default function ImportEvents() {
     setErrorMsg('');
 
     try {
-      const { data } = await client.post(VC_ENDPOINTS.importer.import, {
+      const { data } = await client.post(WP_ENDPOINTS.events.import, {
         rows: preview.rows,
       });
       setResults(data);
@@ -320,27 +251,15 @@ export default function ImportEvents() {
         <div className="bg-white border border-surface-3 rounded-2xl p-4">
           <p className="text-sm font-semibold text-gray-900 mb-1">Need the template?</p>
           <p className="text-xs text-gray-400 mb-3">
-            Download the CSV for direct upload, or download the Excel template (with dropdowns for brand, venue, phase, etc.) and upload it to Google Sheets to build your sync sheet.
+            Download a CSV with all supported columns and an example row. Fill it in, then upload below.
           </p>
-          <div className="flex flex-col gap-2">
-            <button
-              onClick={downloadTemplate}
-              className="flex items-center gap-2 text-sm font-medium text-vc-600 hover:text-vc-700 transition-colors"
-            >
-              <Download className="w-4 h-4" />
-              Download Template CSV
-            </button>
-            <button
-              onClick={downloadXlsxTemplate}
-              className="flex items-center gap-2 text-sm font-medium text-emerald-600 hover:text-emerald-700 transition-colors"
-            >
-              <FileSpreadsheet className="w-4 h-4" />
-              Download Excel Template (with dropdowns)
-            </button>
-          </div>
-          <p className="text-xs text-gray-400 mt-3 leading-relaxed">
-            <span className="font-medium text-gray-600">To sync with this app:</span> Upload the Excel file to Google Sheets → File → Share → Publish to web → CSV → copy URL → paste it in the Link field below.
-          </p>
+          <button
+            onClick={downloadTemplate}
+            className="flex items-center gap-2 text-sm font-medium text-vc-600 hover:text-vc-700 transition-colors"
+          >
+            <Download className="w-4 h-4" />
+            Download Template CSV
+          </button>
         </div>
 
         {/* ── Google Sheet link card ────────────────────────── */}
@@ -350,7 +269,7 @@ export default function ImportEvents() {
             <p className="text-sm font-semibold text-gray-900">Link to Google Sheet</p>
           </div>
           <p className="text-xs text-gray-400 mb-3">
-            Paste your Google Sheet URL (any format — edit link, share link, or published CSV). Tap Sync to pull the latest data. The sheet must be published as CSV: File → Share → Publish to web → select sheet → CSV.
+            Paste your published Google Sheet CSV URL. The link is saved — tap Sync any time to pull the latest data.
           </p>
           <div className="flex gap-2">
             <div className="relative flex-1">

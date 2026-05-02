@@ -8,7 +8,7 @@ import { uploadToWpMedia, compressImage } from '../services/mediaUploadService';
  * @param {function} onChange        Callback(newUrl, mediaObject) on successful upload
  * @param {function} onRemove        Callback() when user removes image
  * @param {string}   aspectRatio     "square" | "circle" | "landscape" | "portrait"
- * @param {number}   maxSize         Unused — compression now triggers at 100 KB for all uploads
+ * @param {number}   maxSize         Max file size in KB before compression triggers (default 100)
  * @param {string}   siteUrl         WordPress site URL (no trailing slash)
  * @param {string}   wpUsername      WP username for Application Password auth
  * @param {string}   wpAppPassword   WP Application Password
@@ -19,7 +19,7 @@ export default function PhotoUpload({
   onChange,
   onRemove,
   aspectRatio = 'square',
-  maxSize = 2,
+  maxSize = 100,
   siteUrl,
   wpUsername,
   wpAppPassword,
@@ -77,12 +77,11 @@ export default function PhotoUpload({
     setProgress(0);
 
     try {
-      // Compress if over 100 KB — covers the gap between the old 2 MB gate
-      // and real-world server upload limits on DreamHost (PHP-FPM).
-      // compressImage returns the original blob if compression produces a
-      // larger result, so small files are safe to pass through.
+      // Compress anything over the threshold (default 100KB) before upload.
+      // Keeps files small enough to clear DreamHost PHP upload limits and
+      // avoids silent hang on large raw uploads.
       let uploadFile = file;
-      if (file.size > 100 * 1024) {
+      if (file.size > maxSize * 1024) {
         const compressed = await compressImage(file, 1600, 0.82);
         uploadFile = new File([compressed], file.name.replace(/\.\w+$/, '.jpg'), {
           type: 'image/jpeg',

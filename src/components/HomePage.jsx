@@ -15,7 +15,7 @@ export default function HomePage() {
       <div className="p-6 pb-8 animate-fade-in">
         <div className="text-center py-20">
           <div className="w-24 h-24 mx-auto mb-5 rounded-full bg-vc-50 flex items-center justify-center">
-            <img src="/icons/VC-WebApp-Logo-Purp-lt.svg" alt="" className="w-14 h-14 object-contain" />
+            <img src="/icons/VC-WebApp-Logo-Purp-dark.svg" alt="" className="w-14 h-14 object-contain" />
           </div>
           <h2 className="text-2xl font-bold text-gray-900">
             Your Sites
@@ -46,7 +46,7 @@ export default function HomePage() {
             className="w-full h-full object-contain"
             onError={(e) => {
               // Fallback to simpler logo
-              e.target.src = '/icons/VC-WebApp-Logo-Purp-lt.svg';
+              e.target.src = '/icons/VC-WebApp-Logo-Purp-dark.svg';
               e.target.className = 'w-16 h-16 object-contain mx-auto mt-4';
             }}
           />
@@ -71,7 +71,7 @@ export default function HomePage() {
               onClick={() => navigate(`/site/${site.id}`)}
               className="vc-card flex items-center gap-3 hover:border-vc-300 transition-colors text-left group w-full"
             >
-              <div className="w-12 h-12 rounded-full bg-surface-2 overflow-hidden flex items-center justify-center shrink-0">
+              <div className="w-14 h-14 rounded-full bg-surface-2 overflow-hidden flex items-center justify-center shrink-0">
                 {logo ? (
                   <img
                     src={logo}

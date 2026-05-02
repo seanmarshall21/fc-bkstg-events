@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from './AuthContext';
-import { ArrowRight, Mail, Lock, Eye, EyeOff } from 'lucide-react';
+import { ArrowRight, Mail, Lock, Eye, EyeOff, PlayCircle } from 'lucide-react';
 
 /**
  * Login / Sign Up page.
@@ -206,6 +206,19 @@ export default function LoginPage() {
         >
           Back
         </button>
+
+        {/* Watch tutorials */}
+        <div className="mt-10 pt-6 border-t border-surface-3">
+          <a
+            href="/tutorials/video-tutorials.html"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl border border-surface-3 bg-white text-sm font-medium text-gray-600 hover:bg-surface-1 hover:text-gray-800 transition-colors"
+          >
+            <PlayCircle className="w-4 h-4 text-vc-600" />
+            Watch tutorials
+          </a>
+        </div>
       </div>
     </div>
   );

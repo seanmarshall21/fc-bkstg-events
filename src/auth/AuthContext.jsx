@@ -403,6 +403,13 @@ export function AuthProvider({ children }) {
     await persistSites(updated);
   }, [sites, persistSites]);
 
+  const renameSite = useCallback(async (siteId, name) => {
+    const updated = sites.map(s =>
+      s.id === siteId ? { ...s, name } : s
+    );
+    await persistSites(updated);
+  }, [sites, persistSites]);
+
   const hasSites = sites.length > 0;
 
   return (
@@ -431,6 +438,7 @@ export function AuthProvider({ children }) {
         removeSite,
         switchSite,
         updateSiteModules,
+        renameSite,
         hasSeenWelcome,
         dismissWelcome,
         // Events

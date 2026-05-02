@@ -1,410 +1,263 @@
-# CLAUDE.md — Zoo Agency · EMH Event Property Listings
+# FC Events Backstage — VC Event Manager PWA
 
-> **Session context for AI assistants.** Read this first before any Zoo Agency WordPress work.
-> Last updated: 2026-04-24 (session 6)
-
----
-
-## File Versioning Convention
-
-**Reference/doc files** (`.md`, specs, layer stacks, build frameworks):
-- Version in the **filename**: `vc-listings-layer-stack-v2.md`
-- First line of file: version number (`# v2.0`)
-- Second line of file: date and timestamp (`# 2026-04-23 02:15 PDT`)
-- Keep prior version around briefly, then delete once the new one is confirmed good
-
-**Deployed asset files** (`.js`, `.css`, `.php` — anything consumed by WPCode, a `<script>` tag, or a PHP include):
-- **Filename stays stable** — never version the filename (changing it breaks references)
-- Version lives in the **file header comment**, lines 1–2 of the block:
-  ```
-  v3.2.0
-  2026-04-23 02:15 PDT
-  ```
-- Changelog entries go in the header block beneath the timestamp
+Live: https://fcevents.netlify.app  
+Managed by: Sean Marshall (Vivo Creative)  
+Brands: CRSSD, Proper NYE, UTBS, Wild Horses, SD Rodeo, LED, Outriders
 
 ---
 
-## Sean's Build Philosophy (read before proposing any implementation)
+## Build & Deploy Workflow
 
-**No shortcodes. No hardcoded markup.** Sean strongly prefers visually editable, native Oxygen elements over PHP-rendered HTML or shortcode outputs. When something breaks, he needs to be able to fix it in the Oxygen builder — not hunt through a PHP string.
+**Source repo:** `vc-event-manager` (this repo — commit src/ changes here)  
+**Deploy repo:** `seanmarshall21/fc-bkstg-events` → Netlify auto-deploys from `main`
 
-**Default to native Oxygen elements.** Use Code Blocks only when Oxygen's dynamic data picker genuinely cannot resolve the field (nested ACF groups, taxonomy term arrays, formatted output). For everything else — structure, flat ACF fields, images, simple text — use native elements.
+### Standard workflow (src/ changes only)
 
-**Hybrid is the right pattern for the card repeater:** native Oxygen divs for card structure, Code Blocks only for the fields that genuinely require PHP. The actual short list is: tag chips, genre chips, nth year, and the video iframe. Everything else — images, logos, text, social links, date (built with Oxygen dynamic data + conditional visibility), meta labels/values — is native Oxygen.
+```bash
+# 1. Make changes in vc-event-manager/src/
+# 2. Commit to vc-event-manager:
+cd ~/Documents/GitHub/vc-event-manager
+git add src/<changed-files>
+git commit -m "feat: description"
+git push
 
-**Minimum Code Block list for cards:**
-1. Tag chips — WP_Term[] → pill HTML
-2. Genre chips — WP_Term[] → pill HTML
-3. Nth year — `vc_nth_year()` calculation
-4. Video iframe — Vimeo embed with `data-src` (lazy-loaded by JS on hover)
-5. Contact mailto href — combines `zoo_contact_emails` (options page) + `vc_ep_title` (per-post)
+# 3. Sync changed src/ files to deploy repo:
+cp ~/Documents/GitHub/vc-event-manager/src/<file> ~/Documents/GitHub/fc-bkstg-events/src/<file>
 
----
-
-## Card Video — Hover Autoplay Behavior
-
-**No player UI.** No play button. On card hover the video starts automatically and covers the image. On mouseout the video remains loaded but hidden.
-
-**Vimeo field format:** Store only the numeric Vimeo ID in `video → vimeo_id` — e.g. `1085752382`. The ACF field is a Text type with `https://vimeo.com/` as a Prepend (cosmetic UI only — stored value is just the number). The Code Block uses the ID directly to construct the embed URL. Access via `get_field('video')['vimeo_id']` — `video` is a top-level group, NOT nested inside `vc_ep_media`.
-
-**Correct embed URL pattern:**
-```
-https://player.vimeo.com/video/{ID}?background=1&autoplay=1&muted=1&loop=1&autopause=0
-```
-`background=1` is the critical parameter — it disables all Vimeo UI and locks the player into silent background-video mode.
-
-**Lazy loading:** The iframe renders with `data-src` (not `src`). `vc-listings.js` sets `src` from `data-src` on the first `mouseenter` of the card. Idle cards never load the Vimeo iframe. No `vc_vimeo_id()` call needed — `vimeo_id` is already the numeric ID.
-
-**CSS:** The iframe is `position:absolute; inset:0; width:100%; height:100%; opacity:0; transition:opacity 0.4s; pointer-events:none;` inside a `position:relative; overflow:hidden` container. Parent card `:hover` brings opacity to 1.
-
-**JS version:** v3.2.0 — `initHoverVideo()` added to `vc-listings.js` (WPCode #3607).
-
----
-
-## Project Overview
-
-**Client:** Zoo Agency (aka EMH — the class prefix used in Oxygen)
-**Site:** WordPress on DreamHost (PHP-FPM/FastCGI — NOT WP Engine)
-**Builder:** Oxygen Builder (Reusable Parts, native elements, Code Blocks)
-**Plugin stack:** vc-event-properties, vc-creative-toolkit, ACF Pro, WPCode
-
-This is a filterable event property listings system. A custom CPT (`vc_event_property`) powers cards that display Zoo Agency's festival portfolio. The listing page uses a PHP/JS/CSS stack injected via WPCode — not a page builder template.
-
----
-
-## WordPress Environment
-
-- **Host:** DreamHost, PHP-FPM/FastCGI
-- **PHP config:** `.user.ini` (NOT `.htaccess` php_value — those don't work on DreamHost)
-  - `max_input_vars = 5000` — already set
-  - `memory_limit = 512M` — needs to be added (sitemap OOM issue with 300+ posts)
-- **Child theme:** active; helper functions go in `functions.php`
-- **WPCode:** used for all PHP and JS snippet deployment (preferred over direct file edits)
-
----
-
-## Plugin: vc-event-properties
-
-**CPT:** `vc_event_property`
-**Taxonomies (registered via plugin or ACF):**
-- `vc_event_tag` — Event Tags (flat, used for tag chips)
-- `vc_event_genre` — Event Genres (flat, used for genre chips)
-
-**Naming conventions:**
-- PHP prefix: `vc_` (all functions, classes, CPTs, field names)
-- CSS class prefix: `vc_` with BEM underscores
-- ACF field prefix: `vc_ep_` for most fields; `brand`, `year` are flat (no prefix)
-- REST namespace: `vc/v1`
-
----
-
-## ACF Field Structure — `vc_event_property`
-
-All field paths verified against ACF JSON export (2026-04-23, Sean's working version).
-
-```
-FLAT (top-level, not in group)
-  brand                     get_field('brand')                            select value
-  year                      get_field('year')                             number
-  vc_ep_event_icon          get_field('vc_ep_event_icon')                 image array
-  vc_ep_title               get_field('vc_ep_title')                      text
-  vc_ep_sub_title           get_field('vc_ep_sub_title')                  text  ← was vc_ep_season (recreated 2026-04-27)
-  vc_ep_confidential        get_field('vc_ep_confidential')               true_false
-  vc_ep_private_visibility  get_field('vc_ep_private_visibility')         true_false
-  capacity_label            get_field('capacity_label')                   text (default "Capacity")
-  capacity_amount           get_field('capacity_amount')                  text (e.g. "12,000 attendees")
-  genre_label               get_field('genre_label')                      text (default "Genre")
-  genre_selection           get_field('genre_selection')                  taxonomy → WP_Term[]
-  custom_data_item_tf       get_field('custom_data_item_tf')              true_false
-  event_tag_labels          get_field('event_tag_labels')                 taxonomy → WP_Term[]  ← was 'tags' (recreated 2026-04-27)
-  contact_emails            get_field('contact_emails')                   text (comma-separated, per-post)
-
-DATES TAB — get_field('vc_ep_dates') → group
-  ['start_date']            Ymd string: "20260420"
-  ['end_date']              Ymd string (or empty)
-
-TBD — get_field('tbd') → group  ← SEPARATE top-level group, NOT inside vc_ep_dates
-  ['enabled']               bool
-  ['text']                  string (default "TBD")
-
-DETAILS TAB — vc_ep_details group REMOVED (2026-04-28). Fields are now FLAT top-level:
-  city                      get_field('city')                             text
-  state                     get_field('state')                            text (e.g. "CA")
-  vc_ep_event_venue         get_field('vc_ep_event_venue')                select (choices: Waterfront Park, Petco Park, Gallagher Square, Big Mtn Ranch, Majestic Valley Arena, Bozeman MT)
-  established               get_field('established')                      number (e.g. 2015)
-
-CUSTOM DATA — get_field('custom_data_item') → group  ← top-level, not nested
-  ['custom_data_label']     text
-  ['custom_data_text']      text
-
-MEDIA TAB — get_field('vc_ep_media') → group
-  ['logo_horizontal']       image array → ['url']
-  ['logo_vertical']         image array → ['url']
-  ['event_image']           image array → ['url']   ← card image
-
-VIDEO — get_field('video') → group  ← SEPARATE top-level group, NOT inside vc_ep_media
-  ['vimeo_id']              text — numeric Vimeo ID only (e.g. "1085752382") — ACF Prepend shows https://vimeo.com/ in UI only
-  ['mp4_url']               URL string
-
-MORE IMAGES — get_field('more_images') → repeater  ← top-level, NOT inside vc_ep_media
-  ['image']                 image array → ['url']
-
-MORE VIDEOS — get_field('more_videos') → repeater  ← top-level, NOT inside vc_ep_media
-  ['vimeo_url']             URL string
-  ['mp4_url']               URL string
-  ['other']                 URL string
-
-LINKS TAB (restructured 2026-04-28):
-WEBSITE — get_field('vc_ep_website') → group
-  ['vc_ep_website_label']   text (e.g. "Official Site")
-  ['vc_ep_website_url']     URL string
-
-SOCIAL — get_field('vc_ep_social') → group  ← replaces all individual social link subfields
-  ['vc_ep_social_label']    text (e.g. "Instagram", "Facebook", "Spotify")
-  ['vc_ep_social_url']      URL string
-  NOTE: individual keys ['website'], ['instagram'], ['facebook'], ['spotify'], ['twitter'], ['tiktok'], ['soundcloud'] NO LONGER EXIST
+# 4. Commit and push deploy repo (Netlify builds automatically):
+cd ~/Documents/GitHub/fc-bkstg-events
+git add src/<changed-files>
+git commit -m "feat: description"
+git push
 ```
 
-**CRITICAL ACF NOTES:**
-- `event_tag_labels` and `genre_selection` are **top-level taxonomy fields** (NOT inside a group).
-- Both have `save_terms: 0` and `load_terms: 0` — bypasses `wp_set_object_terms()`. Data stored as serialized post meta only. **Do not change this.**
-- `event_tag_labels` and `genre_selection` return `WP_Term[]` objects — NOT readable via Oxygen dynamic data picker. Must use Code Blocks with `vc_render_chips()`.
-- `event_tag_labels` was recreated from scratch (2026-04-27) — old `tags` field had stale ACF Local JSON definition in `acf-json/` folder that prevented saves. Do NOT rename this field — recreate instead if issues arise.
-- `video` is a **top-level group** (`get_field('video')`), NOT nested inside `vc_ep_media`. Any code reading `$media['video']` is wrong.
-- `tbd` is a **top-level group** (`get_field('tbd')`), NOT nested inside `vc_ep_dates`.
-- `capacity_label` and `capacity_amount` are **flat top-level fields** — old path `$details['capacity']['capacity']` no longer exists.
-- `contact_emails` is a **per-post field** (still in the group). Zoo Agency options page field is `zoo_contact_emails` (accessed via `get_field('zoo_contact_emails', 'option')`). Both exist — per-post overrides if populated, options page is the fallback.
-- **`vc_ep_details` group REMOVED (2026-04-28)** — `city`, `state`, `established` are now flat top-level fields. `venue` is now `vc_ep_event_venue` (select). Any code reading `get_field('vc_ep_details')` is stale.
-- **`vc_ep_website` group (2026-04-28)** — `get_field('vc_ep_website')` returns `['vc_ep_website_label', 'vc_ep_website_url']`. Old `$social['website']` path is gone.
-- **`vc_ep_social` group (2026-04-28)** — `get_field('vc_ep_social')` returns `['vc_ep_social_label', 'vc_ep_social_url']`. All individual subfields (instagram, facebook, spotify, twitter, tiktok, soundcloud) removed from ACF. Any code reading those keys is stale.
+Netlify runs `npm run build` from fc-bkstg-events and serves from `build/` (gitignored). **Do NOT commit build artifacts** to fc-bkstg-events — Netlify handles the build.
+
+### ⚠️ RETIRED: old static bundle workflow
+~~`cp -r vc-event-manager/build/. fc-bkstg-events/`~~ — This committed built bundles to the repo root and served them statically. **Do not use.** Netlify now builds from source via `netlify.toml`. Any feature not committed to `src/` will be lost on the next deploy.
+
+**Stale lock cleanup** (run if git errors on index.lock or HEAD.lock):
+```bash
+rm ~/Documents/GitHub/vc-event-manager/.git/index.lock 2>/dev/null
+rm ~/Documents/GitHub/vc-event-manager/.git/HEAD.lock 2>/dev/null
+rm ~/Documents/GitHub/fc-bkstg-events/.git/index.lock 2>/dev/null
+rm ~/Documents/GitHub/fc-bkstg-events/.git/HEAD.lock 2>/dev/null
+```
+
+**PWA cache:** After a deploy, clear site data or delete + re-add the home screen icon to pick up new bundles.
 
 ---
 
-## ACF Options Page — Zoo Agency
+## Stack
 
-**Built (2026-04-22), updated slug confirmed 2026-04-23:**
-- Options page title: **Zoo Admin** — menu slug: `zoo-admin`
-- Registered via ACF Pro → Options Pages (not WPCode #3598 — that snippet is off)
-- ACF field group: "Zoo Agency Settings" — post ID 3599
-- Field: `zoo_contact_emails` — Text, comma-separated email addresses
-- Access in PHP: `get_field('zoo_contact_emails', 'option')` — slug-agnostic
-- Used by CTA mailto shortcode (`crssd_mailto`) and card contact link
-
-**Zoo Event Styles field group** (imported 2026-04-23):
-- Group key: `group_zoo_event_styles` — separate from `group_vc_event_property_fields`
-- Must be assigned to `zoo-admin` options page in ACF location rule after import
-- Outputs `--zoo-*` CSS custom properties via WPCode PHP snippet (see below)
-- Completely separate namespace from `--vc-*` listing variables
+- React + Vite + Tailwind CSS
+- Supabase — Tier 1 auth (hub login) + `connected_sites` table (per-site WP credentials)
+- WordPress REST API via `vc-event-properties` plugin — Tier 2 per-site content CRUD
+- PWA — installable on iOS/Android/desktop via Add to Home Screen
+- Netlify — auto-deploys from `main` branch of `seanmarshall21/fc-bkstg-events`
 
 ---
 
-## CTA Mailto Shortcode
+## Module Structure
 
-```php
-function crssd_build_mailto_href( $atts ) {
-    $atts = shortcode_atts([
-        'email_field'    => 'zoo_contact_emails',   // ACF options page field
-        'title_field'    => 'vc_ep_title',
-        'subject_suffix' => 'Partnerships',
-    ], $atts );
-
-    $post_id    = get_the_ID();
-    $raw_emails = get_field( $atts['email_field'], 'option' ) ?: '';
-    $emails     = preg_replace( '/\s*,\s*/', ',', trim( $raw_emails ) );
-    $title      = get_field( $atts['title_field'], $post_id ) ?: get_the_title( $post_id );
-    $subject    = rawurlencode( $title . ' ' . $atts['subject_suffix'] );
-
-    return 'mailto:' . $emails . '?subject=' . $subject;
-}
-add_shortcode( 'crssd_mailto', 'crssd_build_mailto_href' );
 ```
-
-Subject line is dynamic per card (uses `vc_ep_title` of the post). Emails pulled from options page once, not per-post.
+src/
+  modules/
+    artists/        ArtistList.jsx, ArtistDetail.jsx, ImportArtists.jsx
+    lineup/         LineupList.jsx, LineupDetail.jsx
+    sponsors/       SponsorList.jsx, SponsorDetail.jsx
+    events/         EventList.jsx, EventDetail.jsx, ImportEvents.jsx
+                    ZooEventList.jsx, ZooEventDetail.jsx
+    afterdarks/     AfterDarkList.jsx, AfterDarkDetail.jsx  ← CRSSD-specific
+    confidential/   ConfidentialView.jsx
+    contestants/    ContestantList.jsx, ContestantDetail.jsx  ← rodeo-specific
+    genres/         GenreList.jsx
+    stages/         StageList.jsx
+    styles/         StylesView.jsx
+  components/
+    ui/             FieldEditor.jsx, SchemaFields.jsx, ContentList.jsx
+    DraggableList.jsx, EventSelector.jsx, UpdateToast.jsx
+    ArchiveEventDialog.jsx, PhotoUpload.jsx
+    HomePage.jsx, SiteDashboard.jsx, SettingsPage.jsx
+    SearchPage.jsx, FavoritesPage.jsx, TutorialsPage.jsx, Layout.jsx
+  hooks/            useSchema, useActiveEvent, useEventScopedContent,
+                    useDragReorder, useServiceWorkerUpdate, useFavorites, useStore
+  services/         connectedSitesService, mediaUploadService
+  auth/             AuthContext.jsx, ProfileSync.js, LoginPage.jsx, WelcomePage.jsx
+  api/              endpoints.js (WP_ENDPOINTS, VC_ENDPOINTS, MODULES)
+  config/           siteRegistry.js, supabase.js
+  utils/            helpers.js
+  context/          TutorialContext.jsx
+supabase/
+  migrations/       SQL schema
+```
 
 ---
 
-## Oxygen Template — Post 815 (Reusable Part)
+## Schema-Driven Pattern (Critical)
 
-This is the main listings template. 274 nodes total. Lives at: **Oxygen → Reusable Parts → post ID 815**.
+ACF fields are **not hardcoded** in React. `FieldEditor` fetches schema from:
 
-**Top-level structure:**
 ```
-[1]  Section
-[2]    Div (#77)
-[3-4]   Code Blocks: SEARCH CSS, Internal CSS
-[5]     .vc_listings_controls        ← filter/search/view toggle bar
-[27]  .vc_listings_repeater          ← Oxygen Easy Posts element
-[28]    .vc_listings_repeater_item   ← per-post wrapper (has data-* attrs)
-[29]      .vc_listings_repeater_view_tile   ← grid card
-[151]     .vc_listings_repeater_view_list   ← list row
-[274]   Code Block: VC Modal
+GET /wp-json/vc/v1/schema/{post_type}
 ```
 
-**Key class notes:**
-- **Intentional typo** across all chip/data-item classes: `vc_listigs_` (missing second `n`). This is in the Oxygen DOM and WPCode snippets. **Do not "fix" it** — changing it would break both the PHP injection and CSS.
-  - Affected: `.vc_listigs_row_tag`, `.vc_listigs_chip_tag`, `.vc_listigs_chip_tag_large`, `.vc_listigs_grid_data-cont`, `.vc_listigs_grid_data-item`
+and renders fields dynamically. Adding a field in ACF on any site → it appears in the app automatically. **Never hardcode field definitions in React components.**
 
-**Chip containers (injection targets for WPCode #3589):**
-- Tags: `.vc_listigs_row_tag` — nodes 55 (grid), 177 (list)
-- Genre chips: `.vc_listigs_chip_tag_large` — nodes 98–104 (grid), 220–226 (list); script targets their **parent** element and replaces innerHTML
+`SchemaFields.jsx` handles all field type rendering via `FIELD_MAP`. `useSchema` hook manages fetch + caching.
 
-**JavaScript filter data attributes on `.emh_listings_parent`:**
-```
-data-brand    → brand field value
-data-venue    → vc_ep_event_venue (flat select field — was vc_ep_details → venue)
-data-year     → year field value
-data-is-past  → "1" if start_date < today, else "0"
-```
-These are set by WPCode #3589 (emh-listings-data-attrs.php), not Oxygen custom attributes.
+**Tab field handling:** ACF `tab` type fields are UI-only (no data). `FieldEditor` intercepts them via `groupFieldsByTabs()` and renders an interactive sticky tab bar. Tabs have a sticky bar that docks below the top nav and auto-scrolls to top on tab switch. `SchemaFields.jsx` also has `tab: TabField` as a safety net.
 
 ---
 
-## Files in This Workspace
+## Two-Tier Auth
 
-| File | Purpose | Status |
+| Tier | System | Purpose |
 |---|---|---|
-| `vc-listings.js` (v3.2.0) | WPCode #3607 · JS · Footer | Production |
-| `vc-listings.css` (v1.7.0) | WPCode #3750 · CSS · Site Wide Header | Production |
-| `emh-listings-data-attrs.php` | WPCode #3589 · PHP · wp_footer priority 99 | Production |
-| `diagnostic-acf-fields.php` | WPCode diagnostic · admin_notices | **DELETE — temp only** |
-| `vc-listings-build-framework.md` | Full build reference, field map, PHP helpers, both repeater versions | Reference |
-| `vc-listings-layer-stack.md` | Full 274-node Oxygen DOM tree for post 815 | Reference |
-| `vc-listings-oxygen-reference.md` | Oxygen selector/class reference | Reference |
+| 1 | Supabase | Master hub login, required for app access |
+| 2 | WP App Passwords | Per-site credentials, stored in Supabase `connected_sites` table |
+
+- Sign out wipes all local state (IndexedDB via `useStore`)
+- Sign in hydrates connected sites from Supabase (`ProfileSync.js`)
+- `AuthContext` exposes `getClient()` (WP REST client for active site) and `activeSite`
+- `activeSite.registrySlug` drives per-brand component branching (e.g. `'zoo-agency'` → `ZooEventDetail`)
+- `activeSite.modules` — ordered array of module keys for this site; controls tile order + visibility in dashboard
 
 ---
 
-## WPCode Snippets
+## Module Config (`MODULES` in endpoints.js)
 
-| ID | Name | Type | Hook | Status |
-|---|---|---|---|---|
-| #3607 | VC Event Property Listings Controller — v3.2.0 (vc-listings.js) | JavaScript | Footer | Active |
-| #3867 | **MAIN CSS / vc-listings.css — v2.0.4 (vc-listings.css) | CSS Snippet | Site Wide Header | Active — **v2.0.5 content** (title lags) |
-| #3608 | VC Event Property Listing Style — v1.2.0 (vc-listings.css, EMH classes) | CSS Snippet | Site Wide Header | **DEACTIVATE** — superseded by #3750 |
-| #3589 | emh-listings-data-attrs.php | PHP | Run Everywhere (guarded) | Active |
-| #3597 | EMH — Remove Duplicate Taxonomy Metaboxes | PHP | Admin Only | Active |
-| #3601 | EMH — PHP Memory Limit | PHP | Run Everywhere | Active |
-| #3602 | VC Event Property Listing Style — v1.1.0 (old VC classes) | CSS Snippet | Site Wide Header | **DEACTIVATE** |
-| #3535 | Old EMH CSS — v3.0.0 | CSS Snippet | — | Off — leave off |
-| #3598 | Zoo Agency — ACF Options Page | PHP | Admin Only | Off — replaced by Zoo Admin options page |
+Each module entry: `{ key, label, description, icon, svgIcon?, color, border }`.
 
-**WPCode #3589 guards** (top of wp_footer callback — do not remove):
-```php
-if ( is_admin() || wp_doing_ajax() || ( defined( 'REST_REQUEST' ) && REST_REQUEST ) ) return;
+Module order on the dashboard is driven entirely by `activeSite.modules` array order (saved via `updateSiteModules` in settings). `SiteDashboard` maps that array to module configs — do NOT use `Object.values(MODULES)` for display order.
+
+**Adding a module:** add entry to `MODULES`, add route in `App.jsx`, add color in `SiteDashboard.MODULE_COLORS`.
+
+---
+
+## Event Phase System
+
+`vc_event_property` carries an `event_phase` ACF field cycling through:
+
 ```
-This prevents the `get_posts(-1)` query from running on every admin/AJAX request, which was interfering with ACF saves.
-
----
-
-## JavaScript — vc-listings.js v3.2.0
-
-**Selectors (EMH class prefix in JS, not vc_):**
-```js
-SEL.repeater    = '.emh_listings_repeater'
-SEL.item        = '.emh_listings_parent'
-SEL.toggleGrid  = '.emh_cntrl_togl_grid'
-SEL.toggleList  = '.emh_cntrl_togl_list'
-SEL.filterBrand = '.emh_cntrl_fltr_brand select'
-SEL.filterVenue = '.emh_cntrl_fltr_venue select'
-SEL.filterYear  = '.emh_cntrl_fltr_year select'
-SEL.filterPast  = '.emh_cntrl_fltr_past input[type="checkbox"]'
-SEL.searchWrap  = '.emh_cntrl_srch_wrap'
-SEL.searchToggle= '.emh_cntrl_srch_toggle'
-SEL.searchInput = '.emh_cntrl_srch_input'
-SEL.searchClear = '.emh_cntrl_srch_clear'
+planning → save-the-date → lineup-phase-1 → presale → onsale →
+lineup-phase-2 → set-times-live → event-day → post-event → archived
 ```
 
-**Global callback:** `window.emhListings_refresh()` — called by WPCode #3589 after injecting data attributes and chips to rebuild dropdowns and re-apply active filters.
+Phase fields (`event_phase`, `event_phase_changed_at`, `event_phase_log`) are registered programmatically in `VC_Event_Phases::register_phase_fields()` in the plugin. They appear in the app under an "Event Phase" tab in EventDetail. Phase transitions fire via `POST /vc/v1/event/{id}/phase`.
 
-**View classes on repeater:** `emh_listings_view_grid` / `emh_listings_view_list`
-
-**Requires:** GSAP + Flip plugin (loaded before this script in footer)
-
----
-
-## PHP Helpers (functions.php)
-
-These must exist in the child theme's `functions.php`:
-
-```php
-vc_ordinal(int $n): string          // 1 → "1st", 11 → "11th"
-vc_nth_year($established): string   // established 2015, now 2026 → "11th Year"
-vc_vimeo_id(string $url): string    // extract numeric ID from any Vimeo URL
-vc_format_date(start, end, tbd, tbd_text): array  // Ymd → display parts
-vc_render_chips(array $terms, string $css_class): string  // WP_Term[] → chip HTML
-emh_extract_term_names($field_value): array  // safe taxonomy extraction (all return formats)
-```
-
-`emh_extract_term_names()` lives in WPCode #3589 (not functions.php) because it's used only by that snippet.
+- `EventSelector` scopes all list views to the active event
+- Planning mode toggle surfaces upcoming events
+- Archive action sets phase to `archived` and drafts unique items
 
 ---
 
-## CSS — vc-listings.css
+## Companion Repo — WP Plugin
 
-**Token summary:**
-```css
---vc-bg:              #ececec
---vc-card-bg:         rgba(252,252,252,0.5)
---vc-card-border:     #000000
---vc-text-primary:    #282828
---vc-text-muted:      #979797
---vc-display-font:    'Acumin Variable Concept' (Adobe Fonts)
---vc-ui-font:         'Inter' (Google Fonts)
---vc-card-radius:     12px
---vc-pill-radius:     99px
-```
+https://github.com/seanmarshall21/vc-event-properties  
+Current version: **2.6.4**
 
-CSS is **complete and deployed** via WPCode #3750 (CSS Snippet, Site Wide Header, Active — v1.7.0). Tokens confirmed resolving on `/event-properties-grid/`. 22 sections written: tokens, wrapper, controls, year group, repeater grid/list modes, tile view, list view, modal, responsive, search widget, TBD dates, nth year, controls section split, view show/hide, ZFC chips (§21), ZFC bar outer wrapper (§22). Local file: 1269 lines.
+CPTs: `vc_event_property`, `vc_artist`, `vc_lineup_slot`, `vc_sponsor`
 
----
+**ACF field groups** (all 8 are programmatically registered via `acf_add_local_field_group()` on `acf/init` at priority 1):
+- `group_event_property`, `group_event_property_fields` — core event fields
+- `group_artist` — artist fields
+- `group_lineup_slot` — lineup slot fields
+- `group_sponsor` — sponsor fields
+- `group_event_styles` — brand token fields
+- `group_confidential_items` — per-item phase assignment
+- `group_confidential_phases` — announce phase definitions (5 per-section statuses per phase)
 
-## Known Issues / Pending Work
+No manual ACF sync needed on any site — plugin push automatically overrides DB versions.
 
-### Active
-- **WPCode #3589 capacity reads** — Still reads `$details['capacity']['capacity']` and `$details['capacity']['label']`. Must update to `get_field('capacity_label')` and `get_field('capacity_amount')` (flat top-level fields).
-- **WPCode #3589 video reads** — Any code reading `$media['video']` must change to `get_field('video')['vimeo_id']` (video is top-level, not inside vc_ep_media; field is now `vimeo_id` not `vimeo_url`).
-- **WPCode #3589 tbd reads** — If reading `$dates['tbd']`, change to `get_field('tbd')` (top-level group, not inside vc_ep_dates).
-- **WPCode #3589 details reads** — Must update any `get_field('vc_ep_details')` reads to flat `get_field('city')`, `get_field('state')`, `get_field('established')`, `get_field('vc_ep_event_venue')`.
-- **WPCode #3589 social reads** — Must update any `$social['website']` / `$social['instagram']` etc. to `get_field('vc_ep_website')['vc_ep_website_url']` and `get_field('vc_ep_social')['vc_ep_social_url']`.
-- **class-vc-admin-importer.php** — Rewritten for 2026-04-28 ACF structure. Needs to be uploaded to server at `wp-content/plugins/vc-event-properties/includes/admin/` via WP File Manager PRO.
-- **Card build** — Tile + list panels not yet built in Oxygen. Two-panel tab approach confirmed (see View Toggle Architecture section). PHP Code Block outputs both loops.
-- **WPCode #3608 + #3602** — Both old CSS snippets still active. Deactivate both once #3750 confirmed stable on frontend.
-- **Template 3753 — not yet assigned to a page** — ZFC controls UI built and saved (nodes 568/569/575, `zfc_bar_wrap` class confirmed). Needs a test page with Oxygen location rule pointing to post 3753 for frontend render verification.
-- **ACF Local JSON (`acf-json/`)** — Old JSON files in child theme for `vc_ep_season` and `tags` fields still exist. These stale definitions override the database. Do not rename those old fields — create new ones instead (as done with `vc_ep_sub_title` and `event_tag_labels`). Investigate cleaning out `acf-json/` in a future session.
+**Plugin deploy method — manual ZIP upload (Git Updater broken on DreamHost):**
 
-### Resolved (session 7 — 2026-04-28)
-- **ACF field restructure** — `vc_ep_details` group removed; city/state/established now flat. Venue now `vc_ep_event_venue` (select). Social links consolidated into `vc_ep_website` and `vc_ep_social` groups. All sync files updated: `class-vc-admin-importer.php`, `ImportEvents.jsx`, `vc-events-sheet-guide.html`, `VC-CSV-Field-Guide.html`, both CLAUDE.md files.
-- **CSV column set** — Reduced from 21 to 17 columns: removed instagram/facebook/spotify/twitter/tiktok/soundcloud, renamed `website`→`website_url`, added `social_label`+`social_url`.
+Git Updater is installed on all sites but DreamHost blocks outbound PHP API calls to `api.github.com`, so auto-updates don't work. Deploy manually:
 
-### Resolved (session 6 — 2026-04-24)
-- **WPCode #3750 CSS at v1.7.0** — Sections 21 (ZFC chips) and 22 (ZFC bar outer wrapper) added. Deployed, 39597 chars confirmed in CodeMirror.
-- **Template 3753 node 568 class format** — Was `classes: []` (empty array), fixed to `classes: {"0":"zfc_bar_wrap"}`. WP admin save regenerated shortcodes correctly.
-- **Oxygen class format discovery** — `classes` must be `{"0":"name"}` (object with numeric keys). Array format `["name"]` compiles to `{}` in shortcodes. Critical for any future JSON surgery.
-- **Oxygen `save_post` hook discovery** — Oxygen recompiles `ct_builder_json` → `ct_builder_shortcodes` server-side on every WP admin "Update" click. No need to trigger the Oxygen builder's internal Angular save. Updating `ct_builder_json` via WP admin Update is sufficient to regenerate shortcodes.
+1. Go to `github.com/seanmarshall21/vc-event-properties` → Code → Download ZIP
+2. Unzip locally — go inside `vc-event-properties-main/` and ZIP the inner `vc-event-properties/` folder
+3. WP Admin → Plugins → Add New → Upload Plugin → upload that inner ZIP → Replace current
+4. Settings → Permalinks → Save Changes (always flush after plugin update)
 
-### Resolved (session 2)
-- **CSS class mismatch** — `.vc_listings_repeater--grid/--list` corrected to `.emh_listings_view_grid/list` in WPCode #3602. Deployed.
-- **vc-listings.js v3.1.0** — `initHoverVideo()` added and deployed to WPCode #3531. Confirmed live on `/event-properties-grid/` (inlined in page source, `emhListings_refresh` is `function` in global scope).
+**After updating — always flush permalinks** (Settings → Permalinks → Save Changes). Required to register the `event-manager` CPT slug and clear any stale rewrite rules.
 
-### Resolved (prior sessions)
-- **memory_limit** — WP File Manager and WPCode File Editor (PRO) don't allow `.user.ini` access for this admin user. Resolved via WPCode #3601: `@ini_set('memory_limit', '512M')` running on all requests. Remove if `memory_limit = 512M` is ever set directly in `.user.ini` via SSH/FTP.
-- **Zoo Agency Options Page** — built via WPCode #3598 + ACF field group (post ID 3599). See ACF Options Page section above.
-- **Duplicate taxonomy metaboxes** — `event-tag` and `event-genre` native WP metaboxes showed alongside ACF fields on `vc_event_property` edit screen. ACF Pro 6.x removed the "Meta Box → Hidden" Presentation tab option for Taxonomy fields. Fixed via WPCode #3597: `remove_meta_box()` on `add_meta_boxes` hook, priority 99, admin_only.
-- **ACF taxonomy fields not saving** — `tags` and `genre_selection` were inside groups causing conflict between serialized meta and `wp_set_object_terms()`. Fixed by moving to top-level AND setting `save_terms: 0`, `load_terms: 0`.
-- **WPCode #3589 running on admin** — was set to "Run Everywhere" without `is_admin()` guard. Fixed.
-- **`contact_emails` per-post field not saving** — removed; replaced with Zoo Agency options page pattern (see above). Root cause: manually-set ACF field key (`field_vc_ep_contacts`) had no matching `acf-field` post record in `wp_posts`.
+REST endpoints:
+- `GET /wp-json/vc/v1/schema/{post_type}` — field definitions
+- `POST /wp-json/vc/v1/archive-event/{id}` — archive action
+- `POST /wp-json/vc/v1/event/{id}/phase` — set phase
+- `GET /wp-json/vc/v1/lineup?event_id=` — full lineup grouped by day/stage
+- `?events_includes={id}` — event scoping query param on list endpoints (see bug note below)
 
-### ACF Save Failure Root Cause (for future reference)
-If an ACF field silently fails to save (data appears in POST at `acf/save_post` priority 1 but `val=[]` and `ref=[]` at priority 20), the cause is ACF's field definition lookup failing. ACF looks up field keys in `wp_posts` as `acf-field` post type. Manually-set field keys (not auto-generated by ACF UI) may have no corresponding record. Fix: delete and re-create the field in ACF UI to generate a proper auto-keyed `acf-field` record.
+**`events_includes` bug — fixed in v2.6.4:** `VC_Helper_Rest_Query_Filters` previously used `'events'` as a hardcoded field name for all CPTs. Actual field names are per-CPT:
+- `vc_artist` → `vc_artist_events` (relationship array — use `LIKE` compare)
+- `vc_lineup_slot` → `vc_ls_event` (post_object single integer — use `= NUMERIC`)
+- `vc_sponsor` → `vc_sponsor_events` (relationship array — use `LIKE` compare)
+
+`LineupList.jsx` also filters client-side as a belt-and-suspenders fallback (does NOT pass `events_includes` to the API — comment explains why).
+
+Schema endpoint response shape uses `groups` key (not `field_groups`).  
+`TAXONOMY_REST_MAP = { post_tag: 'tags', category: 'categories' }` — WP REST uses different slugs for built-in taxonomies.
+
+**Event property CPT permalink slug:** `event-manager` (NOT `events` — avoids collision with existing `/events` pages on brand sites). Archive disabled (`has_archive: false`).
 
 ---
 
-## Diagnostic Snippet — DELETE WHEN DONE
+## After Darks Module (CRSSD-specific)
 
-`diagnostic-acf-fields.php` in this workspace is a temporary WPCode snippet. Remove it from WPCode as soon as the contact_emails issue is confirmed resolved. It hooks into `admin_notices`, `acf/save_post`, and `save_post` — leaving it active degrades admin UX.
+- CPT slug: `after-darks` (created via ACF Post Types on CRSSD, not in plugin)
+- REST endpoint: `/wp/v2/after-darks`
+- ACF field group: imported via `crssd-after-darks-acf-import.json` (in output folders)
+- Requires **Show in REST API** enabled on the `after-darks` CPT in ACF → Post Types → Advanced
+- Links to event via `vc_ad_event` Post Object field (set via the ACF import JSON)
+- `AfterDarkList` filters client-side by `acf.vc_ad_event.ID === activeEventId`
+- Schema: fetched from `/vc/v1/schema/after-darks`
+- **404 handling:** `AfterDarkList` catches 404 gracefully and sets empty items (CPT not present or REST not enabled on this site). `AfterDarkDetail` only shows confidentiality fields on non-CRSSD sites because `group_confidential_items` ACF location rule includes `after-darks` — admin action required to enable REST per site.
+- **Blank detail root cause:** `group_confidential_items` ACF location rule matches `after-darks` regardless of whether the CPT is registered. If main after-dark field group isn't loaded (REST not enabled), only confidentiality fields render. Fix: enable REST on the CPT in ACF → Post Types → after-darks → Advanced.
 
 ---
 
-## Oxygen Builder — Critical Implementation Notes
+## Features
+
+### Tutorials Page
+- Route: `/tutorials`
+- `TutorialsPage.jsx` renders 11 tutorial HTML files from `public/tutorials/`
+- Accessible from Settings → Tutorials & Support
+- `TutorialContext.jsx` tracks completion state
+
+### CSV Import
+- Artists: `ImportArtists.jsx` → `/artists/import` → `POST /vc/v1/import-artists`
+- Events: `ImportEvents.jsx` → `/events/import` → `POST /vc/v1/import-events`
+- Sheet URL stored at `GET /vc/v1/import-sheet-url`
+
+### Drag Reorder
+- `DraggableList.jsx` — long-press to activate drag, used in artists, sponsors, settings
+- `useDragReorder` hook manages drag state
+- Persists via `menu_order` field on WP posts
+
+### PWA / Service Worker
+- `useServiceWorkerUpdate` hook detects new SW versions and shows `UpdateToast`
+- iOS Safari auto-zooms inputs with `font-size < 16px` — all inputs use `16px` minimum
+- Viewport meta locks zoom at `1.0` to prevent layout breaks on form focus
+- **Service worker caches aggressively** — clear site data or delete/re-add home screen icon to test production updates
+
+---
+
+## Pitfalls & Conventions
+
+- **Do not run multiple Cowork sessions against this repo simultaneously** — causes `.git/index.lock` conflicts
+- **Cowork `index.lock` issue:** Cowork sandbox can't delete `.git/index.lock` files on mounted volumes (permission error even as same user). `git add` stages correctly but leaves a stale lock. Fix from Mac Terminal: `rm ~/Documents/GitHub/<repo>/.git/index.lock` then commit + push normally.
+- Push via Terminal directly; avoid GitHub Desktop worktrees
+- `vc_` prefix on all CPTs, ACF field keys, and utility classes — universal namespace across brands
+- Sean is an advanced developer — production-ready code only, skip fundamentals
+- Module order on dashboard is from `site.modules` array, not from MODULES object key order
+- After Darks CPT must have REST enabled per site — it's not in the plugin, it's site-specific
+- **Sponsor photo save:** `handleLogoChange` must store media ID integer (not URL string) in state — `buildAcfPayload` only extracts ID from objects/integers, not URL strings. ACF image fields reject strings.
+- **ACF image field payloads:** Always pass integer media ID to ACF image fields via REST. Passing a URL string silently fails (field appears saved but data is empty on reload).
+- **SiteDashboard WIP (as of 2026-05-02):** In-progress refactor references `useUptimeStatus` hook and `StatusBadge` component — neither exists yet. Do not commit `SiteDashboard.jsx` or `endpoints.js` icon path updates until those deps are built.
+
+---
+
+## Related Sites (All Run Same Pattern)
 
 ### Recompile Trigger (save_post hook)
 Oxygen recompiles `ct_builder_json` → `ct_builder_shortcodes` **server-side on every WP admin "Update" click**. You do NOT need to trigger the Oxygen builder's internal Angular save. The workflow for JSON surgery is:

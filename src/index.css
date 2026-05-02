@@ -34,7 +34,7 @@
     overflow: hidden;
     display: flex;
     flex-direction: column;
-    background-image: url('/bkgnds/Dirty Marble Mobile.jpg');
+    background-image: url('/bkgnds/MattePaper-Mobile.jpg');
     background-size: cover;
     background-position: center top;
     background-repeat: no-repeat;
@@ -131,6 +131,35 @@
   .vc-badge--blue { @apply bg-vc-50 text-vc-700 border border-vc-200; }
   .vc-badge--gray { @apply bg-gray-100 text-gray-500 border border-gray-200; }
   .vc-badge--purple { @apply bg-purple-50 text-purple-700 border border-purple-200; }
+
+  /* ── Overlay / Modal backdrop ─────────────────────── */
+  /* Use for any fixed full-screen modal — must sit above nav (z-50) */
+  .vc-overlay {
+    @apply fixed inset-0;
+    z-index: 200;
+  }
+
+  /* Legacy dialog classes used by ArchiveEventDialog */
+  .vc-dialog-backdrop {
+    @apply fixed inset-0 flex items-center justify-center bg-black/50 p-4;
+    z-index: 200;
+  }
+  .vc-dialog {
+    @apply bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6;
+    max-height: calc(100dvh - 4rem);
+    overflow-y: auto;
+  }
+  .vc-dialog__title  { @apply text-lg font-bold text-gray-900 mb-3; }
+  .vc-dialog__error  { @apply text-sm text-red-600 mb-3; }
+  .vc-dialog__summary { @apply text-sm text-gray-700 mb-4 leading-relaxed; }
+  .vc-dialog__section { @apply mb-3; }
+  .vc-dialog__toggle  { @apply text-sm font-medium text-gray-700 hover:text-gray-900 mb-1; }
+  .vc-dialog__list    { @apply text-sm text-gray-600 space-y-1 pl-4; }
+  .vc-dialog__list--draft li { @apply text-amber-700; }
+  .vc-dialog__list--keep  li { @apply text-emerald-700; }
+  .vc-dialog__type   { @apply text-xs font-semibold uppercase text-gray-400 mr-1; }
+  .vc-dialog__other  { @apply text-xs text-gray-400; }
+  .vc-dialog__actions { @apply flex justify-end gap-2 mt-5 pt-4 border-t border-surface-3; }
 
   /* ── Scrollable ────────────────────────────────────── */
   .vc-scroll {

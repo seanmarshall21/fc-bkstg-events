@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Search, Plus, RefreshCw, ChevronRight, ArrowDownAZ, Flag } from 'lucide-react';
+import { Search, Plus, RefreshCw, ChevronRight, ArrowDownAZ } from 'lucide-react';
 
 /**
  * Reusable content list shell.
@@ -40,7 +40,7 @@ export default function ContentList({
   const displayCount = count ?? items.length;
 
   return (
-    <div className="p-4 pb-8 animate-fade-in">
+    <div className="p-4 pb-28 animate-fade-in">
       {/* Search bar row: input + filter icon + add icon */}
       {searchable && (
         <div className="flex items-center gap-2 mb-4">
@@ -150,7 +150,11 @@ export default function ContentList({
                   onClick={(e) => { e.stopPropagation(); onToggleFavorite(item); }}
                   className="p-2 -mr-1 rounded-lg hover:bg-surface-2 active:bg-vc-100 transition-colors"
                 >
-                  <Flag className={`w-4 h-4 ${isFavorite?.(moduleKey, item.id) ? 'text-vc-600 fill-vc-600' : 'text-vc-400'}`} />
+                  <img
+                    src={isFavorite?.(moduleKey, item.id) ? '/icons/favorite-on.svg' : '/icons/favorite-off.svg'}
+                    alt=""
+                    className="w-4 h-4"
+                  />
                 </button>
               )}
               {onSelect && (

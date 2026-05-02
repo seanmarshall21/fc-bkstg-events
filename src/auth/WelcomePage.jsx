@@ -17,7 +17,7 @@ export default function WelcomePage({ onDismiss }) {
     <div
       className="flex-1 flex flex-col items-center justify-center p-6 relative overflow-hidden"
       style={{
-        backgroundImage: 'url(/bkgnds/Dirty Marble Mobile.jpg)',
+        backgroundImage: 'url(/bkgnds/MattePaper-Mobile.jpg)',
         backgroundSize: 'cover',
         backgroundPosition: 'center',
       }}

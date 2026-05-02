@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 
 /**
  * ArchiveEventDialog
@@ -66,7 +67,7 @@ export default function ArchiveEventDialog({ apiBase, eventId, eventTitle, onClo
     }
   };
 
-  return (
+  return createPortal(
     <div className="vc-dialog-backdrop" onClick={onClose}>
       <div className="vc-dialog" onClick={(e) => e.stopPropagation()}>
 
@@ -139,6 +140,7 @@ export default function ArchiveEventDialog({ apiBase, eventId, eventTitle, onClo
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

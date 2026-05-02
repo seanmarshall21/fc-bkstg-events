@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthContext';
 import { WP_ENDPOINTS } from '../../api/endpoints';
@@ -27,8 +28,8 @@ function CreateStageSheet({ onClose, onCreated, getClient }) {
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/40" onClick={onClose}>
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-end justify-center bg-black/40" onClick={onClose}>
       <div
         className="w-full max-w-lg bg-white rounded-t-2xl p-6 pb-10 shadow-xl"
         onClick={e => e.stopPropagation()}
@@ -71,7 +72,8 @@ function CreateStageSheet({ onClose, onCreated, getClient }) {
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
@@ -97,8 +99,8 @@ function EditStageSheet({ stage, onClose, onSaved, onDeleted, getClient }) {
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/40" onClick={onClose}>
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-end justify-center bg-black/40" onClick={onClose}>
       <div
         className="w-full max-w-lg bg-white rounded-t-2xl p-6 pb-10 shadow-xl"
         onClick={e => e.stopPropagation()}
@@ -140,7 +142,8 @@ function EditStageSheet({ stage, onClose, onSaved, onDeleted, getClient }) {
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 

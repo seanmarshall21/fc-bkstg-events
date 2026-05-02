@@ -1,21 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Camera, X, ChevronDown, ChevronRight, Plus, Trash2, Search, Loader2, ExternalLink, Images } from 'lucide-react';
-import { compressImage } from '../../services/mediaUploadService';
-
-/**
- * Compress a file if over 100 KB, then upload via client.uploadMedia.
- * Mirrors the compression gate in PhotoUpload.jsx.
- */
-async function compressAndUpload(file, client) {
-  let uploadFile = file;
-  if (file.size > 100 * 1024) {
-    const compressed = await compressImage(file, 1600, 0.82);
-    uploadFile = new File([compressed], file.name.replace(/\.\w+$/, '.jpg'), {
-      type: 'image/jpeg',
-    });
-  }
-  return client.uploadMedia(uploadFile);
-}
+import { Camera, X, ChevronDown, ChevronRight, Plus, Trash2, Search, Loader2, ExternalLink } from 'lucide-react';
 
 /**
  * Schema-driven field renderers.
@@ -223,95 +207,10 @@ function TrueFalseField({ field, value, onChange }) {
   );
 }
 
-/* ─── Media Library Picker ──────────────────────────────────── */
-
-function MediaLibraryPicker({ getClient, onSelect, onClose }) {
-  const [items,    setItems]    = useState([]);
-  const [loading,  setLoading]  = useState(true);
-  const [search,   setSearch]   = useState('');
-
-  const fetchMedia = async (q = '') => {
-    const client = getClient?.();
-    if (!client) return;
-    setLoading(true);
-    try {
-      const params = { media_type: 'image', per_page: 40, orderby: 'date', order: 'desc' };
-      if (q) params.search = q;
-      const { data } = await client.get('/wp/v2/media', params);
-      setItems(data);
-    } catch (err) {
-      console.error('[MediaLibraryPicker] fetch failed:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => { fetchMedia(); }, []);
-
-  return (
-    <div className="fixed inset-0 z-50 bg-black/50 flex items-end" onClick={onClose}>
-      <div
-        className="w-full bg-white rounded-t-2xl max-h-[75vh] flex flex-col"
-        onClick={e => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
-          <span className="text-[14px] font-semibold text-[#282828]">Media Library</span>
-          <button type="button" onClick={onClose} className="text-gray-400 hover:text-gray-600">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        {/* Search */}
-        <div className="flex items-center gap-2 px-4 py-2 border-b border-gray-100">
-          <Search className="w-4 h-4 text-gray-400 shrink-0" />
-          <input
-            type="text"
-            className="flex-1 text-[14px] bg-transparent outline-none placeholder:text-gray-300"
-            style={{ fontSize: '16px' }}
-            placeholder="Search media…"
-            value={search}
-            onChange={e => { setSearch(e.target.value); fetchMedia(e.target.value); }}
-            autoFocus
-          />
-        </div>
-
-        {/* Grid */}
-        <div className="flex-1 overflow-y-auto p-3">
-          {loading ? (
-            <div className="flex justify-center py-8"><Loader2 className="w-5 h-5 animate-spin text-gray-400" /></div>
-          ) : items.length === 0 ? (
-            <div className="py-8 text-center text-[13px] text-gray-400">No images found</div>
-          ) : (
-            <div className="grid grid-cols-3 gap-2">
-              {items.map(item => (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => onSelect({ id: item.id, url: item.source_url, source_url: item.source_url })}
-                  className="aspect-square rounded-lg overflow-hidden border-2 border-transparent hover:border-[#0f331f] transition-colors"
-                >
-                  <img
-                    src={item.media_details?.sizes?.thumbnail?.source_url || item.source_url}
-                    alt={item.alt_text || ''}
-                    className="w-full h-full object-cover"
-                  />
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 /* ─── Image Upload ──────────────────────────────────────────── */
 
 function ImageField({ field, value, onChange, getClient }) {
-  const [uploading,    setUploading]    = useState(false);
-  const [showLibrary,  setShowLibrary]  = useState(false);
-  const [uploadError,  setUploadError]  = useState(null);
+  const [uploading, setUploading] = useState(false);
   const fileRef = useRef(null);
 
   const handleUpload = async (e) => {
@@ -321,13 +220,12 @@ function ImageField({ field, value, onChange, getClient }) {
     if (!client) return;
 
     setUploading(true);
-    setUploadError(null);
     try {
-      const media = await compressAndUpload(file, client);
-      onChange({ id: media.id, url: media.source_url, source_url: media.source_url });
+      const media = await client.uploadMedia(file);
+      // Store the full media object — buildAcfPayload extracts .id
+      onChange({ id: media.id, url: media.source_url, ...media });
     } catch (err) {
-      console.error('[ImageField] upload failed:', err);
-      setUploadError(err.message || 'Upload failed');
+      console.error('Upload failed:', err);
     } finally {
       setUploading(false);
       if (fileRef.current) fileRef.current.value = '';
@@ -347,81 +245,46 @@ function ImageField({ field, value, onChange, getClient }) {
         className="hidden"
         onChange={handleUpload}
       />
-
-      {showLibrary && (
-        <MediaLibraryPicker
-          getClient={getClient}
-          onSelect={(media) => { onChange(media); setShowLibrary(false); }}
-          onClose={() => setShowLibrary(false)}
-        />
-      )}
-
       {imageUrl ? (
-        <div>
-          <div className="relative group">
-            <img
-              src={imageUrl}
-              alt=""
-              className="w-full h-40 object-cover rounded-xl border border-gray-200"
-            />
-            <div className="absolute top-2 right-2 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-              <button
-                type="button"
-                onClick={() => fileRef.current?.click()}
-                className="p-1.5 rounded-lg bg-white/90 shadow text-gray-500 hover:text-gray-700"
-                title="Upload new"
-              >
-                <Camera className="w-3.5 h-3.5" />
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowLibrary(true)}
-                className="p-1.5 rounded-lg bg-white/90 shadow text-gray-500 hover:text-gray-700"
-                title="Choose from library"
-              >
-                <Images className="w-3.5 h-3.5" />
-              </button>
-              <button
-                type="button"
-                onClick={() => onChange(null)}
-                className="p-1.5 rounded-lg bg-white/90 shadow text-gray-500 hover:text-red-500"
-                title="Remove"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          </div>
-          {uploadError && <p className="mt-1 text-[11px] text-red-500">{uploadError}</p>}
-        </div>
-      ) : (
-        <div>
-          <div className="flex gap-2">
+        <div className="relative group">
+          <img
+            src={imageUrl}
+            alt=""
+            className="w-full h-40 object-cover rounded-xl border border-gray-200"
+          />
+          <div className="absolute top-2 right-2 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
             <button
               type="button"
               onClick={() => fileRef.current?.click()}
-              disabled={uploading}
-              className="flex-1 flex flex-col items-center justify-center h-32 rounded-xl border-2 border-dashed border-gray-300 text-gray-400 bg-gray-50 hover:border-gray-400 hover:text-gray-500 transition-colors disabled:opacity-50"
+              className="p-1.5 rounded-lg bg-white/90 shadow text-gray-500 hover:text-gray-700"
             >
-              {uploading ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
-              ) : (
-                <>
-                  <Camera className="w-5 h-5 mb-1" />
-                  <span className="text-[12px]">Upload</span>
-                </>
-              )}
+              <Camera className="w-3.5 h-3.5" />
             </button>
             <button
               type="button"
-              onClick={() => setShowLibrary(true)}
-              className="flex-1 flex flex-col items-center justify-center h-32 rounded-xl border-2 border-dashed border-gray-300 text-gray-400 bg-gray-50 hover:border-gray-400 hover:text-gray-500 transition-colors"
+              onClick={() => onChange(null)}
+              className="p-1.5 rounded-lg bg-white/90 shadow text-gray-500 hover:text-red-500"
             >
-              <Images className="w-5 h-5 mb-1" />
-              <span className="text-[12px]">Library</span>
+              <X className="w-3.5 h-3.5" />
             </button>
           </div>
-          {uploadError && <p className="mt-1 text-[11px] text-red-500">{uploadError}</p>}
         </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => fileRef.current?.click()}
+          disabled={uploading}
+          className="flex items-center justify-center w-full h-40 rounded-xl border-2 border-dashed border-gray-300 text-gray-400 text-sm bg-gray-50 hover:border-gray-400 hover:text-gray-500 transition-colors"
+        >
+          {uploading ? (
+            <Loader2 className="w-5 h-5 animate-spin" />
+          ) : (
+            <span className="flex flex-col items-center gap-1">
+              <Camera className="w-5 h-5" />
+              <span>Tap to upload</span>
+            </span>
+          )}
+        </button>
       )}
     </FieldWrapper>
   );
@@ -441,10 +304,10 @@ export function AvatarUpload({ value, onChange, getClient }) {
 
     setUploading(true);
     try {
-      const media = await compressAndUpload(file, client);
-      onChange({ id: media.id, url: media.source_url, source_url: media.source_url });
+      const media = await client.uploadMedia(file);
+      onChange({ id: media.id, url: media.source_url, ...media });
     } catch (err) {
-      console.error('[AvatarUpload] upload failed:', err);
+      console.error('Upload failed:', err);
     } finally {
       setUploading(false);
       if (fileRef.current) fileRef.current.value = '';
@@ -494,6 +357,9 @@ function TaxonomyField({ field, value, onChange, getClient }) {
   const [loadingTerms, setLoadingTerms] = useState(false);
   const selected = Array.isArray(value) ? value : (value ? [value] : []);
 
+  // WP REST uses different slugs for built-in taxonomies
+  const TAXONOMY_REST_MAP = { post_tag: 'tags', category: 'categories' };
+
   const fetchTerms = async (q = '') => {
     const client = getClient?.();
     if (!client || !field.taxonomy) return;
@@ -501,10 +367,8 @@ function TaxonomyField({ field, value, onChange, getClient }) {
     try {
       const params = { per_page: 50, hide_empty: false };
       if (q) params.search = q;
-      // WP REST uses non-obvious endpoint names for built-in taxonomies
-      const WP_TAXONOMY_REST_MAP = { post_tag: 'tags', category: 'categories' };
-      const restBase = WP_TAXONOMY_REST_MAP[field.taxonomy] || field.taxonomy;
-      const { data } = await client.get(`/wp/v2/${restBase}`, params);
+      const restSlug = TAXONOMY_REST_MAP[field.taxonomy] || field.taxonomy;
+      const { data } = await client.get(`/wp/v2/${restSlug}`, params);
       setTerms(data);
     } catch (err) {
       console.error('Failed to fetch terms:', err);
@@ -616,6 +480,7 @@ function PostObjectField({ field, value, onChange, getClient }) {
   const [results, setResults] = useState([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(false);
+  const [resolvedTitles, setResolvedTitles] = useState({});
   const selected = isMulti
     ? (Array.isArray(value) ? value : [])
     : (value ? [value] : []);
@@ -642,12 +507,38 @@ function PostObjectField({ field, value, onChange, getClient }) {
     if (open && results.length === 0) doSearch('');
   }, [open]);
 
+  // Resolve integer IDs to titles (ACF sometimes returns ID instead of object)
+  useEffect(() => {
+    const client = getClient?.();
+    if (!client || !targetPostType) return;
+    const unresolved = selected
+      .filter(item => typeof item !== 'object' && item)
+      .map(id => Number(id))
+      .filter(id => id && !resolvedTitles[id]);
+    if (unresolved.length === 0) return;
+    Promise.all(
+      unresolved.map(id =>
+        client.get(`/wp/v2/${targetPostType}/${id}`)
+          .then(({ data }) => ({ id, title: data.title?.rendered || data.title?.raw || `#${id}` }))
+          .catch(() => ({ id, title: `#${id}` }))
+      )
+    ).then(resolved => {
+      setResolvedTitles(prev => {
+        const next = { ...prev };
+        resolved.forEach(({ id, title }) => { next[id] = title; });
+        return next;
+      });
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [JSON.stringify(selected.filter(i => typeof i !== 'object')), targetPostType]);
+
   const getPostId = (item) => typeof item === 'object' ? (item.ID || item.id) : item;
   const getPostTitle = (item) => {
     if (typeof item === 'object') {
       return item.title?.rendered || item.title?.raw || item.name || item.post_title || `#${getPostId(item)}`;
     }
-    return `#${item}`;
+    const id = Number(item);
+    return resolvedTitles[id] || `#${item}`;
   };
 
   const togglePost = (post) => {
@@ -995,7 +886,7 @@ function GalleryField({ field, value, onChange, getClient }) {
     try {
       const uploaded = [];
       for (const file of files) {
-        const media = await compressAndUpload(file, client);
+        const media = await client.uploadMedia(file);
         uploaded.push({ id: media.id, url: media.source_url });
       }
       onChange([...images, ...uploaded]);
@@ -1136,6 +1027,18 @@ function normalizeChoices(choices) {
   return Object.entries(choices).map(([value, label]) => ({ value, label }));
 }
 
+/* ─── Tab / Message — UI-only section divider ───────────────── */
+
+function TabField({ field }) {
+  return (
+    <div className="pt-4 pb-1 mt-2 border-t border-surface-3">
+      <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">
+        {field.label}
+      </span>
+    </div>
+  );
+}
+
 /* ─── Field type → component map ────────────────────────────── */
 
 const FIELD_MAP = {
@@ -1164,4 +1067,7 @@ const FIELD_MAP = {
   gallery: GalleryField,
   link: LinkField,
   oembed: OembedField,
+  tab: TabField,
+  message: TabField,
+  accordion: TabField,
 };

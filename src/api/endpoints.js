@@ -8,11 +8,6 @@
 // ── Custom Read Endpoints (vc/v1) ──────────────────────────────
 
 export const VC_ENDPOINTS = {
-  // CSV Import + Google Sheet sync
-  importer: {
-    sheetUrl: '/vc/v1/import-sheet-url',   // GET + POST — stores URL in WP option
-    import:   '/vc/v1/import-events',       // POST — accepts { rows: [] }
-  },
   // Artists
   artists: {
     list: '/vc/v1/artists',
@@ -59,10 +54,13 @@ export const WP_ENDPOINTS = {
   events: {
     list: '/wp/v2/vc_event_property',
     single: (id) => `/wp/v2/vc_event_property/${id}`,
+    import: '/vc/v1/import-events',
+    sheetUrl: '/vc/v1/import-sheet-url',
   },
   artists: {
     list: '/wp/v2/vc_artist',
     single: (id) => `/wp/v2/vc_artist/${id}`,
+    import: '/vc/v1/import-artists',
   },
   // Contestants (alias for vc_artist — rodeo sites)
   contestants: {
@@ -82,16 +80,20 @@ export const WP_ENDPOINTS = {
     single: (id) => `/wp/v2/pages/${id}`,
   },
   genres: {
-    list: '/wp/v2/genre',
-    single: (id) => `/wp/v2/genre/${id}`,
+    list: '/wp/v2/vc_genre',
+    single: (id) => `/wp/v2/vc_genre/${id}`,
   },
   stages: {
-    list: '/wp/v2/stage',
-    single: (id) => `/wp/v2/stage/${id}`,
+    list: '/vc/v1/stages',
+    single: (id) => `/vc/v1/stages/${id}`,
   },
   sponsorTiers: {
-    list: '/wp/v2/sponsor-tier',
-    single: (id) => `/wp/v2/sponsor-tier/${id}`,
+    list: '/wp/v2/vc_sponsor_tier',
+    single: (id) => `/wp/v2/vc_sponsor_tier/${id}`,
+  },
+  afterdarks: {
+    list: '/wp/v2/after-darks',
+    single: (id) => `/wp/v2/after-darks/${id}`,
   },
   media: {
     list: '/wp/v2/media',
@@ -106,13 +108,15 @@ export const WP_ENDPOINTS = {
 // Defines all available content modules for the tile grid.
 // Each module maps to a route, icon, and description.
 
+// Module icon paths — grad-desat series lives in public/icons/mod-icns/.
+// Each entry has svgIcon (custom SVG) + icon (Lucide fallback key).
 export const MODULES = {
   artists: {
     key: 'artists',
     label: 'Artists',
     description: 'Manage artist profiles, bios, and booking status',
     icon: 'Music',
-    svgIcon: '/icons/aster-lt.svg',
+    svgIcon: '/icons/mod-icns/module-icn-artists-grad-desat.svg',
     color: 'from-purple-900/40 to-purple-950/20',
     border: 'border-purple-700/40',
   },
@@ -121,7 +125,7 @@ export const MODULES = {
     label: 'Lineup',
     description: 'Stage assignments, set times, and billing',
     icon: 'ListMusic',
-    svgIcon: '/icons/sound-lt.svg',
+    svgIcon: '/icons/mod-icns/module-icn-lineup-grad-desat.svg',
     color: 'from-blue-900/40 to-blue-950/20',
     border: 'border-blue-700/40',
   },
@@ -130,6 +134,7 @@ export const MODULES = {
     label: 'Sponsors',
     description: 'Sponsor tiers, logos, and activation details',
     icon: 'Handshake',
+    svgIcon: '/icons/mod-icns/module-icn-spon-grad-desat.svg',
     color: 'from-emerald-900/40 to-emerald-950/20',
     border: 'border-emerald-700/40',
   },
@@ -138,7 +143,7 @@ export const MODULES = {
     label: 'Events',
     description: 'Event properties, dates, and relationships',
     icon: 'Calendar',
-    svgIcon: '/icons/starglobe-lt.svg',
+    svgIcon: '/icons/mod-icns/module-icn-events-grad-desat.svg',
     color: 'from-amber-900/40 to-amber-950/20',
     border: 'border-amber-700/40',
   },
@@ -147,7 +152,7 @@ export const MODULES = {
     label: 'Event Styles',
     description: 'Colors, logos, textures, and brand tokens',
     icon: 'Palette',
-    svgIcon: '/icons/sun-lt.svg',
+    svgIcon: '/icons/mod-icns/module-icn-styles-grad-desat.svg',
     color: 'from-rose-900/40 to-rose-950/20',
     border: 'border-rose-700/40',
   },
@@ -156,6 +161,7 @@ export const MODULES = {
     label: 'Confidentiality',
     description: 'Announce phases and visibility controls',
     icon: 'ShieldCheck',
+    svgIcon: '/icons/mod-icns/module-icn-conf-grad-desat.svg',
     color: 'from-red-900/40 to-red-950/20',
     border: 'border-red-700/40',
   },
@@ -164,6 +170,7 @@ export const MODULES = {
     label: 'Genres',
     description: 'Genre taxonomy management',
     icon: 'Tags',
+    svgIcon: '/icons/mod-icns/module-icn-genres-grad-desat.svg',
     color: 'from-cyan-900/40 to-cyan-950/20',
     border: 'border-cyan-700/40',
   },
@@ -172,6 +179,7 @@ export const MODULES = {
     label: 'Stages',
     description: 'Stage taxonomy and event assignments',
     icon: 'LayoutGrid',
+    svgIcon: '/icons/mod-icns/module-icn-stages-grad-desat.svg',
     color: 'from-indigo-900/40 to-indigo-950/20',
     border: 'border-indigo-700/40',
   },
@@ -180,6 +188,7 @@ export const MODULES = {
     label: 'Contestants',
     description: 'Rodeo contestant profiles and participation',
     icon: 'Users',
+    svgIcon: null, // no grad-desat version — falls back to Lucide
     color: 'from-amber-900/40 to-amber-950/20',
     border: 'border-amber-700/40',
   },

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { useAuth } from '../../auth/AuthContext';
 import { WP_ENDPOINTS } from '../../api/endpoints';
 import EventSelector from '../../components/EventSelector';
@@ -36,8 +37,8 @@ const STATUS_CYCLE = ['confidential', 'teaser', 'live'];
 
 // ── Confirm sheet ──────────────────────────────────────────────
 function ConfirmSheet({ phase, onConfirm, onCancel }) {
-  return (
-    <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/40" onClick={onCancel}>
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-end justify-center bg-black/40" onClick={onCancel}>
       <div
         className="w-full max-w-lg bg-white rounded-t-2xl p-6 pb-16 shadow-xl"
         onClick={e => e.stopPropagation()}
@@ -73,7 +74,8 @@ function ConfirmSheet({ phase, onConfirm, onCancel }) {
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
@@ -137,9 +139,7 @@ export default function ConfidentialView() {
   // ── Master toggle ────────────────────────────────────────────
   const toggleMaster = useCallback(() => {
     const current = eventData?.acf?.vc_confidential_master;
-    // Write both fields to keep vc_ep_confidential (per-post ACF) in sync with
-    // vc_confidential_master (announce phases / PHP engine field)
-    saveField({ acf: { vc_confidential_master: !current, vc_ep_confidential: !current } });
+    saveField({ acf: { vc_confidential_master: !current } });
   }, [saveField, eventData]);
 
   // ── Announce phase status cycle ───────────────────────────────

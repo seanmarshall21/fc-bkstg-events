@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Upload } from 'lucide-react';
 import { useAuth } from '../../auth/AuthContext';
 import { VC_ENDPOINTS, WP_ENDPOINTS } from '../../api/endpoints';
 import ContentList from '../../components/ui/ContentList';
@@ -79,7 +80,7 @@ export default function ArtistList() {
 
   if (showReorder) {
     return (
-      <div className="p-4 pb-8 animate-fade-in">
+      <div className="p-4 pb-28 animate-fade-in">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-bold text-gray-900">Artists</h2>
           <button
@@ -131,7 +132,13 @@ export default function ArtistList() {
   return (
     <div>
       <div className="flex items-center justify-between px-4 pt-4 pb-2">
-        <div />
+        <button
+          onClick={() => navigate('/artists/import')}
+          className="w-9 h-9 rounded-xl border border-surface-3 bg-white flex items-center justify-center text-gray-400 hover:text-gray-600 hover:border-gray-300 transition-colors shrink-0"
+          title="Import CSV"
+        >
+          <Upload className="w-4 h-4" />
+        </button>
         <button
           onClick={() => setShowReorder(true)}
           className="px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-gray-900 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"

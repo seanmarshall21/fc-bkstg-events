@@ -103,14 +103,18 @@ export default function useServiceWorkerUpdate(scriptURL = '/sw.js') {
 
   const applyUpdate = useCallback(() => {
     const worker = waitingWorkerRef.current || registrationRef.current?.waiting;
-    if (!worker) {
-      // Fallback: force a reload if we somehow lost the reference
-      window.location.reload();
-      return;
+    if (worker) {
+      // Ask the new SW to activate. controllerchange listener will reload on desktop.
+      worker.postMessage({ type: 'SKIP_WAITING' });
     }
-    // Ask the new SW to activate. controllerchange listener will reload.
-    worker.postMessage({ type: 'SKIP_WAITING' });
-    // Some SW builds use skipWaiting() in message handler; this covers both.
+    // iOS Safari standalone PWA: controllerchange doesn't fire reliably after skipWaiting.
+    // Schedule a fallback reload. The reloadingRef guard prevents double-reload on desktop
+    // (controllerchange fires first, sets the flag, then this timeout is a no-op).
+    setTimeout(() => {
+      if (reloadingRef.current) return;
+      reloadingRef.current = true;
+      window.location.reload();
+    }, 600);
   }, []);
 
   const dismissUpdate = useCallback(() => {

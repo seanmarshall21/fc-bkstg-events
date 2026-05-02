@@ -4,7 +4,6 @@ import { useAuth } from '../../auth/AuthContext';
 import { WP_ENDPOINTS } from '../../api/endpoints';
 import useSchema, { buildDefaultValues, buildAcfPayload, extractValues } from '../../hooks/useSchema';
 import FieldEditor from '../../components/ui/FieldEditor';
-import PhotoUpload from '../../components/PhotoUpload';
 import { setFeaturedMedia } from '../../services/mediaUploadService';
 import { Loader2 } from 'lucide-react';
 
@@ -82,23 +81,19 @@ export default function SponsorDetail() {
     }
   }, [getClient, id, isCreate, schemaFields, navigate, fetchSponsor]);
 
-  // Logo upload — store the full media object so buildAcfPayload can extract the ID.
-  // ACF image fields expect an integer media ID, not a URL string.
-  const handleLogoChange = useCallback(async (url, mediaObject) => {
-    // Store the full media object — buildAcfPayload picks .ID or .id from it.
-    // Fallback to id integer if no full object available.
-    const acfValue = mediaObject && (mediaObject.ID || mediaObject.id)
-      ? mediaObject.ID || mediaObject.id
-      : url;
+  // Photo side effect: called by FieldEditor's AvatarUpload via onPhotoChange.
+  // Receives the full media object { id, url, ... } — same signature as ArtistDetail.
+  const handleLogoChange = useCallback(async (mediaObj) => {
+    const acfValue = mediaObj?.id || mediaObj?.ID || '';
     setSponsor(prev => ({ ...prev, vc_sponsor_logo: acfValue }));
-    if (!isCreate && sponsor?._wp?.id && mediaObject?.id) {
+    if (!isCreate && sponsor?._wp?.id && mediaObj?.id) {
       try {
         await setFeaturedMedia({
           siteUrl: activeSite?.url,
           username: activeSite?.username,
           appPassword: activeSite?.appPassword,
           postId: sponsor._wp.id,
-          mediaId: mediaObject.id,
+          mediaId: mediaObj.id,
           postType: 'vc_sponsor',
         });
       } catch (err) {
@@ -106,10 +101,6 @@ export default function SponsorDetail() {
       }
     }
   }, [activeSite, isCreate, sponsor?._wp?.id]);
-
-  const handleLogoRemove = useCallback(() => {
-    setSponsor(prev => ({ ...prev, vc_sponsor_logo: '' }));
-  }, []);
 
   // ── Guards ────────────────────────────────────────────────────
   if (!activeSite) {
@@ -134,39 +125,19 @@ export default function SponsorDetail() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Logo upload — rendered outside FieldEditor so it doesn't duplicate */}
-      {activeSite && (
-        <div className="bg-white rounded-lg border border-gray-200 p-6">
-          <label className="block text-sm font-medium text-gray-900 mb-4">
-            Sponsor Logo (Dark BG)
-          </label>
-          <PhotoUpload
-            value={sponsor?.vc_sponsor_logo || ''}
-            onChange={handleLogoChange}
-            onRemove={handleLogoRemove}
-            aspectRatio="landscape"
-            maxSize={2}
-            siteUrl={activeSite.url}
-            wpUsername={activeSite.username}
-            wpAppPassword={activeSite.appPassword}
-          />
-        </div>
-      )}
-
-      <FieldEditor
-        schema={schema}
-        values={sponsor}
-        onSave={handleSave}
-        onCancel={() => navigate('/sponsors')}
-        getClient={getClient}
-        saving={saving}
-        mode={isCreate ? 'create' : 'edit'}
-        layout="detail"
-        titleFieldName="title"
-        photoFieldName="vc_sponsor_logo"
-        renderPhotoInEditor={false}
-      />
-    </div>
+    <FieldEditor
+      schema={schema}
+      values={sponsor}
+      onSave={handleSave}
+      onCancel={() => navigate('/sponsors')}
+      getClient={getClient}
+      saving={saving}
+      mode={isCreate ? 'create' : 'edit'}
+      layout="detail"
+      titleFieldName="title"
+      photoFieldName="vc_sponsor_logo"
+      renderPhotoInEditor={true}
+      onPhotoChange={handleLogoChange}
+    />
   );
 }

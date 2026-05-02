@@ -1,34 +1,28 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthContext';
 import { WP_ENDPOINTS } from '../../api/endpoints';
-import { Upload, Download, ArrowLeft, CheckCircle, AlertCircle, Loader, Link, RefreshCw, X } from 'lucide-react';
-
-const SHEET_URL_CACHE_KEY = 'vc_import_sheet_url';
+import { Upload, Download, ArrowLeft, CheckCircle, AlertCircle, Loader } from 'lucide-react';
 
 // ── CSV column definitions (mirrors PHP get_columns()) ────────────────────────
 
 const COLUMNS = [
-  { key: 'slug',         label: 'Slug',         notes: 'Match key — required',       required: true },
-  { key: 'title',        label: 'Title',         notes: 'Event name' },
-  { key: 'post_status',  label: 'Status',        notes: 'publish or draft' },
-  { key: 'season',       label: 'Season',        notes: "e.g. Spring '26" },
-  { key: 'start_date',   label: 'Start Date',    notes: 'YYYY-MM-DD' },
-  { key: 'end_date',     label: 'End Date',      notes: 'YYYY-MM-DD' },
-  { key: 'city',         label: 'City',          notes: '' },
-  { key: 'state',        label: 'State',         notes: '' },
-  { key: 'venue',        label: 'Venue',         notes: '' },
-  { key: 'capacity',     label: 'Capacity',      notes: 'Number' },
-  { key: 'established',  label: 'Established',   notes: 'Year (number)' },
-  { key: 'website',      label: 'Website',       notes: 'URL' },
-  { key: 'instagram',    label: 'Instagram',     notes: 'URL' },
-  { key: 'facebook',     label: 'Facebook',      notes: 'URL' },
-  { key: 'spotify',      label: 'Spotify',       notes: 'URL' },
-  { key: 'twitter',      label: 'Twitter / X',   notes: 'URL' },
-  { key: 'tiktok',       label: 'TikTok',        notes: 'URL' },
-  { key: 'soundcloud',   label: 'SoundCloud',    notes: 'URL' },
-  { key: 'confidential', label: 'Confidential',  notes: '0 or 1' },
-  { key: 'private',      label: 'Private',       notes: '0 or 1' },
+  { key: 'slug',            label: 'Slug',            notes: 'Match key — required',                             required: true },
+  { key: 'title',           label: 'Title',           notes: 'Artist / act name' },
+  { key: 'post_status',     label: 'Status',          notes: 'publish or draft' },
+  { key: 'origin',          label: 'Origin',          notes: 'Hometown / city' },
+  { key: 'booking_status',  label: 'Booking Status',  notes: 'confirmed | pending | hold | cancelled | available | booked | unavailable' },
+  { key: 'booking_fee',     label: 'Booking Fee',     notes: 'Number' },
+  { key: 'genre',           label: 'Genre',           notes: 'Genre slug (e.g. electronic). Comma-separate for multiple.' },
+  { key: 'instagram',       label: 'Instagram',       notes: 'URL' },
+  { key: 'spotify',         label: 'Spotify',         notes: 'URL' },
+  { key: 'soundcloud',      label: 'SoundCloud',      notes: 'URL' },
+  { key: 'twitter',         label: 'Twitter / X',     notes: 'URL' },
+  { key: 'website',         label: 'Website',         notes: 'URL' },
+  { key: 'agent_name',      label: 'Agent Name',      notes: 'Booking agent name' },
+  { key: 'agent_email',     label: 'Agent Email',     notes: 'Booking agent email' },
+  { key: 'agent_phone',     label: 'Agent Phone',     notes: 'Booking agent phone' },
+  { key: 'contract_status', label: 'Contract Status', notes: 'Contract status select value' },
 ];
 
 // ── CSV helpers ───────────────────────────────────────────────────────────────
@@ -71,10 +65,11 @@ function parseCSV(text) {
 function generateTemplateCSV() {
   const headers = COLUMNS.map(c => c.key);
   const example = [
-    'crssd-fall-2026', 'CRSSD Fall 2026', 'publish', "Fall '26",
-    '2026-10-03', '2026-10-04', 'San Diego', 'CA', 'Waterfront Park',
-    '5000', '2013', 'https://crssdfest.com', 'https://instagram.com/crssd',
-    '', '', '', '', '', '0', '0',
+    'fisher', 'Fisher', 'publish', 'Sydney, Australia',
+    'confirmed', '85000', 'electronic',
+    'https://instagram.com/fisher', 'https://open.spotify.com/artist/fisher',
+    'https://soundcloud.com/fisher', '', 'https://fisherdj.com',
+    'Jane Smith', 'jane@agencyname.com', '+1 310 555 0100', 'signed',
   ];
   const escape = v => /[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v;
   return [headers, example].map(row => row.map(escape).join(',')).join('\n');
@@ -82,22 +77,16 @@ function generateTemplateCSV() {
 
 // ── Main component ────────────────────────────────────────────────────────────
 
-export default function ImportEvents() {
+export default function ImportArtists() {
   const { getClient, hasSites } = useAuth();
   const navigate = useNavigate();
   const fileRef = useRef(null);
 
   const [file, setFile]         = useState(null);
-  const [preview, setPreview]   = useState(null); // { headers, rows }
+  const [preview, setPreview]   = useState(null);
   const [status, setStatus]     = useState('idle'); // idle | importing | done | error
   const [results, setResults]   = useState(null);
   const [errorMsg, setErrorMsg] = useState('');
-
-  // ── Google Sheet sync ──────────────────────────────────────────────────────
-  const [sheetUrl, setSheetUrl]         = useState(() => localStorage.getItem(SHEET_URL_CACHE_KEY) || '');
-  const [sheetSaving, setSheetSaving]   = useState(false);
-  const [sheetFetching, setSheetFetching] = useState(false);
-  const [sheetError, setSheetError]     = useState('');
 
   // ── File selection ─────────────────────────────────────────────────────────
 
@@ -124,76 +113,14 @@ export default function ImportEvents() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'vc-events-import-template.csv';
+    a.download = 'vc-artists-import-template.csv';
     a.click();
     URL.revokeObjectURL(url);
   };
 
-  // ── Sheet URL — load from WP on mount ─────────────────────────────────────
-
-  useEffect(() => {
-    const client = getClient();
-    if (!client) return;
-    client.get(WP_ENDPOINTS.events.sheetUrl)
-      .then(({ data }) => {
-        if (data?.url) {
-          setSheetUrl(data.url);
-          localStorage.setItem(SHEET_URL_CACHE_KEY, data.url);
-        }
-      })
-      .catch(() => {}); // fall back to cached localStorage value
-  }, [getClient]);
-
-  // ── Sheet URL — save to WP on blur ────────────────────────────────────────
-
-  const handleSheetUrlChange = (url) => {
-    setSheetUrl(url);
-    // Update cache immediately
-    if (url.trim()) localStorage.setItem(SHEET_URL_CACHE_KEY, url.trim());
-    else localStorage.removeItem(SHEET_URL_CACHE_KEY);
-  };
-
-  const handleSheetUrlBlur = useCallback(async () => {
-    const client = getClient();
-    if (!client) return;
-    setSheetSaving(true);
-    try {
-      await client.post(WP_ENDPOINTS.events.sheetUrl, { url: sheetUrl.trim() });
-    } catch (err) {
-      console.warn('Sheet URL save failed:', err);
-    } finally {
-      setSheetSaving(false);
-    }
-  }, [getClient, sheetUrl]);
-
-  // ── Fetch from Google Sheet ────────────────────────────────────────────────
-
-  const fetchSheet = async () => {
-    const url = sheetUrl.trim();
-    if (!url) return;
-    setSheetFetching(true);
-    setSheetError('');
-    setPreview(null);
-    setFile(null);
-    setResults(null);
-    setStatus('idle');
-    try {
-      const res = await fetch(url);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const text = await res.text();
-      const parsed = parseCSV(text);
-      if (!parsed.rows.length) throw new Error('Sheet returned no rows — check the URL and column headers.');
-      setPreview(parsed);
-    } catch (err) {
-      setSheetError(err.message || 'Could not fetch sheet. Make sure it is published as CSV.');
-    } finally {
-      setSheetFetching(false);
-    }
-  };
-
   // ── Import ─────────────────────────────────────────────────────────────────
 
-  const handleImport = async () => {
+  const handleImport = useCallback(async () => {
     if (!preview?.rows?.length) return;
     const client = getClient();
     if (!client) return;
@@ -202,17 +129,17 @@ export default function ImportEvents() {
     setErrorMsg('');
 
     try {
-      const { data } = await client.post(WP_ENDPOINTS.events.import, {
+      const { data } = await client.post(WP_ENDPOINTS.artists.import, {
         rows: preview.rows,
       });
       setResults(data);
       setStatus('done');
     } catch (err) {
-      console.error('Import failed:', err);
+      console.error('Artist import failed:', err);
       setErrorMsg(err?.response?.data?.message || 'Import failed — check the console.');
       setStatus('error');
     }
-  };
+  }, [getClient, preview]);
 
   // ── Guards ─────────────────────────────────────────────────────────────────
 
@@ -235,12 +162,12 @@ export default function ImportEvents() {
       {/* ── Header ────────────────────────────────────────────── */}
       <div className="px-4 pt-4 pb-2 flex items-center gap-3">
         <button
-          onClick={() => navigate('/events')}
+          onClick={() => navigate('/artists')}
           className="w-9 h-9 rounded-xl border border-surface-3 bg-white flex items-center justify-center text-gray-400 hover:text-gray-600 transition-colors shrink-0"
         >
           <ArrowLeft className="w-4 h-4" />
         </button>
-        <h2 className="text-xl font-bold text-gray-900">Import Events</h2>
+        <h2 className="text-xl font-bold text-gray-900">Import Artists</h2>
       </div>
 
       <div className="mx-4 border-b border-surface-3 mb-4" />
@@ -252,6 +179,7 @@ export default function ImportEvents() {
           <p className="text-sm font-semibold text-gray-900 mb-1">Need the template?</p>
           <p className="text-xs text-gray-400 mb-3">
             Download a CSV with all supported columns and an example row. Fill it in, then upload below.
+            Photos, bio, and any fields not in the CSV are left untouched.
           </p>
           <button
             onClick={downloadTemplate}
@@ -262,69 +190,12 @@ export default function ImportEvents() {
           </button>
         </div>
 
-        {/* ── Google Sheet link card ────────────────────────── */}
-        <div className="bg-white border border-surface-3 rounded-2xl p-4">
-          <div className="flex items-center gap-2 mb-1">
-            <Link className="w-4 h-4 text-gray-400" />
-            <p className="text-sm font-semibold text-gray-900">Link to Google Sheet</p>
-          </div>
-          <p className="text-xs text-gray-400 mb-3">
-            Paste your published Google Sheet CSV URL. The link is saved — tap Sync any time to pull the latest data.
-          </p>
-          <div className="flex gap-2">
-            <div className="relative flex-1">
-              <input
-                type="url"
-                value={sheetUrl}
-                onChange={e => handleSheetUrlChange(e.target.value)}
-                onBlur={handleSheetUrlBlur}
-                placeholder="https://docs.google.com/spreadsheets/d/…"
-                className="w-full bg-surface-1 border border-surface-3 rounded-xl px-3 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-vc-500 focus:ring-2 focus:ring-vc-500/20 transition-colors pr-8"
-              />
-              {sheetUrl && !sheetSaving && (
-                <button
-                  onClick={() => { handleSheetUrlChange(''); handleSheetUrlBlur(); }}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-300 hover:text-gray-500"
-                >
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              )}
-              {sheetSaving && (
-                <Loader className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 animate-spin" />
-              )}
-            </div>
-            <button
-              onClick={fetchSheet}
-              disabled={!sheetUrl.trim() || sheetFetching}
-              className={`px-3 py-2.5 rounded-xl text-sm font-medium flex items-center gap-1.5 shrink-0 transition-colors ${
-                !sheetUrl.trim() || sheetFetching
-                  ? 'bg-surface-2 text-gray-400 cursor-not-allowed'
-                  : 'bg-vc-500 hover:bg-vc-600 text-white'
-              }`}
-            >
-              {sheetFetching
-                ? <Loader className="w-4 h-4 animate-spin" />
-                : <RefreshCw className="w-4 h-4" />}
-              {sheetFetching ? 'Fetching…' : 'Sync'}
-            </button>
-          </div>
-          {sheetError && (
-            <p className="text-xs text-red-500 mt-2 flex items-center gap-1">
-              <AlertCircle className="w-3.5 h-3.5 shrink-0" />{sheetError}
-            </p>
-          )}
-          {sheetUrl && !sheetError && !sheetFetching && !preview && (
-            <p className="text-xs text-gray-400 mt-2">
-              {sheetSaving ? 'Saving…' : 'Sheet linked — tap Sync to load data.'}
-            </p>
-          )}
-        </div>
-
         {/* ── File upload card ───────────────────────────────── */}
         <div className="bg-white border border-surface-3 rounded-2xl p-4">
           <p className="text-sm font-semibold text-gray-900 mb-1">Upload CSV</p>
           <p className="text-xs text-gray-400 mb-3">
-            Rows are matched to existing events by slug. Only columns present in your file are updated — photos and all other fields are left untouched.
+            Rows are matched to existing artists by slug. Matched rows are updated, unmatched rows create new
+            artist posts. Only columns present in your file are written.
           </p>
 
           <input
@@ -423,17 +294,17 @@ export default function ImportEvents() {
             {status === 'importing' ? (
               <><Loader className="w-4 h-4 animate-spin" /> Importing…</>
             ) : (
-              <><Upload className="w-4 h-4" /> Import {validRows.length} Event{validRows.length !== 1 ? 's' : ''}</>
+              <><Upload className="w-4 h-4" /> Import {validRows.length} Artist{validRows.length !== 1 ? 's' : ''}</>
             )}
           </button>
         )}
 
         {status === 'done' && (
           <button
-            onClick={() => navigate('/events')}
+            onClick={() => navigate('/artists')}
             className="w-full py-4 rounded-2xl font-semibold text-sm bg-gray-900 text-white hover:bg-gray-800 transition-colors"
           >
-            Back to Events
+            Back to Artists
           </button>
         )}
 
@@ -451,6 +322,7 @@ export default function ImportEvents() {
             ))}
           </div>
           <p className="text-xs text-gray-400 mt-2">* Required</p>
+          <p className="text-xs text-gray-400 mt-1">Genre: use the term slug (e.g. <code className="font-mono">electronic</code>), not the display name.</p>
         </div>
 
       </div>

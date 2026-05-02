@@ -3,101 +3,39 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthContext';
 import { WP_ENDPOINTS } from '../../api/endpoints';
 import useSchema, { buildDefaultValues, buildAcfPayload, extractValues } from '../../hooks/useSchema';
-import SchemaField, { AvatarUpload } from '../../components/ui/SchemaFields';
+import FieldEditor from '../../components/ui/FieldEditor';
+import { AvatarUpload } from '../../components/ui/SchemaFields';
+import ArchiveEventDialog from '../../components/ArchiveEventDialog';
+import { Loader2, Archive, ExternalLink, AlertTriangle } from 'lucide-react';
 import { decodeHtml } from '../../utils/helpers';
-import { ChevronLeft, Loader2, Link as LinkIcon, CheckCircle, AlertCircle, ShieldCheck, ShieldOff } from 'lucide-react';
-import PostControls from '../../components/ui/PostControls';
 
-/**
- * ZooEventDetail — Zoo Agency-specific event detail/create form.
- *
- * Layout (top → bottom):
- *   ← Events  [Save]
- *   Event Title  (post_title — labeled input)
- *   Permalink    (read-only, from _wp.link)
- *   Event Icon   (vc_ep_event_icon — AvatarUpload, circle)
- *   ── Schema-driven ACF fields ──
- *   Title / Season / Confidential / Private Visibility  (flat)
- *   Dates / Details / Media / Social                   (Group sections, collapsible)
- */
-
-// ── Event Icon field name ──────────────────────────────────────
-const ICON_FIELD = 'vc_ep_event_icon';
-
-// ── Save toast ─────────────────────────────────────────────────
-function SaveToast({ status, message }) {
-  if (!status) return null;
-  return (
-    <div className={`flex items-center gap-2 px-4 py-3 mx-4 rounded-xl mb-3 ${
-      status === 'success'
-        ? 'bg-emerald-50 border border-emerald-200'
-        : 'bg-red-50 border border-red-200'
-    }`}>
-      {status === 'success'
-        ? <CheckCircle className="w-4 h-4 text-emerald-500 shrink-0" />
-        : <AlertCircle  className="w-4 h-4 text-red-500 shrink-0"    />
-      }
-      <span className={`text-[13px] ${
-        status === 'success' ? 'text-emerald-700' : 'text-red-700'
-      }`}>{message}</span>
-    </div>
-  );
-}
-
-// ── Labeled field wrapper ──────────────────────────────────────
-function LabeledInput({ label, children }) {
-  return (
-    <div className="px-4 mb-3">
-      <label className="block text-[11px] font-semibold text-[#979797] uppercase tracking-wide mb-1">
-        {label}
-      </label>
-      {children}
-    </div>
-  );
-}
-
-// ── Main component ─────────────────────────────────────────────
 export default function ZooEventDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { getClient, activeSite } = useAuth();
 
+  const [event, setEvent]             = useState(null);
+  const [loading, setLoading]         = useState(true);
+  const [saving, setSaving]           = useState(false);
+  const [showArchive, setShowArchive] = useState(false);
+  // Track icon separately so AvatarUpload can save independently
+  const [iconValue, setIconValue]     = useState(null);
+
   const isCreate = id === 'new';
 
-  const [event,          setEvent]          = useState(null);
-  const [values,         setValues]         = useState({});
-  const [loading,        setLoading]        = useState(true);
-  const [saving,         setSaving]         = useState(false);
-  const [saveStatus,     setSaveStatus]     = useState(null);
-  const [saveMsg,        setSaveMsg]        = useState('');
-  const [confToggling,   setConfToggling]   = useState(false);
-  const [wpStatus,       setWpStatus]       = useState(null);
-
-  // ── Schema ──────────────────────────────────────────────────
-  const {
-    schema,
-    fields: schemaFields,
-    loading: schemaLoading,
-    error: schemaError,
-  } = useSchema('vc_event_property', {
-    skip: !activeSite?.appPassword,
+  // Schema endpoint is public (no auth required) — skip only if no site at all.
+  // appPassword is needed for saves, not for schema fetch.
+  const { schema, fields: schemaFields, loading: schemaLoading, error: schemaError } = useSchema('vc_event_property', {
+    skip: !activeSite,
     apiBase: activeSite ? `${activeSite.url}/wp-json/vc/v1` : '/wp-json/vc/v1',
     username: activeSite?.username,
     appPassword: activeSite?.appPassword,
   });
 
-  // ── Fields split: icon vs everything else ──────────────────
-  // The icon field is rendered as AvatarUpload above the form.
-  // All remaining schema fields render via SchemaField in order.
-  const iconField    = schemaFields.find(f => f.name === ICON_FIELD);
-  const bodyFields   = schemaFields.filter(f => f.name !== ICON_FIELD);
-
-  // ── Fetch event ─────────────────────────────────────────────
   const fetchEvent = useCallback(async () => {
     if (isCreate) {
       const defaults = schemaFields.length > 0 ? buildDefaultValues(schemaFields) : {};
-      setValues({ title: '', ...defaults });
-      setEvent(null);
+      setEvent({ title: '', ...defaults });
       setLoading(false);
       return;
     }
@@ -109,16 +47,15 @@ export default function ZooEventDetail() {
       const { data } = await client.get(WP_ENDPOINTS.events.single(id), { context: 'edit' });
       const acf = data.acf || {};
       const acfValues = schemaFields.length > 0 ? extractValues(schemaFields, acf) : acf;
-      setEvent(data);
-      setWpStatus(data.status || 'publish');
-      setValues({
+      setIconValue(acf.vc_ep_event_icon || null);
+      setEvent({
+        _wp: data,
         title: decodeHtml(data.title?.raw || ''),
         ...acfValues,
       });
     } catch (err) {
-      console.error('[ZooEventDetail] fetch failed:', err);
-      setEvent(null);
-      setValues({ title: `Event #${id}`, _fetchError: true });
+      console.error('Failed to fetch event:', err);
+      setEvent({ title: `Event #${id}`, _fetchError: true });
     } finally {
       setLoading(false);
     }
@@ -128,104 +65,64 @@ export default function ZooEventDetail() {
     if (!schemaLoading) fetchEvent();
   }, [fetchEvent, schemaLoading]);
 
-  // ── Handle field change ─────────────────────────────────────
-  const handleChange = (key, value) => {
-    setValues(prev => ({ ...prev, [key]: value }));
-  };
+  // ── Icon upload — immediate PATCH, independent of main form ───────────────
 
-  // ── Save ────────────────────────────────────────────────────
-  const handleSave = useCallback(async () => {
+  const handleIconChange = useCallback(async (newIcon) => {
+    setIconValue(newIcon);
+    const client = getClient();
+    if (!client || isCreate) return;
+    try {
+      await client.post(WP_ENDPOINTS.events.single(id), {
+        acf: { vc_ep_event_icon: newIcon?.id ?? null },
+      });
+    } catch (err) {
+      console.error('Icon save failed:', err);
+      setIconValue(prev => prev);
+    }
+  }, [getClient, id, isCreate]);
+
+  // ── Main form save ─────────────────────────────────────────────────────────
+
+  const handleSave = useCallback(async (values) => {
     const client = getClient();
     if (!client) return;
     setSaving(true);
-    setSaveStatus(null);
-
     try {
       const acfPayload = schemaFields.length > 0 ? buildAcfPayload(schemaFields, values) : {};
-      const body = { title: values.title || '' };
-      if (Object.keys(acfPayload).length > 0) body.acf = acfPayload;
+      // ACF returns image fields with uppercase ID; uploads return lowercase id — handle both
+      if (iconValue !== null) acfPayload.vc_ep_event_icon = iconValue?.ID ?? iconValue?.id ?? null;
 
       if (isCreate) {
-        body.status = 'publish';
-        const { data: newPost } = await client.post(WP_ENDPOINTS.events.list, body);
+        const createBody = { title: values.title, status: 'publish' };
+        if (Object.keys(acfPayload).length > 0) createBody.acf = acfPayload;
+        const { data: newPost } = await client.post(WP_ENDPOINTS.events.list, createBody);
         navigate(`/events/${newPost.id}`, { replace: true });
-        return;
+      } else {
+        const updateBody = { title: values.title };
+        if (Object.keys(acfPayload).length > 0) updateBody.acf = acfPayload;
+        await client.post(WP_ENDPOINTS.events.single(id), updateBody);
+        await fetchEvent();
       }
-
-      await client.post(WP_ENDPOINTS.events.single(id), body);
-      await fetchEvent();
-      setSaveStatus('success');
-      setSaveMsg('Saved successfully');
-      setTimeout(() => setSaveStatus(null), 2000);
-    } catch (err) {
-      console.error('[ZooEventDetail] save failed:', err);
-      setSaveStatus('error');
-      setSaveMsg(err.message || 'Save failed');
     } finally {
       setSaving(false);
     }
-  }, [getClient, id, isCreate, schemaFields, values, navigate, fetchEvent]);
+  }, [getClient, id, isCreate, schemaFields, iconValue, navigate, fetchEvent]);
 
-  // ── Confidential master toggle (independent of form save) ──
-  const handleToggleConfidential = useCallback(async () => {
-    const client = getClient();
-    if (!client || isCreate || confToggling) return;
+  const handleArchived = () => {
+    setShowArchive(false);
+    navigate('/events');
+  };
 
-    const current = Boolean(event?.acf?.vc_ep_confidential);
-    const next    = !current;
-
-    // Optimistic update
-    setEvent(prev => prev ? {
-      ...prev,
-      acf: { ...prev.acf, vc_ep_confidential: next, vc_confidential_master: next },
-    } : prev);
-    setConfToggling(true);
-
-    try {
-      await client.post(WP_ENDPOINTS.events.single(id), {
-        acf: { vc_ep_confidential: next, vc_confidential_master: next },
-      });
-    } catch (err) {
-      console.error('[ZooEventDetail] confidential toggle failed:', err);
-      // Revert
-      setEvent(prev => prev ? {
-        ...prev,
-        acf: { ...prev.acf, vc_ep_confidential: current, vc_confidential_master: current },
-      } : prev);
-    } finally {
-      setConfToggling(false);
-    }
-  }, [getClient, id, isCreate, event, confToggling]);
-
-  // ── Permalink display ───────────────────────────────────────
-  const permalink = event?.link || event?.permalink || '';
-  const slug      = event?.slug || '';
-
-  // ── Guards ──────────────────────────────────────────────────
+  // ── Guards ────────────────────────────────────────────────────
   if (!activeSite) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
-      </div>
-    );
+    return <div className="flex items-center justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-gray-400" /></div>;
   }
-
   if (activeSite.appPassword && !schema && !schemaError) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
-      </div>
-    );
+    return <div className="flex items-center justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-gray-400" /></div>;
   }
-
   if (schemaLoading || loading) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
-      </div>
-    );
+    return <div className="flex items-center justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-gray-400" /></div>;
   }
-
   if (schemaError) {
     return (
       <div className="p-4 text-center">
@@ -234,141 +131,91 @@ export default function ZooEventDetail() {
       </div>
     );
   }
+  if (!event) {
+    return <div className="p-4 text-center text-gray-400">Event not found</div>;
+  }
 
-  // ── Render ──────────────────────────────────────────────────
+  // Zoo visibility is driven by vc_ep_confidential / vc_ep_private_visibility ACF toggles,
+  // not a phase cycle. Archived = WP post drafted via archive endpoint.
+  const isArchived   = event._wp?.status === 'draft';
+  const permalink    = event._wp?.link || null;
+  const displayTitle = event.vc_ep_title || event.title || '';
+  const hasCredentials = !!activeSite?.appPassword;
+
   return (
-    <div className="pb-8 animate-fade-in">
-
-      {/* ── Nav header ──────────────────────────────────── */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 sticky top-0 bg-white z-10">
-        <button
-          onClick={() => navigate('/events')}
-          className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 transition-colors"
-        >
-          <ChevronLeft className="w-4 h-4" />
-          <span>Events</span>
-        </button>
-        <button
-          onClick={handleSave}
-          disabled={saving}
-          className="px-4 py-1.5 rounded-lg text-sm font-semibold transition-all
-            bg-[#b1d6c3] text-[#0f331f] hover:bg-[#9ac8b0]
-            disabled:opacity-40 disabled:cursor-not-allowed"
-        >
-          {saving ? 'Saving…' : 'Save'}
-        </button>
-      </div>
-
-      {/* ── Confidential master toggle bar ───────────────── */}
-      {!isCreate && event && (() => {
-        const isConf = Boolean(event.acf?.vc_ep_confidential);
-        return (
-          <button
-            type="button"
-            onClick={handleToggleConfidential}
-            disabled={confToggling}
-            className={`w-full flex items-center justify-between px-4 py-2.5 transition-colors ${
-              isConf
-                ? 'bg-[#1a0a0a] text-[#f87171]'
-                : 'bg-[#0a1a0f] text-[#4ade80]'
-            } ${confToggling ? 'opacity-60' : ''}`}
-          >
-            <div className="flex items-center gap-2">
-              {isConf
-                ? <ShieldOff className="w-4 h-4 shrink-0" />
-                : <ShieldCheck className="w-4 h-4 shrink-0" />
-              }
-              <span className="text-[13px] font-semibold">
-                {isConf ? 'Confidential — tap to make live' : 'Live — tap to mark confidential'}
-              </span>
-            </div>
-            {confToggling
-              ? <Loader2 className="w-4 h-4 animate-spin shrink-0" />
-              : (
-                <div className={`w-9 h-[20px] rounded-full relative transition-colors ${isConf ? 'bg-red-800' : 'bg-emerald-800'}`}>
-                  <span className={`absolute top-[2px] w-4 h-4 rounded-full bg-white shadow transition-all ${isConf ? 'left-[2px]' : 'left-[18px]'}`} />
-                </div>
-              )
-            }
-          </button>
-        );
-      })()}
-
-      {/* ── Save toast ───────────────────────────────────── */}
-      <div className="mt-3">
-        <SaveToast status={saveStatus} message={saveMsg} />
-      </div>
-
-      {/* ── Event Title (post_title) ─────────────────────── */}
-      <LabeledInput label="Event Title">
-        <div className="vc-field-bg">
-          <input
-            type="text"
-            className="w-full bg-transparent text-[14px] text-[#282828] border-none outline-none placeholder:text-gray-300"
-            style={{ fontSize: '16px' }}
-            value={values.title || ''}
-            onChange={e => handleChange('title', e.target.value)}
-            placeholder={isCreate ? 'Enter event title…' : ''}
-            autoFocus={isCreate}
-          />
+    <>
+      {/* ── No-credentials banner ─────────────────────────────── */}
+      {!hasCredentials && (
+        <div className="flex items-center gap-2 px-4 py-2.5 bg-amber-50 border-b border-amber-200 text-xs text-amber-700">
+          <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+          <span>No WP credentials configured for this site — viewing only. Add an app password in site settings to enable saves.</span>
         </div>
-      </LabeledInput>
+      )}
 
-      {/* ── Permalink (read-only) ────────────────────────── */}
+      {/* ── Zoo header: icon + title ───────────────────────────── */}
       {!isCreate && (
-        <LabeledInput label="Permalink">
-          <div className="vc-field-bg flex items-center gap-2">
-            <LinkIcon className="w-3.5 h-3.5 text-gray-400 shrink-0" />
-            <span className="flex-1 text-[13px] text-[#979797] truncate">
-              {permalink || `${activeSite?.url || ''}/`}
-            </span>
+        <div className="bg-white border-b border-surface-3 px-4 py-4 flex items-center gap-4">
+          <AvatarUpload
+            value={iconValue}
+            onChange={handleIconChange}
+            getClient={getClient}
+          />
+          <div className="flex-1 min-w-0">
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-0.5">
+              Zoo Agency
+            </p>
+            <h2 className="text-lg font-bold text-gray-900 truncate leading-tight">
+              {displayTitle || <span className="text-gray-300">Untitled Event</span>}
+            </h2>
           </div>
-        </LabeledInput>
-      )}
-
-      {/* ── Event Icon (vc_ep_event_icon) ────────────────── */}
-      <div className="px-4 mb-2">
-        <label className="block text-[11px] font-semibold text-[#979797] uppercase tracking-wide mb-2">
-          Event Icon
-        </label>
-        <AvatarUpload
-          value={values[ICON_FIELD] ?? null}
-          onChange={val => handleChange(ICON_FIELD, val)}
-          getClient={getClient}
-        />
-      </div>
-
-      {/* ── Schema-driven ACF fields ─────────────────────── */}
-      <div className="px-4 space-y-3 mt-2">
-        {bodyFields.map(field => (
-          <SchemaField
-            key={field.key || field.name}
-            field={field}
-            value={field.type === 'group'
-              ? (values[field.name] || {})
-              : (values[field.name] ?? '')}
-            onChange={val => handleChange(field.name, val)}
-            getClient={getClient}
-            depth={0}
-          />
-        ))}
-      </div>
-
-      {/* ── Post status + trash ──────────────────────────── */}
-      {!isCreate && event && (
-        <div className="px-4">
-          <PostControls
-            endpoint={WP_ENDPOINTS.events.single(id)}
-            currentStatus={wpStatus}
-            onStatusChanged={setWpStatus}
-            onDeleted={() => navigate('/events')}
-            getClient={getClient}
-            isCreate={isCreate}
-            disabled={saving}
-          />
         </div>
       )}
 
-    </div>
+      {/* ── Permalink bar ─────────────────────────────────────── */}
+      {!isCreate && permalink && (
+        <a
+          href={permalink}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-2 px-4 py-2 bg-surface-1 border-b border-surface-3 text-xs text-gray-400 hover:text-vc-600 transition-colors"
+          onClick={e => e.stopPropagation()}
+        >
+          <ExternalLink className="w-3 h-3 shrink-0" />
+          <span className="truncate">{permalink}</span>
+        </a>
+      )}
+
+      {/* ── Schema-driven field editor ────────────────────────── */}
+      <FieldEditor
+        schema={schema}
+        values={event}
+        onSave={handleSave}
+        onCancel={() => navigate('/events')}
+        getClient={getClient}
+        saving={saving}
+        mode={isCreate ? 'create' : 'edit'}
+        layout="detail"
+        titleFieldName="title"
+        renderPhotoInEditor={false}
+        extraActions={!isCreate && !isArchived ? [
+          {
+            label: 'Archive Event',
+            icon: Archive,
+            variant: 'danger',
+            onClick: () => setShowArchive(true),
+          },
+        ] : undefined}
+      />
+
+      {showArchive && (
+        <ArchiveEventDialog
+          apiBase={activeSite ? `${activeSite.url}/wp-json` : ''}
+          eventId={id}
+          eventTitle={event.title}
+          onClose={() => setShowArchive(false)}
+          onArchived={handleArchived}
+        />
+      )}
+    </>
   );
 }

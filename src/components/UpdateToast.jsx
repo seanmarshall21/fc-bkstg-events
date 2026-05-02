@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import useServiceWorkerUpdate from '../hooks/useServiceWorkerUpdate';
 
 /**
@@ -11,8 +11,14 @@ import useServiceWorkerUpdate from '../hooks/useServiceWorkerUpdate';
  */
 export default function UpdateToast() {
   const { hasUpdate, applyUpdate, dismissUpdate } = useServiceWorkerUpdate();
+  const [updating, setUpdating] = useState(false);
 
   if (!hasUpdate) return null;
+
+  const handleUpdate = () => {
+    setUpdating(true);
+    applyUpdate();
+  };
 
   return (
     <>
@@ -50,16 +56,19 @@ export default function UpdateToast() {
 
           <div className="min-w-0 flex-1">
             <p className="text-sm font-semibold text-gray-900">New version available</p>
-            <p className="truncate text-xs text-gray-500">Reload to get the latest updates.</p>
+            <p className="truncate text-xs text-gray-500">
+              {updating ? 'Reloading…' : 'Reload to get the latest updates.'}
+            </p>
           </div>
 
           <button
             type="button"
-            onClick={applyUpdate}
-            className="flex-shrink-0 rounded-lg px-3 py-1.5 text-sm font-semibold text-white shadow-sm transition-colors hover:opacity-90 active:opacity-80"
+            onClick={handleUpdate}
+            disabled={updating}
+            className="flex-shrink-0 rounded-lg px-3 py-1.5 text-sm font-semibold text-white shadow-sm transition-opacity hover:opacity-90 active:opacity-80 disabled:opacity-60"
             style={{ backgroundColor: '#6b21e8' }}
           >
-            Update
+            {updating ? '…' : 'Update'}
           </button>
 
           <button

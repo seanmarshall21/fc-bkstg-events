@@ -1,5 +1,5 @@
 /**
- * VC API Endpoint Definitions — v2
+ * VC API Endpoint Definitions
  *
  * Maps all available endpoints from both the custom vc/v1 namespace
  * and the standard wp/v2 namespace for CRUD operations.

@@ -4,7 +4,6 @@ import { useAuth } from '../../auth/AuthContext';
 import { WP_ENDPOINTS } from '../../api/endpoints';
 import useSchema, { buildDefaultValues, buildAcfPayload, extractValues } from '../../hooks/useSchema';
 import FieldEditor from '../../components/ui/FieldEditor';
-import PhotoUpload from '../../components/PhotoUpload';
 import { setFeaturedMedia } from '../../services/mediaUploadService';
 import { Loader2 } from 'lucide-react';
 
@@ -22,15 +21,15 @@ export default function ArtistDetail() {
   const [artist, setArtist] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [wpStatus, setWpStatus] = useState(null);
 
   const isCreate = id === 'new';
 
-  // Fetch schema for vc_artist — cached per site+postType
+  // Fetch schema for vc_artist — cached per site+postType.
+  // Skip until appPassword is confirmed available to avoid a timing
+  // race that fires a relative-URL unauthenticated request on first mount.
   const {
     schema,
     fields: schemaFields,
-    restBase,
     loading: schemaLoading,
     error: schemaError,
   } = useSchema('vc_artist', {
@@ -74,7 +73,6 @@ export default function ArtistDetail() {
         title: wpPost.title?.raw || wpPost.title?.rendered || '',
         ...acfValues,
       });
-      setWpStatus(wpPost.status || 'publish');
     } catch (err) {
       console.error('Failed to fetch artist:', err);
       setArtist({ title: `Artist #${id}`, _fetchError: true });
@@ -91,7 +89,7 @@ export default function ArtistDetail() {
   }, [fetchArtist, schemaLoading]);
 
   // Save handler — builds ACF payload from schema
-  const handleSave = async (values) => {
+  const handleSave = useCallback(async (values) => {
     const client = getClient();
     if (!client) return;
     setSaving(true);
@@ -103,34 +101,31 @@ export default function ArtistDetail() {
         : {};
 
       if (isCreate) {
-        const body = { title: values.title, status: 'publish' };
-        if (Object.keys(acfPayload).length > 0) body.acf = acfPayload;
-        const { data: newPost } = await client.post(WP_ENDPOINTS.artists.list, body);
+        const createBody = { title: values.title, status: 'publish' };
+        if (Object.keys(acfPayload).length > 0) createBody.acf = acfPayload;
+        const { data: newPost } = await client.post(WP_ENDPOINTS.artists.list, createBody);
         navigate(`/artists/${newPost.id}`, { replace: true });
       } else {
-        const editBody = { title: values.title };
-        if (Object.keys(acfPayload).length > 0) editBody.acf = acfPayload;
-        await client.post(WP_ENDPOINTS.artists.single(id), editBody);
+        const updateBody = { title: values.title };
+        if (Object.keys(acfPayload).length > 0) updateBody.acf = acfPayload;
+        await client.post(WP_ENDPOINTS.artists.single(id), updateBody);
         await fetchArtist();
       }
     } finally {
       setSaving(false);
     }
-  };
+  }, [getClient, id, isCreate, schemaFields, navigate, fetchArtist]);
 
-
-  // Photo handlers — must be declared before any conditional returns (Rules of Hooks)
-  const handlePhotoChange = useCallback(async (url, mediaObject) => {
-    setArtist(prev => ({ ...prev, vc_artist_photo: url }));
-
-    if (!isCreate && artist?._wp?.id) {
+  // Photo side effect: set WP featured image when avatar changes
+  const handlePhotoChange = useCallback(async (mediaObj) => {
+    if (!isCreate && artist?._wp?.id && mediaObj?.id) {
       try {
         await setFeaturedMedia({
           siteUrl: activeSite?.url,
           username: activeSite?.username,
           appPassword: activeSite?.appPassword,
           postId: artist._wp.id,
-          mediaId: mediaObject.id,
+          mediaId: mediaObj.id,
           postType: 'vc_artist',
         });
       } catch (err) {
@@ -138,10 +133,6 @@ export default function ArtistDetail() {
       }
     }
   }, [activeSite, isCreate, artist?._wp?.id]);
-
-  const handlePhotoRemove = useCallback(() => {
-    setArtist(prev => ({ ...prev, vc_artist_photo: '' }));
-  }, []);
 
   // ── Loading / error states ──────────────────────────────────────
   // Must come AFTER all hooks above.
@@ -155,7 +146,9 @@ export default function ArtistDetail() {
     );
   }
 
-  // Credentials ready but schema not yet loaded — prevent premature render with null schema
+  // Credentials ready but schema hasn't loaded yet — keep spinner.
+  // Prevents a race where the form renders with schema=null before the
+  // schema fetch (triggered by skip flipping false) has completed.
   if (activeSite.appPassword && !schema && !schemaError) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -190,45 +183,20 @@ export default function ArtistDetail() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Photo upload section */}
-      {activeSite && (
-        <div className="bg-white rounded-lg border border-gray-200 p-6">
-          <label className="block text-sm font-medium text-gray-900 mb-4">
-            Artist Photo
-          </label>
-          <PhotoUpload
-            value={artist?.vc_artist_photo || ''}
-            onChange={handlePhotoChange}
-            onRemove={handlePhotoRemove}
-            aspectRatio="circle"
-            maxSize={2}
-            siteUrl={activeSite.url}
-            wpUsername={activeSite.username}
-            wpAppPassword={activeSite.appPassword}
-          />
-        </div>
-      )}
-
-      {/* Form fields */}
-      <FieldEditor
-        schema={schema}
-        values={artist}
-        onSave={handleSave}
-        onCancel={() => navigate(-1)}
-        getClient={getClient}
-        saving={saving}
-        mode={isCreate ? 'create' : 'edit'}
-        layout="detail"
-        photoFieldName="vc_artist_photo"
-        renderPhotoInEditor={false}
-        titleFieldName="title"
-        badgeFieldName="vc_artist_booking_status"
-        postEndpoint={!isCreate ? WP_ENDPOINTS.artists.single(id) : undefined}
-        postStatus={wpStatus}
-        onPostStatusChange={setWpStatus}
-        onPostDelete={() => navigate('/artists')}
-      />
-    </div>
+    <FieldEditor
+      schema={schema}
+      values={artist}
+      onSave={handleSave}
+      onCancel={() => navigate(-1)}
+      onPhotoChange={handlePhotoChange}
+      getClient={getClient}
+      saving={saving}
+      mode={isCreate ? 'create' : 'edit'}
+      layout="detail"
+      photoFieldName="vc_artist_photo"
+      renderPhotoInEditor={true}
+      titleFieldName="title"
+      badgeFieldName="vc_artist_booking_status"
+    />
   );
 }

@@ -5,27 +5,18 @@ import { useAuth } from '../auth/AuthContext';
 import EventSelector from './EventSelector';
 import { useEffect } from 'react';
 import { resolveSiteLogo, siteName } from '../utils/helpers';
+import useUptimeStatus from '../hooks/useUptimeStatus';
+import StatusBadge from './ui/StatusBadge';
 
-const MODULE_COLORS = {
-  artists:      { bg: 'bg-blue-100', text: 'text-blue-600', iconBg: 'bg-blue-500' },
-  lineup:       { bg: 'bg-purple-100', text: 'text-purple-600', iconBg: 'bg-purple-500' },
-  sponsors:     { bg: 'bg-emerald-100', text: 'text-emerald-600', iconBg: 'bg-emerald-500' },
-  events:       { bg: 'bg-orange-100', text: 'text-orange-600', iconBg: 'bg-orange-500' },
-  styles:       { bg: 'bg-yellow-100', text: 'text-yellow-600', iconBg: 'bg-yellow-500' },
-  confidential: { bg: 'bg-red-100', text: 'text-red-600', iconBg: 'bg-red-500' },
-  genres:       { bg: 'bg-cyan-100', text: 'text-cyan-600', iconBg: 'bg-cyan-500' },
-  stages:       { bg: 'bg-indigo-100', text: 'text-indigo-600', iconBg: 'bg-indigo-500' },
-  contestants:  { bg: 'bg-amber-100', text: 'text-amber-600', iconBg: 'bg-amber-500' },
-};
 
 export default function SiteDashboard() {
   const { siteId } = useParams();
   const navigate = useNavigate();
   const { sites, switchSite, activeSite } = useAuth();
+  const { statusBySiteId } = useUptimeStatus();
 
   const site = sites.find(s => s.id === siteId);
 
-  // Auto-switch active site context when viewing a site dashboard
   useEffect(() => {
     if (site && activeSite?.id !== site.id) {
       switchSite(site.id);
@@ -44,7 +35,7 @@ export default function SiteDashboard() {
   }
 
   const enabledModules = site.modules
-    ? Object.values(MODULES).filter(m => site.modules.includes(m.key))
+    ? site.modules.filter(k => MODULES[k]).map(k => MODULES[k])
     : Object.values(MODULES);
 
   return (
@@ -58,21 +49,30 @@ export default function SiteDashboard() {
             <Icons.Globe className="w-5 h-5 text-vc-600" />
           )}
         </div>
-        <h2 className="text-xl font-bold text-gray-900 tracking-tight truncate">
-          {siteName(site)}
-        </h2>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <h2 className="text-xl font-bold text-gray-900 tracking-tight truncate">
+              {siteName(site)}
+            </h2>
+            {(() => {
+              const s = statusBySiteId[site.registrySlug];
+              return s?.status ? <StatusBadge status={s.status} showLabel size="sm" /> : null;
+            })()}
+          </div>
+        </div>
       </div>
 
-      {/* Event Selector */}
-      <div className="mb-5">
-        <EventSelector />
-      </div>
+      {/* Event Selector — hidden on Zoo Agency */}
+      {activeSite?.registrySlug !== 'zoo-agency' && (
+        <div className="mb-5">
+          <EventSelector />
+        </div>
+      )}
 
       {/* Module Grid */}
       <div className="grid grid-cols-2 gap-3">
         {enabledModules.map((mod) => {
           const LucideIcon = Icons[mod.icon] || Icons.Folder;
-          const colors = MODULE_COLORS[mod.key] || MODULE_COLORS.artists;
 
           return (
             <button
@@ -80,20 +80,46 @@ export default function SiteDashboard() {
               onClick={() => navigate(`/${mod.key}`)}
               className="vc-tile group"
             >
-              <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-3 ${colors.iconBg}`}>
+              {/* Icon — 36×36 frameless, top-left corner */}
+              <div className="absolute top-3 left-3 w-9 h-9">
                 {mod.svgIcon ? (
-                  <img src={mod.svgIcon} alt="" className="w-5 h-5" />
+                  <>
+                    <img
+                      src={mod.svgIcon}
+                      alt=""
+                      className="w-full h-full object-contain"
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                        e.target.nextSibling.style.display = 'flex';
+                      }}
+                    />
+                    <span style={{ display: 'none' }} className="w-full h-full items-center justify-center">
+                      <LucideIcon className="w-9 h-9 text-gray-400" />
+                    </span>
+                  </>
                 ) : (
-                  <LucideIcon className="w-5 h-5 text-white" />
+                  <LucideIcon className="w-9 h-9 text-gray-400" />
                 )}
               </div>
-              <span className="text-sm font-semibold text-gray-800 group-hover:text-gray-900 transition-colors">
+
+              {/* Label */}
+              <span
+                className="text-sm font-semibold text-gray-800 group-hover:text-gray-900 transition-colors"
+                style={{ lineHeight: '1rem' }}
+              >
                 {mod.label}
               </span>
+
+              {/* Description */}
               <span className="text-[11px] text-gray-400 mt-0.5 text-left leading-snug line-clamp-2">
                 {mod.description}
               </span>
-              <img src="/icons/arrows/arrow-rt-dark.svg" alt="" className="absolute top-4 right-3 w-4 h-4 opacity-30 group-hover:opacity-60 transition-opacity" />
+
+              <img
+                src="/icons/arrows/arrow-rt-dark.svg"
+                alt=""
+                className="absolute top-3 right-3 w-4 h-4 opacity-30 group-hover:opacity-60 transition-opacity"
+              />
             </button>
           );
         })}

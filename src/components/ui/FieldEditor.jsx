@@ -1,7 +1,6 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { ChevronLeft, AlertCircle, CheckCircle } from 'lucide-react';
 import SchemaField, { AvatarUpload, StatusBadge } from './SchemaFields';
-import PostControls from './PostControls';
 
 /**
  * Schema-driven field editor.
@@ -28,6 +27,110 @@ import PostControls from './PostControls';
  *   - badgeFieldName: field name to render as status badge (default: first select with status-like choices)
  */
 
+/* ─── Tab grouping helpers ──────────────────────────────────── */
+
+/**
+ * Split a flat fields array into tab groups.
+ * Returns { preTabs: Field[], tabs: { label: string, fields: Field[] }[] }
+ * If no tab fields exist, tabs is empty and all fields are in preTabs.
+ */
+function groupFieldsByTabs(fields) {
+  const hasTabs = fields.some(f => f.type === 'tab');
+  if (!hasTabs) return { preTabs: fields, tabs: [] };
+
+  const preTabs = [];
+  const tabs = [];
+  let current = null;
+
+  for (const field of fields) {
+    if (field.type === 'tab') {
+      if (current) tabs.push(current);
+      current = { label: field.label || 'Tab', fields: [] };
+    } else if (!current) {
+      preTabs.push(field);
+    } else {
+      current.fields.push(field);
+    }
+  }
+  if (current) tabs.push(current);
+  return { preTabs, tabs };
+}
+
+/**
+ * Renders fields with a horizontal tab bar when ACF tab fields are present.
+ * Falls back to a flat list when no tabs are detected.
+ */
+function TabbedFields({ fields, values, onChange, getClient }) {
+  const { preTabs, tabs } = useMemo(() => groupFieldsByTabs(fields), [fields]);
+  const [activeTab, setActiveTab] = useState(0);
+  const tabBarRef = useRef(null);
+
+  // Reset active tab if field schema changes
+  useEffect(() => { setActiveTab(0); }, [fields]);
+
+  // Scroll to top of content on tab switch
+  useEffect(() => {
+    tabBarRef.current?.closest('.vc-scroll')?.scrollTo({ top: 0 });
+  }, [activeTab]);
+
+  const renderField = (field) => {
+    const fieldId = field.name || field.key;
+    return (
+      <SchemaField
+        key={field.key || field.name}
+        field={field}
+        value={field.type === 'group' ? (values[fieldId] || {}) : (values[fieldId] ?? '')}
+        onChange={(val) => onChange(fieldId, val)}
+        getClient={getClient}
+        depth={0}
+      />
+    );
+  };
+
+  // No tabs — flat render
+  if (!tabs.length) {
+    return <div className="space-y-3">{fields.map(renderField)}</div>;
+  }
+
+  return (
+    <div>
+      {/* Pre-tab fields (before first tab marker) */}
+      {preTabs.length > 0 && (
+        <div className="space-y-3 mb-4">{preTabs.map(renderField)}</div>
+      )}
+
+      {/* Tab bar — sticky below top nav, full-width opaque background */}
+      <div className="sticky top-0 z-30 -mx-4 px-4 pt-2.5 pb-2 bg-white border-b border-surface-3 mb-4">
+        <div
+          ref={tabBarRef}
+          className="flex gap-1 overflow-x-auto scrollbar-hide"
+          style={{ WebkitOverflowScrolling: 'touch' }}
+        >
+          {tabs.map((tab, i) => (
+            <button
+              key={i}
+              type="button"
+              onClick={() => setActiveTab(i)}
+              className={`shrink-0 px-3 py-1.5 rounded-lg text-[12px] font-semibold transition-all whitespace-nowrap ${
+                activeTab === i
+                  ? 'bg-vc-100 text-vc-700'
+                  : 'text-gray-400 hover:text-gray-600 hover:bg-surface-1'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Active tab's fields */}
+      <div className="space-y-3">
+        {(tabs[activeTab]?.fields || []).map(renderField)}
+      </div>
+    </div>
+  );
+}
+
 export default function FieldEditor({
   schema,
   fields: fieldsProp,
@@ -35,6 +138,7 @@ export default function FieldEditor({
   initialValues: initialValuesProp,
   onSave,
   onCancel,
+  onPhotoChange,
   getClient,
   saving = false,
   mode = 'edit',
@@ -43,11 +147,6 @@ export default function FieldEditor({
   renderPhotoInEditor = true,
   titleFieldName = 'title',
   badgeFieldName,
-  // Post controls (status + trash) — omit to hide section
-  postEndpoint,
-  postStatus,
-  onPostStatusChange,
-  onPostDelete,
 }) {
   // Flatten fields from schema groups or use direct fields prop
   const allFields = useMemo(() => {
@@ -122,7 +221,7 @@ export default function FieldEditor({
   // ── Detail layout ────────────────────────────────────────
   if (layout === 'detail') {
     return (
-      <div className="p-4 pb-8 animate-fade-in">
+      <div className="p-4 pb-28 animate-fade-in">
         {/* Header: back + save */}
         <div className="flex items-center justify-between mb-5">
           <button
@@ -151,7 +250,10 @@ export default function FieldEditor({
           {photoField && renderPhotoInEditor && (
             <AvatarUpload
               value={values[photoField.name]}
-              onChange={(val) => handleChange(photoField.name, val)}
+              onChange={(val) => {
+                handleChange(photoField.name, val);
+                onPhotoChange?.(val);
+              }}
               getClient={getClient}
             />
           )}
@@ -180,57 +282,21 @@ export default function FieldEditor({
             </div>
           )}
 
-          {/* Dynamic fields */}
-          <div className="space-y-3">
-            {regularFields.map(field => {
-              const fieldId = field.name || field.key;
-              // Group fields: pass nested values
-              if (field.type === 'group') {
-                return (
-                  <SchemaField
-                    key={field.key || field.name}
-                    field={field}
-                    value={values[fieldId] || {}}
-                    onChange={(val) => handleChange(fieldId, val)}
-                    getClient={getClient}
-                    depth={0}
-                  />
-                );
-              }
-
-              return (
-                <SchemaField
-                  key={field.key || field.name}
-                  field={field}
-                  value={values[fieldId] ?? ''}
-                  onChange={(val) => handleChange(fieldId, val)}
-                  getClient={getClient}
-                  depth={0}
-                />
-              );
-            })}
-          </div>
-        </form>
-
-        {/* Post status + trash — only shown when endpoint is wired */}
-        {postEndpoint && (
-          <PostControls
-            endpoint={postEndpoint}
-            currentStatus={postStatus}
-            onStatusChanged={onPostStatusChange}
-            onDeleted={onPostDelete}
+          {/* Dynamic fields — tabs if ACF tab fields present */}
+          <TabbedFields
+            fields={regularFields}
+            values={values}
+            onChange={handleChange}
             getClient={getClient}
-            isCreate={mode === 'create'}
-            disabled={saving}
           />
-        )}
+        </form>
       </div>
     );
   }
 
   // ── Form layout ──────────────────────────────────────────
   return (
-    <div className="p-4 pb-8 animate-fade-in">
+    <div className="p-4 pb-28 animate-fade-in">
       <div className="flex items-center justify-between mb-6">
         {onCancel && (
           <button
@@ -270,19 +336,12 @@ export default function FieldEditor({
           </div>
         </div>
 
-        {allFields.map(field => {
-          const fieldId = field.name || field.key;
-          return (
-            <SchemaField
-              key={field.key || field.name}
-              field={field}
-              value={field.type === 'group' ? (values[fieldId] || {}) : (values[fieldId] ?? '')}
-              onChange={(val) => handleChange(fieldId, val)}
-              getClient={getClient}
-              depth={0}
-            />
-          );
-        })}
+        <TabbedFields
+          fields={allFields}
+          values={values}
+          onChange={handleChange}
+          getClient={getClient}
+        />
       </form>
     </div>
   );

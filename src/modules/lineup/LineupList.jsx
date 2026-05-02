@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthContext';
-import { VC_ENDPOINTS, WP_ENDPOINTS } from '../../api/endpoints';
+import { WP_ENDPOINTS } from '../../api/endpoints';
 import ContentList from '../../components/ui/ContentList';
 import DraggableList from '../../components/DraggableList';
 import useDragReorder from '../../hooks/useDragReorder';
@@ -22,48 +22,38 @@ export default function LineupList() {
     if (!client) { setLoading(false); return; }
     setLoading(true);
     try {
-      // Try VC endpoint first (structured by day/stage)
-      if (activeEventId) {
-        try {
-          const { data } = await client.get(VC_ENDPOINTS.lineup.full, { event_id: activeEventId });
-          // Flatten structured data into slot list
-          const flat = [];
-          data.forEach(day => {
-            day.stages?.forEach(stage => {
-              stage.slots?.forEach(slot => {
-                flat.push({
-                  ...slot,
-                  _day: day.label,
-                  _stage: stage.name,
-                  title: slot.artist?.name || (slot.is_secret ? 'Secret Guest' : `Slot #${slot.id}`),
-                });
-              });
-            });
-          });
-          // Only use VC data if it actually returned slots — new slots with no
-          // stage/day assignment won't appear in the structured response, so fall
-          // through to WP REST which shows all slots regardless of assignment.
-          if (flat.length > 0) {
-            setSlots(flat);
-            return;
-          }
-        } catch (vcErr) {
-          console.warn('VC lineup endpoint failed, falling back to WP:', vcErr.message);
-        }
-      }
-
-      // Fallback: WP REST — all lineup slots
+      // Always use WP REST — VC structured endpoint hides slots with no day/stage assignment.
+      // Do NOT pass events_includes — the plugin's filter uses the wrong field name ('events')
+      // for lineup slots (correct field is 'vc_ls_event'). Filter client-side instead.
       const params = { per_page: 200, context: 'edit' };
-      const { data } = await client.get(WP_ENDPOINTS.lineupSlots.list, params);
-      setSlots(data.map(s => ({
-        id: s.id,
-        title: s.title?.rendered || s.title?.raw || `Slot #${s.id}`,
-        _stage: s.acf?.vc_ls_stage || '',
-        start_time: s.acf?.vc_ls_start_time || '',
-        end_time: s.acf?.vc_ls_end_time || '',
-        billing: s.acf?.vc_ls_billing || '',
-        artist: { name: s.title?.rendered || s.title?.raw || '' },
-      })));
+      const { data: rawSlots } = await client.get(WP_ENDPOINTS.lineupSlots.list, params);
+
+      // Client-side event filter — vc_ls_event is a post_object field (not 'events')
+      const filtered = activeEventId
+        ? rawSlots.filter(s => {
+            const eventRef = s.acf?.vc_ls_event;
+            const eventId = eventRef?.ID || eventRef?.id || (typeof eventRef === 'number' ? eventRef : null);
+            return eventId && String(eventId) === String(activeEventId);
+          })
+        : rawSlots;
+
+      const data = filtered;
+      setSlots(data.map(s => {
+        const stage = s.acf?.vc_ls_stage;
+        const stageName = stage?.name || (typeof stage === 'string' ? stage : '') || '';
+        const title = s.title?.rendered || s.title?.raw || `Slot #${s.id}`;
+        return {
+          id: s.id,
+          title,
+          _stage: stageName,
+          _day: s.acf?.vc_ls_day || '',
+          start_time: s.acf?.vc_ls_start_time || '',
+          end_time: s.acf?.vc_ls_end_time || '',
+          billing: s.acf?.vc_ls_billing || '',
+          set_type: s.acf?.vc_ls_set_type || '',
+          artist: { name: title },
+        };
+      }));
     } catch (err) {
       console.error('Failed to fetch lineup:', err);
     } finally {

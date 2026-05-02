@@ -2,9 +2,10 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { MODULES } from '../api/endpoints';
-import { Check, Globe, Trash2, LogOut, LogIn } from 'lucide-react';
+import { Check, Globe, Trash2, LogOut, LogIn, GripVertical, BookOpen, PlayCircle } from 'lucide-react';
 import * as Icons from 'lucide-react';
 import { resolveSiteLogo, siteName } from '../utils/helpers';
+import DraggableList from './DraggableList';
 
 export default function SettingsPage() {
   const navigate = useNavigate();
@@ -27,10 +28,19 @@ export default function SettingsPage() {
     );
   }
 
-  const enabledModules = activeSite.modules || Object.keys(MODULES);
+  // Ordered list of all module keys — enabled ones first in saved order, then disabled ones appended
+  const allModuleKeys = Object.keys(MODULES);
+  const savedOrder = activeSite.modules || allModuleKeys;
+  // Merge: saved order first, then any keys not yet in savedOrder
+  const orderedModules = [
+    ...savedOrder.filter(k => allModuleKeys.includes(k)),
+    ...allModuleKeys.filter(k => !savedOrder.includes(k)),
+  ].map(k => MODULES[k]).filter(Boolean);
+
+  const enabledSet = new Set(savedOrder);
 
   const toggleModule = async (key) => {
-    const current = activeSite.modules || Object.keys(MODULES);
+    const current = savedOrder;
     const updated = current.includes(key)
       ? current.filter(k => k !== key)
       : [...current, key];
@@ -40,6 +50,12 @@ export default function SettingsPage() {
 
   const enableAll = async () => {
     await updateSiteModules(activeSiteId, null);
+  };
+
+  const handleReorder = async (newItems) => {
+    // Preserve only the enabled keys in new order, disabled keys are excluded
+    const newOrder = newItems.map(m => m.key).filter(k => enabledSet.has(k));
+    await updateSiteModules(activeSiteId, newOrder);
   };
 
   const handleRemoveSite = async () => {
@@ -79,7 +95,39 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      {/* Section Visibility */}
+      {/* Tutorials & Support */}
+      <button
+        onClick={() => navigate('/tutorials')}
+        className="w-full flex items-center gap-3 vc-card mb-3 text-left hover:border-vc-300 hover:bg-vc-50 active:scale-[0.99] transition-all"
+      >
+        <div className="w-10 h-10 rounded-xl bg-vc-100 flex items-center justify-center shrink-0">
+          <BookOpen className="w-5 h-5 text-vc-600" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="text-sm font-semibold text-gray-800">Tutorials & Support</div>
+          <div className="text-xs text-gray-400 mt-0.5">Interactive walkthroughs for all features</div>
+        </div>
+        <span className="text-gray-300 text-sm">→</span>
+      </button>
+
+      {/* Watch tutorial videos */}
+      <a
+        href="/tutorials/video-tutorials.html"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="w-full flex items-center gap-3 vc-card mb-6 text-left hover:border-vc-300 hover:bg-vc-50 active:scale-[0.99] transition-all"
+      >
+        <div className="w-10 h-10 rounded-xl bg-vc-100 flex items-center justify-center shrink-0">
+          <PlayCircle className="w-5 h-5 text-vc-600" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="text-sm font-semibold text-gray-800">Watch Tutorials</div>
+          <div className="text-xs text-gray-400 mt-0.5">Video walkthroughs for every feature</div>
+        </div>
+        <span className="text-gray-300 text-sm">↗</span>
+      </a>
+
+      {/* Section Visibility + Order */}
       <div className="mb-6">
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-sm font-medium text-gray-700">Visible Sections</h3>
@@ -87,29 +135,29 @@ export default function SettingsPage() {
             Show All
           </button>
         </div>
-        <div className="space-y-1">
-          {Object.values(MODULES).map((mod) => {
+        <DraggableList
+          items={orderedModules}
+          keyExtractor={m => m.key}
+          onReorder={handleReorder}
+          renderItem={(mod) => {
             const Icon = Icons[mod.icon] || Icons.Folder;
-            const enabled = enabledModules.includes(mod.key);
+            const enabled = enabledSet.has(mod.key);
             return (
               <button
-                key={mod.key}
                 onClick={() => toggleModule(mod.key)}
-                className={`w-full flex items-center gap-3 p-3 rounded-xl transition-colors text-left ${
-                  enabled
-                    ? 'bg-white border border-surface-3 shadow-sm'
-                    : 'bg-transparent border border-transparent opacity-40'
+                className={`w-full flex items-center gap-3 text-left transition-opacity ${
+                  enabled ? 'opacity-100' : 'opacity-35'
                 }`}
               >
                 <Icon className="w-4 h-4 text-gray-500 shrink-0" />
                 <span className="flex-1 text-sm text-gray-700">{mod.label}</span>
-                {enabled && <Check className="w-4 h-4 text-vc-600" />}
+                {enabled && <Check className="w-4 h-4 text-vc-600 shrink-0" />}
               </button>
             );
-          })}
-        </div>
+          }}
+        />
         <p className="text-xs text-gray-400 mt-2">
-          Toggle sections to customize your dashboard.
+          Tap to show/hide · Long-press to reorder.
         </p>
       </div>
 

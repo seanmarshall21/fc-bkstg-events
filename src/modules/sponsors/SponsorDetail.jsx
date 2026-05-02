@@ -18,7 +18,6 @@ export default function SponsorDetail() {
   const [sponsor, setSponsor] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [wpStatus, setWpStatus] = useState(null);
 
   const isCreate = id === 'new';
 
@@ -49,7 +48,6 @@ export default function SponsorDetail() {
         title: wpPost.title?.raw || wpPost.title?.rendered || '',
         ...acfValues,
       });
-      setWpStatus(wpPost.status || 'publish');
     } catch (err) {
       console.error('Failed to fetch sponsor:', err);
       setSponsor({ title: `Sponsor #${id}`, _fetchError: true });
@@ -84,10 +82,16 @@ export default function SponsorDetail() {
     }
   }, [getClient, id, isCreate, schemaFields, navigate, fetchSponsor]);
 
-  // Logo upload — mirrors ArtistDetail's photo handler
+  // Logo upload — store the full media object so buildAcfPayload can extract the ID.
+  // ACF image fields expect an integer media ID, not a URL string.
   const handleLogoChange = useCallback(async (url, mediaObject) => {
-    setSponsor(prev => ({ ...prev, vc_sponsor_logo: url }));
-    if (!isCreate && sponsor?._wp?.id) {
+    // Store the full media object — buildAcfPayload picks .ID or .id from it.
+    // Fallback to id integer if no full object available.
+    const acfValue = mediaObject && (mediaObject.ID || mediaObject.id)
+      ? mediaObject.ID || mediaObject.id
+      : url;
+    setSponsor(prev => ({ ...prev, vc_sponsor_logo: acfValue }));
+    if (!isCreate && sponsor?._wp?.id && mediaObject?.id) {
       try {
         await setFeaturedMedia({
           siteUrl: activeSite?.url,
@@ -162,10 +166,6 @@ export default function SponsorDetail() {
         titleFieldName="title"
         photoFieldName="vc_sponsor_logo"
         renderPhotoInEditor={false}
-        postEndpoint={!isCreate ? WP_ENDPOINTS.sponsors.single(id) : undefined}
-        postStatus={wpStatus}
-        onPostStatusChange={setWpStatus}
-        onPostDelete={() => navigate('/sponsors')}
       />
     </div>
   );

@@ -237,97 +237,51 @@ export function extractValues(fields, acf) {
 }
 
 /**
- * Recursively normalize a field value so ACF REST update_callback receives
- * the correct primitive type. ACF expects:
- *   image / file  → integer attachment ID (not the full WP media object)
- *   gallery       → array of integer attachment IDs
- *   taxonomy      → array of integer term IDs
- *                   ACF REST returns WP_Term objects with `term_id` (not `id`).
- *                   WP REST taxonomy endpoints use lowercase `id`.
- *                   We check both so freshly-picked terms and reloaded terms work.
- *   post_object   → integer post ID (WP REST uses `id`; WP_Post uses `ID`)
- *   group         → object with recursively normalized sub-field values
- *   repeater      → array of rows, each with recursively normalized sub-fields
- */
-function normalizeFieldValue(field, val) {
-  if (val == null) return val;
-
-  switch (field.type) {
-    case 'image':
-    case 'file':
-      return (val && typeof val === 'object') ? (val.id || val.ID || null) : val;
-
-    case 'gallery':
-      if (Array.isArray(val)) {
-        return val.map(v => (v && typeof v === 'object') ? (v.id || v.ID) : v).filter(Boolean);
-      }
-      return val;
-
-    case 'taxonomy':
-      // ACF REST → WP_Term → JSON has `term_id`.
-      // TaxonomyField picker → WP REST → JSON has `id`.
-      // Must check both or existing (reloaded) terms get stripped to [] on save.
-      if (Array.isArray(val)) {
-        return val.map(v => (v && typeof v === 'object') ? (v.id || v.term_id) : v).filter(Boolean);
-      }
-      if (val && typeof val === 'object') {
-        return val.id || val.term_id || null;
-      }
-      return val;
-
-    case 'post_object':
-    case 'relationship':
-      if (Array.isArray(val)) {
-        return val.map(v => (v && typeof v === 'object') ? (v.ID || v.id) : v).filter(Boolean);
-      }
-      if (val && typeof val === 'object') {
-        return val.ID || val.id || null;
-      }
-      return val;
-
-    case 'group':
-      if (val && typeof val === 'object' && field.sub_fields?.length) {
-        const out = { ...val };
-        for (const sub of field.sub_fields) {
-          if (sub.name in out) {
-            out[sub.name] = normalizeFieldValue(sub, out[sub.name]);
-          }
-        }
-        return out;
-      }
-      return val;
-
-    case 'repeater':
-      if (Array.isArray(val) && field.sub_fields?.length) {
-        return val.map(row => {
-          const out = { ...row };
-          for (const sub of field.sub_fields) {
-            if (sub.name in out) {
-              out[sub.name] = normalizeFieldValue(sub, out[sub.name]);
-            }
-          }
-          return out;
-        });
-      }
-      return val;
-
-    default:
-      return val;
-  }
-}
-
-/**
  * Build an ACF-compatible payload from form values, filtered to only
  * keys that exist in the schema. Safe to POST directly as the `acf` property.
  *
- * All field values are recursively normalized via normalizeFieldValue so
- * ACF REST update_callback receives the correct types at every nesting level.
+ * Normalizes post_object and taxonomy values to IDs — ACF's update_callback
+ * expects integer IDs, not full post/term objects.
  */
 export function buildAcfPayload(fields, values) {
   const payload = {};
   for (const field of fields) {
     if (!(field.name in values)) continue;
-    payload[field.name] = normalizeFieldValue(field, values[field.name]);
+    let val = values[field.name];
+
+    if (field.type === 'post_object' || field.type === 'relationship') {
+      // Extract post ID(s) from object(s)
+      if (Array.isArray(val)) {
+        val = val.map(v => (v && typeof v === 'object') ? (v.ID || v.id) : v).filter(Boolean);
+      } else if (val && typeof val === 'object') {
+        val = val.ID || val.id || null;
+      }
+    }
+
+    if (field.type === 'taxonomy') {
+      // Extract term ID(s) from object(s)
+      if (Array.isArray(val)) {
+        val = val.map(v => (v && typeof v === 'object') ? v.id : v).filter(Boolean);
+      } else if (val && typeof val === 'object') {
+        val = val.id || null;
+      }
+    }
+
+    if (field.type === 'image' || field.type === 'file') {
+      // ACF expects the media ID (integer), not the full media object
+      if (val && typeof val === 'object') {
+        val = val.ID || val.id || null;
+      }
+    }
+
+    if (field.type === 'gallery') {
+      // ACF expects an array of media IDs
+      if (Array.isArray(val)) {
+        val = val.map(v => (v && typeof v === 'object') ? (v.ID || v.id) : v).filter(Boolean);
+      }
+    }
+
+    payload[field.name] = val;
   }
   return payload;
 }

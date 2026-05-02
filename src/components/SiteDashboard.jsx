@@ -5,9 +5,9 @@ import { useAuth } from '../auth/AuthContext';
 import EventSelector from './EventSelector';
 import { useEffect } from 'react';
 import { resolveSiteLogo, siteName } from '../utils/helpers';
-import useUptimeStatus from '../hooks/useUptimeStatus';
-import StatusBadge from './ui/StatusBadge';
-
+// TODO: useUptimeStatus + StatusBadge not yet implemented — stubbed until built
+const useUptimeStatus = () => ({ statusBySiteId: {} });
+const StatusBadge = () => null;
 
 export default function SiteDashboard() {
   const { siteId } = useParams();

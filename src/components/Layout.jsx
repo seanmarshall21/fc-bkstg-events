@@ -1,7 +1,9 @@
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { ChevronLeft, MoreVertical, Flag } from 'lucide-react';
+import { ChevronLeft, MoreVertical, Flag, HelpCircle } from 'lucide-react';
 import { useAuth } from '../auth/AuthContext';
 import { useFavorites } from '../hooks/useFavorites';
+import { useTutorial } from '../context/TutorialContext';
+import { ROUTE_TUTORIAL_MAP } from '../tutorials/tutorialData';
 import SiteSwitcher from '../sites/SiteSwitcher';
 import { useState, useRef, useEffect } from 'react';
 import { resolveSiteLogo, siteName } from '../utils/helpers';
@@ -21,6 +23,7 @@ const MODULE_ROUTES = ['/artists', '/lineup', '/sponsors', '/events', '/styles',
 export default function Layout() {
   const { activeSite, activeSiteId, hasSites, user, isAuthenticated } = useAuth();
   const { isFavorite, toggleFavorite } = useFavorites(activeSiteId);
+  const { openTutorial } = useTutorial();
   const navigate = useNavigate();
   const location = useLocation();
   const isHome = location.pathname === '/';
@@ -63,16 +66,16 @@ export default function Layout() {
   // Is this a module list page (e.g. /artists, /sponsors)?
   const isModuleList = MODULE_ROUTES.some(r => location.pathname === r);
 
+  // Tutorial help button — shown when the current route has a mapped tutorial
+  const routeTutorial = ROUTE_TUTORIAL_MAP[location.pathname] || null;
+
   // Handle back button
   const handleBack = () => {
     if (isSiteDashboard) {
-      // Site dashboard → home
       navigate('/');
     } else if (isModuleList && activeSiteId) {
-      // Module list → site dashboard
       navigate(`/site/${activeSiteId}`);
     } else {
-      // Detail page or anything else → go back
       navigate(-1);
     }
   };
@@ -121,8 +124,20 @@ export default function Layout() {
           )}
         </div>
 
-        {/* Right side: kebab menu + user avatar */}
+        {/* Right side: tutorial help + kebab menu + user avatar */}
         <div className="flex items-center gap-1.5">
+          {/* Tutorial help button — visible when current route has a mapped tutorial */}
+          {routeTutorial && (
+            <button
+              onClick={() => openTutorial(routeTutorial)}
+              className="p-2 rounded-lg hover:bg-surface-2 text-gray-400 hover:text-vc-600 transition-colors"
+              aria-label="Help / Tutorial"
+              title={`Tutorial: ${routeTutorial.title}`}
+            >
+              <HelpCircle className="w-5 h-5" />
+            </button>
+          )}
+
           {/* Kebab / more menu — always visible on module and site views */}
           {(isInsideSite || detailMatch) && (
             <div className="relative" ref={kebabRef}>

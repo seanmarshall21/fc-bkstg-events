@@ -1,7 +1,7 @@
 # CLAUDE.md — Zoo Agency · EMH Event Property Listings
 
 > **Session context for AI assistants.** Read this first before any Zoo Agency WordPress work.
-> Last updated: 2026-04-24 (session 6)
+> Last updated: 2026-05-02 (session 9)
 
 ---
 
@@ -277,13 +277,14 @@ These are set by WPCode #3589 (emh-listings-data-attrs.php), not Oxygen custom a
 
 | ID | Name | Type | Hook | Status |
 |---|---|---|---|---|
-| #3607 | VC Event Property Listings Controller — v3.2.0 (vc-listings.js) | JavaScript | Footer | Active |
-| #3867 | **MAIN CSS / vc-listings.css — v2.0.4 (vc-listings.css) | CSS Snippet | Site Wide Header | Active — **v2.0.5 content** (title lags) |
-| #3608 | VC Event Property Listing Style — v1.2.0 (vc-listings.css, EMH classes) | CSS Snippet | Site Wide Header | **DEACTIVATE** — superseded by #3750 |
-| #3589 | emh-listings-data-attrs.php | PHP | Run Everywhere (guarded) | Active |
+| #3866 | MAIN JS / vc-listings.js — v4.6.3 | JavaScript | Footer | Active |
+| #3607 | VC Event Property Listings Controller — v3.2.0 (vc-listings.js) | JavaScript | Footer | Superseded by #3866 — confirm status |
+| #3867 | MAIN CSS / vc-listings.css — v2.1.0 | CSS Snippet | Site Wide Header | Active |
+| #3608 | VC Event Property Listing Style — v1.2.0 | CSS Snippet | Site Wide Header | Trashed |
+| #3589 | emh-listings-data-attrs.php — v.01.09 | PHP | Run Everywhere (guarded) | Active |
 | #3597 | EMH — Remove Duplicate Taxonomy Metaboxes | PHP | Admin Only | Active |
 | #3601 | EMH — PHP Memory Limit | PHP | Run Everywhere | Active |
-| #3602 | VC Event Property Listing Style — v1.1.0 (old VC classes) | CSS Snippet | Site Wide Header | **DEACTIVATE** |
+| #3602 | VC Event Property Listing Style — v1.1.0 (old VC classes) | CSS Snippet | Site Wide Header | Trashed |
 | #3535 | Old EMH CSS — v3.0.0 | CSS Snippet | — | Off — leave off |
 | #3598 | Zoo Agency — ACF Options Page | PHP | Admin Only | Off — replaced by Zoo Admin options page |
 
@@ -360,16 +361,24 @@ CSS is **complete and deployed** via WPCode #3750 (CSS Snippet, Site Wide Header
 ## Known Issues / Pending Work
 
 ### Active
-- **WPCode #3589 capacity reads** — Still reads `$details['capacity']['capacity']` and `$details['capacity']['label']`. Must update to `get_field('capacity_label')` and `get_field('capacity_amount')` (flat top-level fields).
-- **WPCode #3589 video reads** — Any code reading `$media['video']` must change to `get_field('video')['vimeo_id']` (video is top-level, not inside vc_ep_media; field is now `vimeo_id` not `vimeo_url`).
-- **WPCode #3589 tbd reads** — If reading `$dates['tbd']`, change to `get_field('tbd')` (top-level group, not inside vc_ep_dates).
-- **WPCode #3589 details reads** — Must update any `get_field('vc_ep_details')` reads to flat `get_field('city')`, `get_field('state')`, `get_field('established')`, `get_field('vc_ep_event_venue')`.
-- **WPCode #3589 social reads** — Must update any `$social['website']` / `$social['instagram']` etc. to `get_field('vc_ep_website')['vc_ep_website_url']` and `get_field('vc_ep_social')['vc_ep_social_url']`.
-- **class-vc-admin-importer.php** — Rewritten for 2026-04-28 ACF structure. Needs to be uploaded to server at `wp-content/plugins/vc-event-properties/includes/admin/` via WP File Manager PRO.
-- **Card build** — Tile + list panels not yet built in Oxygen. Two-panel tab approach confirmed (see View Toggle Architecture section). PHP Code Block outputs both loops.
-- **WPCode #3608 + #3602** — Both old CSS snippets still active. Deactivate both once #3750 confirmed stable on frontend.
 - **Template 3753 — not yet assigned to a page** — ZFC controls UI built and saved (nodes 568/569/575, `zfc_bar_wrap` class confirmed). Needs a test page with Oxygen location rule pointing to post 3753 for frontend render verification.
 - **ACF Local JSON (`acf-json/`)** — Old JSON files in child theme for `vc_ep_season` and `tags` fields still exist. These stale definitions override the database. Do not rename those old fields — create new ones instead (as done with `vc_ep_sub_title` and `event_tag_labels`). Investigate cleaning out `acf-json/` in a future session.
+- **Plugin v2.6.4 — upload to Proper NYE pending** — ZIP built, not yet uploaded. Fixes `events_includes` per-CPT field map. Deploy: WP Admin → Plugins → Upload → replace → flush permalinks.
+- **After Darks on Proper NYE** — `after-darks` CPT must have REST API enabled: ACF → Post Types → after-darks → Advanced → Show in REST API. Also verify existing after-dark posts have `vc_ad_event` field populated. CRSSD site same requirement.
+
+### Resolved (session 9 — 2026-05-02)
+- **Lineup slots not showing in app** — Root cause: `VC_Helper_Rest_Query_Filters` used hardcoded field name `'events'` for all CPTs. Lineup slots use `vc_ls_event`. Fix in plugin v2.6.4 (per-CPT `EVENT_FIELD_MAP`, `= NUMERIC` compare for post_object). Client-side filter also added to `LineupList.jsx` as fallback (never passes `events_includes` to API — comment explains why).
+- **Sponsor photo not saving** — Root cause: `handleLogoChange` was storing URL string in state; `buildAcfPayload` only extracts integer ID from objects. ACF image fields require integer media ID. Fixed: store `mediaObject.id` (integer) instead of `url`.
+- **After Darks blank detail** — Root cause: `group_confidential_items` ACF location rule matches `after-darks` even when the CPT isn't REST-enabled, so only confidentiality fields render. `AfterDarkList` now catches 404 gracefully. Admin action required per site to enable REST on the CPT.
+- **fc-bkstg-events deploy sync** — All QA fix files + tutorials + AfterDarks module synced to deploy repo. Pushed to GitHub (Netlify auto-deploy triggered).
+- **useSchema.js, FieldEditor, SchemaFields, mediaUploadService** — Synced newer versions (tab grouping, normalizeFieldValue, 120s timeout + 2x retry, compression gate cleanup) to fc-bkstg-events.
+
+### Resolved (session 8 — 2026-05-01)
+- **WPCode #3589** — Updated live from v.01.08 → v.01.09. All field reads were already clean; sync brings live in line with workspace.
+- **WPCode #3608 + #3602** — Confirmed already trashed (deactivated). No action needed.
+- **class-vc-admin-importer.php** — Uploaded to `wp-content/plugins/vc-event-properties/includes/admin/` via WP File Manager PRO.
+- **vc-listings.css v2.1.0** — Deployed to WPCode #3867. Fix 3: `width:100%!important` on `.emh_listings_repeater_view`, `.vc_listings_repeater_view_tile`, `.vc_listings_repeater_view_list` at top-level (outside `.isotope-active`) — prevents Oxygen pixel widths bleeding through on mobile.
+- **vc-listings.js v4.6.3** — Deployed to WPCode #3866. Fix 1: `sortCards(false)` before `applyActiveFilters()` in `emhListings_refresh`. Fix 2: `_iso.layout()` after `equalizeRowHeights` to re-position rows at equalized heights. Fix 3: referenced CSS change.
 
 ### Resolved (session 7 — 2026-04-28)
 - **ACF field restructure** — `vc_ep_details` group removed; city/state/established now flat. Venue now `vc_ep_event_venue` (select). Social links consolidated into `vc_ep_website` and `vc_ep_social` groups. All sync files updated: `class-vc-admin-importer.php`, `ImportEvents.jsx`, `vc-events-sheet-guide.html`, `VC-CSV-Field-Guide.html`, both CLAUDE.md files.

@@ -38,6 +38,12 @@ export const VC_ENDPOINTS = {
     single: (id) => `/vc/v1/sponsors/${id}`,
     tiers: '/vc/v1/sponsor-tiers',
   },
+  // Partnership page (page template, not CPT)
+  partnership: {
+    list:   '/vc/v1/partnership',
+    single: (id) => `/vc/v1/partnership/${id}`,
+    schema: '/vc/v1/partnership/schema',
+  },
   // Event Styles
   eventStyles: {
     full: (id) => `/vc/v1/event-styles/${id}`,
@@ -70,6 +76,10 @@ export const WP_ENDPOINTS = {
   sponsors: {
     list: '/wp/v2/vc_sponsor',
     single: (id) => `/wp/v2/vc_sponsor/${id}`,
+  },
+  pages: {
+    list:   '/wp/v2/pages',
+    single: (id) => `/wp/v2/pages/${id}`,
   },
   genres: {
     list: '/wp/v2/genre',
@@ -172,5 +182,13 @@ export const MODULES = {
     icon: 'Users',
     color: 'from-amber-900/40 to-amber-950/20',
     border: 'border-amber-700/40',
+  },
+  partnership: {
+    key: 'partnership',
+    label: 'Partnership',
+    description: 'Partnership page content, tiers, and sponsor presentation',
+    icon: 'Handshake',
+    color: 'from-violet-900/40 to-violet-950/20',
+    border: 'border-violet-700/40',
   },
 };

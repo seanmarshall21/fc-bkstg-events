@@ -114,6 +114,9 @@ export default function HomePage() {
         <Plus className="w-4 h-4" />
         Add another site
       </button>
+
+      {/* QA version stamp — remove before final release */}
+      <p className="mt-6 text-center text-[10px] text-gray-300 tracking-wide">v1.9.5</p>
     </div>
   );
 }

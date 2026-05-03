@@ -1,3 +1,7 @@
+[build]
+  command = "rm -rf node_modules/.vite && npm run build"
+  publish = "build"
+
 [[redirects]]
   from = "/*"
   to = "/index.html"

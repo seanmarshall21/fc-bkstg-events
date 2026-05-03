@@ -5,7 +5,9 @@ import { useAuth } from '../auth/AuthContext';
 import EventSelector from './EventSelector';
 import { useEffect } from 'react';
 import { resolveSiteLogo, siteName } from '../utils/helpers';
-// StatusBadge — inline until useUptimeStatus is built
+// Stubs — useUptimeStatus + StatusBadge not yet implemented
+const useUptimeStatus = () => ({ statusBySiteId: {} });
+
 function StatusBadge({ status, size }) {
   const colors = {
     up:      'bg-green-100 text-green-700',
